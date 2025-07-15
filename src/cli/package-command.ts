@@ -6,7 +6,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { PackageModule } from '../modules/package-module';
 import type { PackageCLIOptions, PipelineSourceType } from '../types/pipeline';
-import { CriticalError, PipelineValidator } from '../utils/CriticalError';
+import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
 import type { PipelineState } from '../utils/pipeline-state-manager';
 

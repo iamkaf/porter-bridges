@@ -22,9 +22,9 @@ import type {
   PipelineStateWithPackageResult,
   ProgressCallback,
 } from '../types/pipeline';
-import { CriticalError, PipelineValidator } from '../utils/CriticalError';
+import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
-import { PipelineStateManager } from '../utils/PipelineStateManager';
+import { PipelineStateManager } from '../utils/pipeline-state-manager';
 
 /**
  * Interactive orchestration class

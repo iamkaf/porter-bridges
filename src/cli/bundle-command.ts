@@ -5,7 +5,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { BundleModule } from '../modules/bundle-module';
-import { CriticalError, PipelineValidator } from '../utils/CriticalError';
+import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
 
 export async function executeBundleCommand(options: {
