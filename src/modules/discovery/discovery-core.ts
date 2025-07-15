@@ -47,7 +47,7 @@ export class DiscoveryCore {
   constructor(options: Partial<IDiscoveryOptions> = {}) {
     this.options = {
       cacheDirectory: options.cacheDirectory || './.discovery-cache',
-      userAgent: options.userAgent || 'linkie-porting-intelligence/1.0.0',
+      userAgent: options.userAgent || 'porter-bridges/1.0.0',
       timeout: options.timeout || 30_000,
       retryAttempts: options.retryAttempts || 3,
       discoveryModeEnabled: true,

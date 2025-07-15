@@ -15,7 +15,7 @@ import type { PipelineState } from '../utils/pipeline-state-manager';
 
 export async function executeCollectionCommand(options: CollectionCLIOptions) {
   try {
-    logger.info('🚀 Linkie Porting Intelligence - Collection Module');
+    logger.info('🚀 Porter Bridges - Collection Module');
 
     // Load discovered sources
     let sourcesData: PipelineState;

@@ -2,9 +2,9 @@
 
 - Don't run anything unless the user tells you to. Don't guess what the user means. Clarify, disambiguate, confirm and ask first if there is any doubt.
 
-# Project Overview: Linkie Porting Intelligence
+# Project Overview: Porter Bridges
 
-This project is a development-time data processing utility designed to automate the collection and structuring of Minecraft mod porting information. It is a Node.js/TypeScript application.
+This project is a development-time data processing utility designed to automate the collection and structuring of Minecraft mod porting information. It is a Bun/TypeScript application.
 
 ## Core Pipeline
 
@@ -27,14 +27,14 @@ The application operates as a five-stage pipeline. The main command `orchestrate
 -   **`docs/`**: High-level documentation about the project, its data sources, and its data model.
 -   **`generated/`**: The output directory for all pipeline artifacts (e.g., `discovered-sources.json`, `collected-content/`, `distilled-content/`). This directory is gitignored.
 -   **`logs/`**: Contains runtime logs, including detailed logs of calls made to the Gemini API.
--   **`package.json`**: Defines npm dependencies and scripts.
+-   **`package.json`**: Defines Bun dependencies and scripts.
 
 ## How to Run
 
--   **Installation:** `npm install`
--   **Execution:** The project is written in TypeScript and requires a loader to run directly.
-    -   **Main interactive command:** `node --loader ts-node/esm src/index.ts orchestrate`
-    -   **Individual commands:** `node --loader ts-node/esm src/index.ts <command_name>` (e.g., `discover`, `collect`)
+-   **Installation:** `bun install`
+-   **Execution:** The project is written in TypeScript and executed with Bun.
+    -   **Main interactive command:** `bun src/index.ts orchestrate`
+    -   **Individual commands:** `bun src/index.ts <command_name>` (e.g., `discover`, `collect`)
 
 ## State Management
 

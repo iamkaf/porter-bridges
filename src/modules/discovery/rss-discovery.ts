@@ -31,7 +31,7 @@ export class RSSDiscovery {
 
   constructor(options: Partial<IRSSDiscoveryOptions> = {}) {
     this.options = {
-      userAgent: 'linkie-porting-intelligence/1.0.0',
+      userAgent: 'porter-bridges/1.0.0',
       timeout: 30_000,
       retryAttempts: 3,
       ...options,

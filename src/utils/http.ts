@@ -17,7 +17,7 @@ const DEFAULT_OPTIONS: Options = {
   },
   timeout: 30_000,
   headers: {
-    'User-Agent': 'linkie-porting-intelligence/1.0.0',
+    'User-Agent': 'porter-bridges/1.0.0',
   },
 };
 
@@ -46,7 +46,7 @@ export const httpClient = createHttpClient();
 export const githubClient = createHttpClient({
   headers: {
     Accept: 'application/vnd.github.v3+json',
-    'User-Agent': 'linkie-porting-intelligence/1.0.0',
+    'User-Agent': 'porter-bridges/1.0.0',
   },
 });
 

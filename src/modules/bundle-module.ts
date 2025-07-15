@@ -39,7 +39,7 @@ export class BundleModule {
     this.options = {
       bundleDirectory: options.bundleDirectory || './generated/bundles',
       packageDirectory: options.packageDirectory || './generated/packages',
-      bundleName: options.bundleName || 'linkie-porting-intelligence',
+      bundleName: options.bundleName || 'porter-bridges',
       includeMetadata: options.includeMetadata !== false,
       validateIntegrity: options.validateIntegrity !== false,
       createArchive: options.createArchive !== false,
@@ -295,7 +295,7 @@ export class BundleModule {
       bundle_info: {
         name: bundleName,
         created_at: new Date().toISOString(),
-        generator: 'linkie-porting-intelligence',
+        generator: 'porter-bridges',
         generator_version: '1.0.0',
       },
       bundle_contents: {
@@ -410,7 +410,10 @@ export class BundleModule {
                 error: error.message,
               });
             } else {
-              logger.error({ error }, 'Failed to get archive stats with unknown error');
+              logger.error(
+                { error },
+                'Failed to get archive stats with unknown error'
+              );
             }
             resolve(archivePath);
           }
@@ -418,9 +421,14 @@ export class BundleModule {
 
         output.on('error', (error: unknown) => {
           if (error instanceof Error) {
-            logger.error('Archive output stream error', { error: error.message });
+            logger.error('Archive output stream error', {
+              error: error.message,
+            });
           } else {
-            logger.error({ error }, 'Archive output stream error with unknown error');
+            logger.error(
+              { error },
+              'Archive output stream error with unknown error'
+            );
           }
           reject(error);
         });
@@ -460,9 +468,14 @@ export class BundleModule {
         archive.finalize();
       } catch (error: unknown) {
         if (error instanceof Error) {
-          logger.error('Failed to create ZIP archive', { error: error.message });
+          logger.error('Failed to create ZIP archive', {
+            error: error.message,
+          });
         } else {
-          logger.error({ error }, 'Failed to create ZIP archive with unknown error');
+          logger.error(
+            { error },
+            'Failed to create ZIP archive with unknown error'
+          );
         }
         reject(error);
       }

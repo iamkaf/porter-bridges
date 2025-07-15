@@ -10,7 +10,7 @@ import { logger } from './utils/logger';
 const program = new Command();
 
 program
-  .name('linkie-porting-intelligence')
+  .name('porter-bridges')
   .description(
     'A development utility for discovering, processing, and packaging Minecraft mod porting data.'
   )
@@ -31,11 +31,7 @@ program
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--max-concurrent <num>', 'Maximum concurrent operations', '3')
   .option('--gemini-model <model>', 'Gemini model to use', 'gemini-2.5-flash')
-  .option(
-    '--bundle-name <name>',
-    'Bundle name prefix',
-    'linkie-porting-intelligence'
-  )
+  .option('--bundle-name <name>', 'Bundle name prefix', 'porter-bridges')
   .option(
     '--version <version>',
     'Package version (auto-generated if not specified)'
@@ -213,11 +209,7 @@ program
     'Directory containing packages',
     './generated/packages'
   )
-  .option(
-    '--bundle-name <name>',
-    'Bundle name prefix',
-    'linkie-porting-intelligence'
-  )
+  .option('--bundle-name <name>', 'Bundle name prefix', 'porter-bridges')
   .option('--no-metadata', 'Skip bundle metadata generation')
   .option('--no-checksums', 'Skip integrity checksum generation')
   .option('--no-archive', 'Skip distribution archive creation')

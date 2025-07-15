@@ -2,7 +2,7 @@
  * @file Critical Error - Enhanced error handling for pipeline failures
  *
  * This module provides critical error detection and escalation for the
- * linkie-porting-intelligence pipeline to prevent silent failures.
+ * porter-bridges pipeline to prevent silent failures.
  */
 
 import type { ISourceItem } from '../modules/discovery/source-item-factory';
