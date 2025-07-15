@@ -9,20 +9,20 @@ import { logger } from '../../utils/logger';
 import {
   DirectUrlDiscovery,
   type IDirectUrlDiscoveryOptions,
-} from './DirectUrlDiscovery';
-import { DiscoveryStats } from './DiscoveryStats';
+} from './direct-url-discovery';
+import { DiscoveryStats } from './discovery-stats';
 import {
   GitHubDiscovery,
   type IGitHubDiscoveryOptions,
-} from './GitHubDiscovery';
+} from './github-discovery';
 import {
   GitHubReleasesDiscovery,
   type IGitHubReleasesDiscoveryOptions,
-} from './GitHubReleasesDiscovery';
-import { type IMavenDiscoveryOptions, MavenDiscovery } from './MavenDiscovery';
-import { type IRSSDiscoveryOptions, RSSDiscovery } from './RSSDiscovery';
-import { type ISourceConfig, SourceConfigs } from './SourceConfigs';
-import type { ISourceItem } from './SourceItemFactory';
+} from './github-releases-discovery';
+import { type IMavenDiscoveryOptions, MavenDiscovery } from './maven-discovery';
+import { type IRSSDiscoveryOptions, RSSDiscovery } from './rss-discovery';
+import { type ISourceConfig, SourceConfigs } from './source-configs';
+import type { ISourceItem } from './source-item-factory';
 
 type IDiscoveryOptions = { cacheDirectory: string } & IGitHubDiscoveryOptions &
   IRSSDiscoveryOptions &

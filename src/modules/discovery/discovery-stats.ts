@@ -7,7 +7,7 @@
 
 import { groupBy, mapValues, pipe } from 'remeda';
 import { logger } from '../../utils/logger';
-import type { ISourceItem } from './SourceItemFactory';
+import type { ISourceItem } from './source-item-factory';
 
 /**
  * Discovery statistics class

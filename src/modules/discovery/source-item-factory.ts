@@ -5,7 +5,7 @@
  * and provides validation and error handling.
  */
 
-import { SourceItemSchema } from '../../schemas/SourceItemSchema';
+import { SourceItemSchema } from '../../schemas/source-item-schema';
 import { logger } from '../../utils/logger';
 
 export interface ISourceItem {
