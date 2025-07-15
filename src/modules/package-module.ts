@@ -16,7 +16,7 @@ import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { logger } from '../utils/logger';
-import type { PipelineState } from '../utils/PipelineStateManager';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 import { ContentProcessor } from './packaging/content-processor';
 import { CrossReferenceAnalyzer } from './packaging/cross-reference-analyzer';
 import { PackageStats } from './packaging/package-stats';

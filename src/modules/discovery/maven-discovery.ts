@@ -9,9 +9,9 @@ import { createHash } from 'node:crypto';
 import type { LoaderType, SourceType } from '../../constants/enums';
 import { createHttpError, mavenClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
-import { ContentAnalyzer } from './ContentAnalyzer';
-import type { ISourceConfig } from './SourceConfigs';
-import { SourceItemFactory } from './SourceItemFactory';
+import { ContentAnalyzer } from './content-analyzer';
+import type { ISourceConfig } from './source-configs';
+import { SourceItemFactory } from './source-item-factory';
 
 export interface IMavenDiscoveryOptions {
   includeSnapshots: any;
