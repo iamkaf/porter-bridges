@@ -18,7 +18,7 @@ export async function executeBundleCommand(options: {
   output: string;
 }) {
   try {
-    logger.info('🚀 Linkie Porting Intelligence - Bundle Module');
+    logger.info('🚀 Porter Bridges - Bundle Module');
 
     // Log bundling configuration
     logger.info(

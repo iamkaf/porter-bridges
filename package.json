@@ -1,5 +1,5 @@
 {
-  "name": "linkie-porting-intelligence",
+  "name": "porter-bridges",
   "version": "1.0.0",
   "description": "A development utility for discovering, processing, and packaging Minecraft mod porting data.",
   "main": "src/index.ts",
@@ -43,9 +43,9 @@
     "zod": "^4.0.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.1.1",
     "@types/archiver": "^6.0.3",
     "@types/node": "^24.0.13",
-    "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "ultracite": "^5.0.36"
   }

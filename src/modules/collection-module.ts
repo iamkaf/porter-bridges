@@ -83,11 +83,17 @@ class CollectionFilters {
 class ContentDownloader {
   private options: any;
 
-  constructor(options: { timeout?: number; maxRedirects?: number; userAgent?: string } = {}) {
+  constructor(
+    options: {
+      timeout?: number;
+      maxRedirects?: number;
+      userAgent?: string;
+    } = {}
+  ) {
     this.options = {
       timeout: options.timeout || 30_000,
       maxRedirects: options.maxRedirects || 5,
-      userAgent: 'Linkie-Porting-Intelligence/1.0.0',
+      userAgent: 'porter-bridges/1.0.0',
       ...options,
     };
   }
@@ -217,12 +223,26 @@ class ContentDownloader {
  * Main Collection Module class
  */
 export class CollectionModule {
-  private options: { contentDirectory: string; maxConcurrent: number; progressCallback: ((current: number, total: number, currentFile: string) => void) | null };
+  private options: {
+    contentDirectory: string;
+    maxConcurrent: number;
+    progressCallback:
+      | ((current: number, total: number, currentFile: string) => void)
+      | null;
+  };
   private filters: CollectionFilters;
   private stats: CollectionStats;
   private downloader: ContentDownloader;
 
-  constructor(options: { contentDirectory?: string; maxConcurrent?: number; progressCallback?: ((current: number, total: number, currentFile: string) => void) | null } = {}) {
+  constructor(
+    options: {
+      contentDirectory?: string;
+      maxConcurrent?: number;
+      progressCallback?:
+        | ((current: number, total: number, currentFile: string) => void)
+        | null;
+    } = {}
+  ) {
     this.options = {
       contentDirectory:
         options.contentDirectory || './generated/collected-content',
@@ -239,7 +259,10 @@ export class CollectionModule {
   /**
    * Main collection entry point
    */
-  async collect(sourcesData: PipelineState, filters: Record<string, unknown> = {}) {
+  async collect(
+    sourcesData: PipelineState,
+    filters: Record<string, unknown> = {}
+  ) {
     logger.info('📥 Starting content collection process');
     this.stats.startCollection();
 
@@ -299,7 +322,10 @@ export class CollectionModule {
               `❌ Collection failed: ${source.url} - ${error.message}`
             );
           } else {
-            logger.error({ error }, `❌ Collection failed: ${source.url} - unknown error`);
+            logger.error(
+              { error },
+              `❌ Collection failed: ${source.url} - unknown error`
+            );
           }
         }
       }

@@ -2,7 +2,7 @@
  * @file Orchestration Command - Interactive pipeline execution panel
  *
  * This module provides a beautiful, interactive CLI interface for executing
- * the entire linkie-porting-intelligence pipeline step by step with user input.
+ * the entire porter-bridges pipeline step by step with user input.
  */
 
 import { promises as fs } from 'node:fs';
@@ -896,7 +896,7 @@ export class OrchestrationCommand {
     const bundling = new BundleModule({
       bundleDirectory: './generated/bundles',
       packageDirectory: './generated/packages',
-      bundleName: (options as any).bundleName || 'linkie-porting-intelligence',
+      bundleName: (options as any).bundleName || 'porter-bridges',
       includeMetadata: true,
       validateIntegrity: true,
       createArchive: true,

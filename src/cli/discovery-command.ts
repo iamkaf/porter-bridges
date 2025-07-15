@@ -14,7 +14,7 @@ import { logger } from '../utils/logger';
 
 export async function executeDiscoveryCommand(options: DiscoveryCLIOptions) {
   try {
-    logger.info('🚀 Linkie Porting Intelligence - Discovery Module');
+    logger.info('🚀 Porter Bridges - Discovery Module');
 
     // Initialize discovery module
     const discovery = new DiscoveryModule({

@@ -9,15 +9,15 @@ import type {
   DistillationCLIOptions,
   PipelineSourceType,
 } from '../types/pipeline';
-import type { PipelineState } from '../utils/pipeline-state-manager';
 import { CriticalError, PipelineValidator } from '../utils/CriticalError';
 import { logger } from '../utils/logger';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 
 export async function executeDistillationCommand(
   options: DistillationCLIOptions
 ) {
   try {
-    logger.info('🚀 Linkie Porting Intelligence - Distillation Module');
+    logger.info('🚀 Porter Bridges - Distillation Module');
 
     // Load collected sources
     let sourcesData: PipelineState;

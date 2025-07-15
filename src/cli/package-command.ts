@@ -12,7 +12,7 @@ import type { PipelineState } from '../utils/pipeline-state-manager';
 
 export async function executePackageCommand(options: PackageCLIOptions) {
   try {
-    logger.info('🚀 Linkie Porting Intelligence - Package Module');
+    logger.info('🚀 Porter Bridges - Package Module');
 
     // Load distilled sources
     let sourcesData: PipelineState;

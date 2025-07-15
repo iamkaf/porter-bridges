@@ -1,4 +1,4 @@
-# Linkie Porting Intelligence - Lean MVP
+# Porter Bridges - Lean MVP
 
 A focused utility for discovering, processing, and distilling Minecraft mod porting data using AI. This is the **lean MVP version** optimized for simplicity and core functionality.
 
@@ -18,22 +18,22 @@ A focused utility for discovering, processing, and distilling Minecraft mod port
 
 ```bash
 # Install minimal dependencies
-npm install
+bun install
 
 # Discover sources (RSS feeds, GitHub repos, etc.)
-node src/index.js discover
+bun src/index.ts discover
 
 # Collect content from discovered sources
-node src/index.js collect
+bun src/index.ts collect
 
 # Distill porting intelligence using AI
-node src/index.js distill
+bun src/index.ts distill
 
 # Package into versioned releases
-node src/index.js package
+bun src/index.ts package
 
 # Bundle for distribution
-node src/index.js bundle
+bun src/index.ts bundle
 ```
 
 ## Generated Output
@@ -75,13 +75,13 @@ All generated files are properly gitignored and organized in the `generated/` di
 
 ```bash
 # Full pipeline
-node src/index.js discover
-node src/index.js collect  
-node src/index.js distill
-node src/index.js package
-node src/index.js bundle
+bun src/index.ts discover
+bun src/index.ts collect
+bun src/index.ts distill
+bun src/index.ts package
+bun src/index.ts bundle
 
 # Direct URL processing
-node src/index.js collect --input custom-sources.json
-node src/index.js distill --content-dir ./my-content
+bun src/index.ts collect --input custom-sources.json
+bun src/index.ts distill --content-dir ./my-content
 ```
