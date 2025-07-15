@@ -202,7 +202,6 @@ export class GitHubReleasesDiscovery {
       return total + ((asset.download_count as number) || 0);
     }, 0);
   }
-  }
 
   /**
    * Generate a checksum for a URL

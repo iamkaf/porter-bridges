@@ -356,5 +356,6 @@ export class DiscoveryCore {
       }
     }
   }
+}
 
 export default DiscoveryCore;
