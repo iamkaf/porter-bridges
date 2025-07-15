@@ -9,7 +9,7 @@ import type {
   CollectionCLIOptions,
   PipelineSourceType,
 } from '../types/pipeline';
-import { CriticalError, PipelineValidator } from '../utils/CriticalError';
+import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
 import type { PipelineState } from '../utils/pipeline-state-manager';
 

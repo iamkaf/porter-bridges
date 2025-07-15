@@ -20,7 +20,7 @@ import path from 'node:path';
 import { request } from 'undici';
 import type { PipelineSourceType } from '../types/pipeline';
 import { logger } from '../utils/logger';
-import type { PipelineState } from '../utils/PipelineStateManager';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 import { CollectionStats } from './collection/collection-stats';
 
 /**

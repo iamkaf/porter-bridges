@@ -9,7 +9,7 @@ import type {
   DiscoveryCLIOptions,
   PipelineSourceType,
 } from '../types/pipeline';
-import { CriticalError, PipelineValidator } from '../utils/CriticalError';
+import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
 
 export async function executeDiscoveryCommand(options: DiscoveryCLIOptions) {
