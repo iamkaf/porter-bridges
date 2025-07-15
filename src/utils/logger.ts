@@ -38,6 +38,29 @@ const winstonLogger = winston.createLogger({
         winston.format.json()
       ),
     }),
+    new winston.transports.Http({
+      host: 'localhost',
+      port: 3000,
+      path: '/api/ingest',
+      ssl: false,
+      batch: true,
+      batchInterval: 5000,
+      level: 'debug',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ level, message, timestamp, ...meta }) => {
+          return JSON.stringify({
+            level,
+            message,
+            project: 'linkie',
+            source: 'porter-bridges',
+            timestamp,
+            tags: meta.tags || [],
+            customFields: meta
+          });
+        })
+      )
+    })
   ],
 });
 
