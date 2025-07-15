@@ -640,8 +640,7 @@ export class OrchestrationCommand {
   ): Promise<CollectionResult> {
     const collection = new CollectionModule({
       contentDirectory: './generated/collected-content',
-      maxConcurrentDownloads: Number.parseInt(options.maxConcurrent || '3', 10),
-      timeout: Number.parseInt(options.timeout || '30000', 10),
+      maxConcurrent: Number.parseInt(options.maxConcurrent || '3', 10),
     });
 
     const results = await collection.collect(sourcesData);
@@ -703,8 +702,7 @@ export class OrchestrationCommand {
   ): Promise<CollectionResult> {
     const collection = new CollectionModule({
       contentDirectory: './generated/collected-content',
-      maxConcurrentDownloads: Number.parseInt(options.maxConcurrent || '3', 10),
-      timeout: Number.parseInt(options.timeout || '30000', 10),
+      maxConcurrent: Number.parseInt(options.maxConcurrent || '3', 10),
       progressCallback: (
         current: number,
         total: number,
@@ -796,7 +794,7 @@ export class OrchestrationCommand {
       } else {
         logger.warn(
           '⚠️  Could not update existing distilled file status with unknown error:',
-          error
+          String(error)
         );
       }
     }
@@ -924,11 +922,12 @@ export class OrchestrationCommand {
    */
   _showCompletion() {
     const state = this.pipelineState.getState();
-    const _discoveredCount = state?.metadata.phase_counts.discovered || 0;
-    const _collectedCount = state?.metadata.phase_counts.collected || 0;
-    const _distilledCount = state?.metadata.phase_counts.distilled || 0;
-    const _packagedCount = state?.metadata.phase_counts.packaged || 0;
-    const _bundledCount = state?.metadata.phase_counts.bundled || 0;
+    // TODO: Implement completion summary display
+    // const _discoveredCount = state?.metadata.phase_counts.discovered || 0;
+    // const _collectedCount = state?.metadata.phase_counts.collected || 0;
+    // const _distilledCount = state?.metadata.phase_counts.distilled || 0;
+    // const _packagedCount = state?.metadata.phase_counts.packaged || 0;
+    // const _bundledCount = state?.metadata.phase_counts.bundled || 0;
 
     if (state?.context) {
       // Empty block, intentionally left blank

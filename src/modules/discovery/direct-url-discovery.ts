@@ -19,6 +19,9 @@ export interface IDirectUrlDiscoveryOptions {
 }
 
 export interface IUrlInfo {
+  type: string;
+  domain: string;
+  path: string;
   username?: string | undefined;
   gistId?: string | undefined;
   owner?: string | undefined;
@@ -98,7 +101,7 @@ export class DirectUrlDiscovery {
 
     let type = 'unknown';
 
-    const details: IUrlInfo = {};
+    const details: Partial<IUrlInfo> = {};
 
     if (url.includes('gist.github.com')) {
       type = 'github_gist';

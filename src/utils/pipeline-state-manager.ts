@@ -50,6 +50,7 @@ export class PipelineStateManager {
         total_sources: 0,
         phase_counts: {
           discovered: 0,
+          pending: 0,
           collected: 0,
           collecting: 0,
           distilling: 0,
@@ -88,6 +89,7 @@ export class PipelineStateManager {
         total_sources: 0,
         phase_counts: {
           discovered: 0,
+          pending: 0,
           collected: 0,
           collecting: 0,
           distilling: 0,
@@ -317,6 +319,7 @@ export class PipelineStateManager {
     // Count sources by phase
     const phaseCounts = {
       discovered: 0,
+      pending: 0,
       collected: 0,
       collecting: 0,
       distilling: 0,
@@ -389,6 +392,7 @@ export class PipelineStateManager {
         total_sources: Object.keys(state.sources || {}).length,
         phase_counts: {
           discovered: 0,
+          pending: 0,
           collected: 0,
           collecting: 0,
           distilling: 0,

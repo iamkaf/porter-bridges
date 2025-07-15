@@ -56,11 +56,11 @@ const winstonLogger = winston.createLogger({
             source: 'porter-bridges',
             timestamp,
             tags: meta.tags || [],
-            customFields: meta
+            customFields: meta,
           });
         })
-      )
-    })
+      ),
+    }),
   ],
 });
 

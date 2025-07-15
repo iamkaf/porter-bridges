@@ -47,7 +47,9 @@ export class GitHubReleasesDiscovery {
 
     try {
       // Fetch releases from GitHub API
-      const releases = await githubClient.get(sourceConfig.url).json<Record<string, unknown>[]>();
+      const releases = await githubClient
+        .get(sourceConfig.url)
+        .json<Record<string, unknown>[]>();
 
       // Limit to recent releases to avoid overwhelming the system
       const recentReleases = releases.slice(0, this.options.maxReleases);
@@ -85,7 +87,10 @@ export class GitHubReleasesDiscovery {
             `${sourceConfig.loader_type} Release ${release.tag_name}`,
           minecraft_version: version.minecraft_version,
           loader_version: version.loader_version,
-          content_preview: this._truncateText((release.body as string) || '', 200),
+          content_preview: this._truncateText(
+            (release.body as string) || '',
+            200
+          ),
           checksum: this._generateUrlChecksum(release.html_url as string),
           tags: this._generateTags(release, sourceConfig),
           relevance_score: relevanceScore,
@@ -94,7 +99,8 @@ export class GitHubReleasesDiscovery {
             release_tag: release.tag_name as string,
             published_at: release.published_at as string,
             is_prerelease: release.prerelease as boolean,
-            assets_count: (release.assets as unknown[] | undefined)?.length || 0,
+            assets_count:
+              (release.assets as unknown[] | undefined)?.length || 0,
             download_count: this._calculateDownloadCount(release),
           },
         });
@@ -152,7 +158,10 @@ export class GitHubReleasesDiscovery {
   /**
    * Generate relevant tags for release
    */
-  _generateTags(release: Record<string, unknown>, sourceConfig: ISourceConfig): string[] {
+  _generateTags(
+    release: Record<string, unknown>,
+    sourceConfig: ISourceConfig
+  ): string[] {
     const tags = ['changelog', sourceConfig.loader_type, 'release'];
 
     if (release.prerelease) {
@@ -175,9 +184,14 @@ export class GitHubReleasesDiscovery {
   /**
    * Calculate priority based on release characteristics
    */
-  _calculatePriority(release: Record<string, unknown>, relevanceScore: number): Priority {
+  _calculatePriority(
+    release: Record<string, unknown>,
+    relevanceScore: number
+  ): Priority {
     // Recent releases with high relevance get higher priority
-    const publishedDate = new Date((release.published_at as string) || Date.now());
+    const publishedDate = new Date(
+      (release.published_at as string) || Date.now()
+    );
     const daysSincePublished =
       (Date.now() - publishedDate.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -198,9 +212,12 @@ export class GitHubReleasesDiscovery {
       return 0;
     }
 
-    return (release.assets as unknown[]).reduce((total, asset: Record<string, unknown>) => {
-      return total + ((asset.download_count as number) || 0);
-    }, 0);
+    return (release.assets as unknown[]).reduce(
+      (total: number, asset: Record<string, unknown>) => {
+        return total + ((asset.download_count as number) || 0);
+      },
+      0
+    ) as number;
   }
 
   /**

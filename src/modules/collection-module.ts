@@ -192,7 +192,9 @@ class ContentDownloader {
         lastError = error;
 
         const errorInfo = {
-          code: (error instanceof Error && error.code) || 'unknown_error',
+          code:
+            (error instanceof Error && 'code' in error && String(error.code)) ||
+            'unknown_error',
           message: (error instanceof Error && error.message) || String(error),
           attempt,
           timestamp: new Date().toISOString(),
@@ -253,7 +255,7 @@ export class CollectionModule {
 
     this.filters = new CollectionFilters();
     this.stats = new CollectionStats();
-    this.downloader = new ContentDownloader(this.options);
+    this.downloader = new ContentDownloader();
   }
 
   /**

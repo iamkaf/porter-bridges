@@ -13,6 +13,7 @@ import { z } from 'zod';
  */
 export const PipelinePhase = z.enum([
   'discovered',
+  'pending',
   'collected',
   'collecting',
   'distilling',
@@ -115,16 +116,24 @@ export const PipelineSource = z
     // Core identification
     status: PipelinePhase,
     url: z.string().url(),
-    source_type: z.enum(['primer', 'blog_post', 'changelog', 'guide']),
-    checksum: z.string(),
+    source_type: z.enum([
+      'primer',
+      'blog_post',
+      'changelog',
+      'guide',
+      'documentation',
+      'local_document',
+    ]),
+    checksum: z.string().optional(),
+    _sourceKey: z.string().optional(),
 
     // Content metadata
-    title: z.string(),
+    title: z.string().optional(),
     minecraft_version: z.string().optional(),
     loader_type: z.enum(['vanilla', 'fabric', 'neoforge', 'forge']).optional(),
-    priority: z.enum(['high', 'medium', 'low']),
-    tags: z.array(z.string()),
-    relevance_score: z.number().min(0).max(1),
+    priority: z.enum(['high', 'medium', 'low', 'critical']).optional(),
+    tags: z.array(z.string()).optional(),
+    relevance_score: z.number().min(0).max(1).optional(),
 
     // Legacy fields (for backward compatibility)
     size_kb: z.number().min(0).optional(),

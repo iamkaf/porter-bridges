@@ -92,7 +92,10 @@ export class DiscoveryCore {
               'Failed to discover from source'
             );
           } else {
-            logger.error({ sourceId, error }, 'Failed to discover from source with unknown error');
+            logger.error(
+              { sourceId, error },
+              'Failed to discover from source with unknown error'
+            );
           }
           this.stats.incrementFailedDiscoveries();
           logger.warn(`✗ Failed to discover from ${sourceId}`);
@@ -111,7 +114,10 @@ export class DiscoveryCore {
         logger.error('💥 Discovery process failed');
         logger.error({ error: error.message }, 'Discovery process failed');
       } else {
-        logger.error({ error }, '💥 Discovery process failed with unknown error');
+        logger.error(
+          { error },
+          '💥 Discovery process failed with unknown error'
+        );
       }
       throw error;
     }
@@ -196,9 +202,7 @@ export class DiscoveryCore {
   /**
    * Get discovered sources by criteria
    */
-  getSourcesByCriteria(
-    criteria: Partial<Record<string, unknown>> = {}
-  ) {
+  getSourcesByCriteria(criteria: Partial<Record<string, unknown>> = {}) {
     const sources = Array.from(this.discoveredSources.values());
 
     return sources.filter((source) => {
@@ -300,7 +304,10 @@ export class DiscoveryCore {
           `❌ Failed to discover from GitHub releases ${sourceId}: ${error.message}`
         );
       } else {
-        logger.error({ error }, `❌ Failed to discover from GitHub releases ${sourceId}: unknown error`);
+        logger.error(
+          { error },
+          `❌ Failed to discover from GitHub releases ${sourceId}: unknown error`
+        );
       }
     }
   }
@@ -326,7 +333,10 @@ export class DiscoveryCore {
           `❌ Failed to discover from Maven repository ${sourceId}: ${error.message}`
         );
       } else {
-        logger.error({ error }, `❌ Failed to discover from Maven repository ${sourceId}: unknown error`);
+        logger.error(
+          { error },
+          `❌ Failed to discover from Maven repository ${sourceId}: unknown error`
+        );
       }
     }
   }
@@ -352,7 +362,10 @@ export class DiscoveryCore {
           `❌ Failed to discover from direct URL ${sourceId}: ${error.message}`
         );
       } else {
-        logger.error({ error }, `❌ Failed to discover from direct URL ${sourceId}: unknown error`);
+        logger.error(
+          { error },
+          `❌ Failed to discover from direct URL ${sourceId}: unknown error`
+        );
       }
     }
   }

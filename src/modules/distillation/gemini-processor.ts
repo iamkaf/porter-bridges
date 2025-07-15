@@ -308,7 +308,7 @@ export class GeminiProcessor {
         const result = {
           stdout,
           stderr,
-          exitCode: null,
+          exitCode: null as null,
           processingDuration,
           error: error.message,
         };

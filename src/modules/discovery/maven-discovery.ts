@@ -6,7 +6,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { LoaderType, SourceType } from '../../constants/enums';
+import type { LoaderType, Priority, SourceType } from '../../constants/enums';
 import { createHttpError, mavenClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
@@ -94,10 +94,7 @@ export class MavenDiscovery {
           });
 
           sources.push(sourceItem);
-        } catch (_error: unknown) {
-          // Skip individual version failures
-          continue;
-        }
+        } catch (_error: unknown) {}
       }
     } catch (error: unknown) {
       const httpError = createHttpError(error, sourceConfig.url);
@@ -142,7 +139,9 @@ export class MavenDiscovery {
       if (error instanceof Error) {
         throw new Error(`Failed to fetch Maven metadata: ${error.message}`);
       }
-      throw new Error(`Failed to fetch Maven metadata with unknown error: ${error}`);
+      throw new Error(
+        `Failed to fetch Maven metadata with unknown error: ${error}`
+      );
     }
   }
 
@@ -257,7 +256,10 @@ export class MavenDiscovery {
   /**
    * Extract version information from Maven version string
    */
-  _extractVersionInfo(version: string, loaderType: string): {
+  _extractVersionInfo(
+    version: string,
+    loaderType: string
+  ): {
     minecraft_version: string | null;
     loader_version: string;
   } {

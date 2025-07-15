@@ -11,22 +11,22 @@ import { createHttpError, githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
-import { SourceItemFactory, type ISourceItem } from './source-item-factory';
+import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
-// Simple retry utility with proper typing
-const _retry = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await fn();
-    } catch (error: unknown) {
-      if (i === retries - 1) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2 ** i * 1000));
-    }
-  }
-  throw new Error('Retry function should not reach here');
-};
+// Simple retry utility with proper typing (currently unused)
+// const _retry = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {
+//   for (let i = 0; i < retries; i++) {
+//     try {
+//       return await fn();
+//     } catch (error: unknown) {
+//       if (i === retries - 1) {
+//         throw error;
+//       }
+//       await new Promise((resolve) => setTimeout(resolve, 2 ** i * 1000));
+//     }
+//   }
+//   throw new Error('Retry function should not reach here');
+// };
 
 export interface IGitHubDiscoveryOptions {
   userAgent: string;
@@ -39,18 +39,11 @@ export interface IGitHubDiscoveryOptions {
  * GitHub discovery class
  */
 export class GitHubDiscovery {
-  private options: IGitHubDiscoveryOptions;
   private sourceItemFactory: SourceItemFactory;
   private contentAnalyzer: ContentAnalyzer;
 
-  constructor(options: Partial<IGitHubDiscoveryOptions> = {}) {
-    this.options = {
-      userAgent: 'porter-bridges/1.0.0',
-      timeout: 30_000,
-      retryAttempts: 3,
-      discoveryModeEnabled: true,
-      ...options,
-    };
+  constructor(_options: Partial<IGitHubDiscoveryOptions> = {}) {
+    // Options are currently unused but kept for future extensibility
 
     this.sourceItemFactory = new SourceItemFactory();
     this.contentAnalyzer = new ContentAnalyzer();

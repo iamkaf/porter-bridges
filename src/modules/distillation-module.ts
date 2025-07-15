@@ -17,6 +17,7 @@
 
 import { promises as fs } from 'node:fs';
 import { logger } from '../utils/logger';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 import { GeminiProcessor } from './distillation/gemini-processor';
 
 /**
@@ -317,14 +318,17 @@ export class DistillationModule {
     return breakdown;
   }
 
-  _createDistillationTasks(sourcesByType, sourcesData) {
+  _createDistillationTasks(
+    sourcesByType: Record<string, unknown[]>,
+    sourcesData: PipelineState
+  ) {
     const tasks = [];
 
     for (const [type, sources] of Object.entries(sourcesByType)) {
       for (const source of sources as any[]) {
         tasks.push({
           title: `${type}: ${source.title || source.url}`,
-          task: async (_ctx, task) => {
+          task: async (_ctx: unknown, task: unknown) => {
             try {
               await this.geminiProcessor.distillSingleSource(source, task);
               this.stats.incrementDistilled();

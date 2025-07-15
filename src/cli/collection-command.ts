@@ -68,8 +68,7 @@ export async function executeCollectionCommand(options: CollectionCLIOptions) {
     // Initialize collection module
     const collection = new CollectionModule({
       contentDirectory: options.contentDir,
-      maxConcurrentDownloads: Number.parseInt(options.maxConcurrent || '3', 10),
-      timeout: Number.parseInt(options.timeout ?? ('30000' as any), 10), // fuck off TS
+      maxConcurrent: Number.parseInt(options.maxConcurrent || '3', 10),
     });
 
     // Run collection

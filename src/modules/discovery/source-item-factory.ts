@@ -11,6 +11,7 @@ import { logger } from '../../utils/logger';
 export interface ISourceItem {
   status:
     | 'discovered'
+    | 'pending'
     | 'collected'
     | 'collecting'
     | 'distilling'
@@ -21,14 +22,20 @@ export interface ISourceItem {
     | 'bundling'
     | 'bundled';
   url: string;
-  source_type: 'primer' | 'blog_post' | 'changelog' | 'guide';
-  checksum: string;
-  title: string;
+  source_type:
+    | 'primer'
+    | 'blog_post'
+    | 'changelog'
+    | 'guide'
+    | 'documentation'
+    | 'local_document';
+  checksum?: string;
+  title?: string;
   minecraft_version?: string;
   loader_type?: 'vanilla' | 'fabric' | 'neoforge' | 'forge';
-  priority: 'high' | 'medium' | 'low';
-  tags: string[];
-  relevance_score: number;
+  priority?: 'high' | 'medium' | 'low' | 'critical';
+  tags?: string[];
+  relevance_score?: number;
   size_kb?: number;
   content_type?: string;
   loader_version?: string;
@@ -53,6 +60,7 @@ export interface ISourceItem {
         changelog_type: string;
       };
   id?: string;
+  _sourceKey?: string;
   content_length?: number;
   discovered_at?: string;
   file_size_bytes?: number;
@@ -94,7 +102,7 @@ export interface ISourceItem {
     message: string;
     timestamp: string;
     retry_count: number;
-    phase:
+    phase?:
       | 'discovered'
       | 'collected'
       | 'collecting'
@@ -138,9 +146,15 @@ export class SourceItemFactory {
       return SourceItemSchema.parse(sourceItem);
     } catch (error: unknown) {
       if (error instanceof Error) {
-        logger.warn(`⚠️  Schema validation failed for ${data.id}:`, error.message);
+        logger.warn(
+          `⚠️  Schema validation failed for ${data.id}:`,
+          error.message
+        );
       } else {
-        logger.warn({ error }, `⚠️  Schema validation failed for ${data.id}: unknown error`);
+        logger.warn(
+          { error },
+          `⚠️  Schema validation failed for ${data.id}: unknown error`
+        );
       }
       return sourceItem; // Return unvalidated for now, log the issue
     }
