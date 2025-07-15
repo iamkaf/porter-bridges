@@ -11,7 +11,7 @@ import { createHttpError, githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
-import { SourceItemFactory } from './source-item-factory';
+import { SourceItemFactory, type ISourceItem } from './source-item-factory';
 
 // Simple retry utility with proper typing
 const _retry = async <T>(fn: () => Promise<T>, retries = 3): Promise<T> => {

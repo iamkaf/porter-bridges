@@ -12,7 +12,7 @@ import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
 import { FeedParser } from './feed-parser';
 import type { ISourceConfig } from './source-configs';
-import { SourceItemFactory } from './source-item-factory';
+import { SourceItemFactory, type ISourceItem } from './source-item-factory';
 
 export interface IRSSDiscoveryOptions {
   userAgent: string;
