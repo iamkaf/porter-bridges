@@ -1,0 +1,56 @@
+{
+  "name": "linkie-porting-intelligence",
+  "version": "1.0.0",
+  "description": "A development utility for discovering, processing, and packaging Minecraft mod porting data.",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts orchestrate",
+    "orchestrate": "tsx src/index.ts orchestrate",
+    "run": "tsx src/index.ts run",
+    "discover": "tsx src/index.ts discover",
+    "collect": "tsx src/index.ts collect",
+    "distill": "tsx src/index.ts distill",
+    "package": "tsx src/index.ts package",
+    "bundle": "tsx src/index.ts bundle",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf generated/*",
+    "clean:full": "rm -rf generated/ && mkdir generated",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "minecraft",
+    "modding",
+    "porting",
+    "fabric",
+    "forge",
+    "neoforge"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "commander": "^11.0.0",
+    "ky": "^1.8.1",
+    "listr2": "^8.0.1",
+    "ora": "^8.0.1",
+    "remeda": "^2.25.0",
+    "undici": "^7.11.0",
+    "winston": "^3.17.0",
+    "zod": "^4.0.5"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/archiver": "^6.0.3",
+    "@types/node": "^24.0.13",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
