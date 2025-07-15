@@ -1,6 +1,6 @@
 /**
  * @file Centralized Type-Safe Enum Constants
- * 
+ *
  * This file provides compile-time type safety for all enum values used throughout
  * the application, eliminating string literal type mismatches and improving IntelliSense.
  */
@@ -8,7 +8,7 @@
 // Pipeline phase constants
 export const PIPELINE_PHASES = [
   'discovered',
-  'collected', 
+  'collected',
   'collecting',
   'distilling',
   'distilled',
@@ -16,70 +16,56 @@ export const PIPELINE_PHASES = [
   'packaging',
   'packaged',
   'bundling',
-  'bundled'
+  'bundled',
 ] as const;
 
-export type PipelinePhase = typeof PIPELINE_PHASES[number];
+export type PipelinePhase = (typeof PIPELINE_PHASES)[number];
 
 // Source type constants
 export const SOURCE_TYPES = [
   'primer',
-  'blog_post', 
+  'blog_post',
   'changelog',
-  'guide'
+  'guide',
 ] as const;
 
-export type SourceType = typeof SOURCE_TYPES[number];
+export type SourceType = (typeof SOURCE_TYPES)[number];
 
-// Loader type constants  
-export const LOADER_TYPES = [
-  'vanilla',
-  'fabric',
-  'neoforge', 
-  'forge'
-] as const;
+// Loader type constants
+export const LOADER_TYPES = ['vanilla', 'fabric', 'neoforge', 'forge'] as const;
 
-export type LoaderType = typeof LOADER_TYPES[number];
+export type LoaderType = (typeof LOADER_TYPES)[number];
 
 // Priority level constants
-export const PRIORITY_LEVELS = [
-  'high',
-  'medium',
-  'low'
-] as const;
+export const PRIORITY_LEVELS = ['high', 'medium', 'low'] as const;
 
-export type Priority = typeof PRIORITY_LEVELS[number];
+export type Priority = (typeof PRIORITY_LEVELS)[number];
 
 // Severity level constants
-export const SEVERITY_LEVELS = [
-  'low',
-  'medium', 
-  'high',
-  'critical'
-] as const;
+export const SEVERITY_LEVELS = ['low', 'medium', 'high', 'critical'] as const;
 
-export type SeverityLevel = typeof SEVERITY_LEVELS[number];
+export type SeverityLevel = (typeof SEVERITY_LEVELS)[number];
 
 // Status constants for SourceItemSchema compatibility
 export const SOURCE_STATUSES = [
   'discovered',
-  'pending', 
+  'pending',
   'collecting',
   'collected',
-  'failed'
+  'failed',
 ] as const;
 
-export type SourceStatus = typeof SOURCE_STATUSES[number];
+export type SourceStatus = (typeof SOURCE_STATUSES)[number];
 
 // API update types
 export const API_UPDATE_TYPES = [
   'new_api',
   'enhancement',
-  'deprecation', 
-  'bug_fix'
+  'deprecation',
+  'bug_fix',
 ] as const;
 
-export type ApiUpdateType = typeof API_UPDATE_TYPES[number];
+export type ApiUpdateType = (typeof API_UPDATE_TYPES)[number];
 
 // Distillation item statuses
 export const DISTILLATION_STATUSES = [
@@ -87,18 +73,15 @@ export const DISTILLATION_STATUSES = [
   'distilling',
   'distilled',
   'failed',
-  'validation_failed'
+  'validation_failed',
 ] as const;
 
-export type DistillationStatus = typeof DISTILLATION_STATUSES[number];
+export type DistillationStatus = (typeof DISTILLATION_STATUSES)[number];
 
 // Output format types
-export const OUTPUT_FORMATS = [
-  'json',
-  'yaml'
-] as const;
+export const OUTPUT_FORMATS = ['json', 'yaml'] as const;
 
-export type OutputFormat = typeof OUTPUT_FORMATS[number];
+export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
 
 // Helper functions for validation
 export const isValidPipelinePhase = (value: string): value is PipelinePhase => {
@@ -127,5 +110,5 @@ export const ENUM_MAPPINGS = {
   sourceStatuses: SOURCE_STATUSES,
   apiUpdateTypes: API_UPDATE_TYPES,
   distillationStatuses: DISTILLATION_STATUSES,
-  outputFormats: OUTPUT_FORMATS
+  outputFormats: OUTPUT_FORMATS,
 } as const;

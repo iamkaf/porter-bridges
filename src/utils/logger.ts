@@ -3,8 +3,8 @@
  * Maintains compatibility with existing code that passes objects
  */
 
+import path from 'node:path';
 import winston from 'winston';
-import path from 'path';
 
 const winstonLogger = winston.createLogger({
   level: 'info',
@@ -19,7 +19,7 @@ const winstonLogger = winston.createLogger({
       format: winston.format.combine(
         winston.format.colorize(),
         winston.format.simple()
-      )
+      ),
     }),
     // Daily rotating file transport
     new winston.transports.File({
@@ -27,7 +27,7 @@ const winstonLogger = winston.createLogger({
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json()
-      )
+      ),
     }),
     // Error-only file transport
     new winston.transports.File({
@@ -36,9 +36,9 @@ const winstonLogger = winston.createLogger({
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.json()
-      )
-    })
-  ]
+      ),
+    }),
+  ],
 });
 
 // Wrapper to maintain compatibility with existing code
@@ -53,7 +53,7 @@ const logger = {
       winstonLogger.info(message, metadata);
     }
   },
-  
+
   warn(message: string | object, metadata?: string | object) {
     if (typeof message === 'object' && typeof metadata === 'string') {
       winstonLogger.warn(metadata, message);
@@ -63,7 +63,7 @@ const logger = {
       winstonLogger.warn(message, metadata);
     }
   },
-  
+
   error(message: string | object, metadata?: string | object) {
     if (typeof message === 'object' && typeof metadata === 'string') {
       winstonLogger.error(metadata, message);
@@ -72,7 +72,7 @@ const logger = {
     } else {
       winstonLogger.error(message, metadata);
     }
-  }
+  },
 };
 
 export { logger };

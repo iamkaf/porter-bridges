@@ -1,6 +1,6 @@
 /**
  * @file HTTP Client Utilities
- * 
+ *
  * Centralized HTTP client configuration using ky for consistent
  * request handling, retry logic, and error management across all modules.
  */
@@ -13,12 +13,12 @@ const DEFAULT_OPTIONS: Options = {
     limit: 3,
     methods: ['get', 'head'],
     statusCodes: [408, 413, 429, 500, 502, 503, 504],
-    backoffLimit: 3000
+    backoffLimit: 3000,
   },
-  timeout: 30000,
+  timeout: 30_000,
   headers: {
-    'User-Agent': 'linkie-porting-intelligence/1.0.0'
-  }
+    'User-Agent': 'linkie-porting-intelligence/1.0.0',
+  },
 };
 
 /**
@@ -30,8 +30,8 @@ export function createHttpClient(options: Partial<Options> = {}): KyInstance {
     ...options,
     headers: {
       ...DEFAULT_OPTIONS.headers,
-      ...options.headers
-    }
+      ...options.headers,
+    },
   });
 }
 
@@ -45,9 +45,9 @@ export const httpClient = createHttpClient();
  */
 export const githubClient = createHttpClient({
   headers: {
-    'Accept': 'application/vnd.github.v3+json',
-    'User-Agent': 'linkie-porting-intelligence/1.0.0'
-  }
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'linkie-porting-intelligence/1.0.0',
+  },
 });
 
 /**
@@ -55,17 +55,17 @@ export const githubClient = createHttpClient({
  */
 export const mavenClient = createHttpClient({
   headers: {
-    'Accept': 'application/xml, text/xml'
-  }
+    Accept: 'application/xml, text/xml',
+  },
 });
 
 /**
- * RSS/XML feed client  
+ * RSS/XML feed client
  */
 export const rssClient = createHttpClient({
   headers: {
-    'Accept': 'application/rss+xml, application/xml, text/xml'
-  }
+    Accept: 'application/rss+xml, application/xml, text/xml',
+  },
 });
 
 /**
@@ -78,7 +78,10 @@ export async function fetchJson<T>(url: string, options?: Options): Promise<T> {
 /**
  * Type-safe text response helper
  */
-export async function fetchText(url: string, options?: Options): Promise<string> {
+export async function fetchText(
+  url: string,
+  options?: Options
+): Promise<string> {
   return httpClient.get(url, options).text();
 }
 

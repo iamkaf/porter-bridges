@@ -1,11 +1,11 @@
 import { Command } from 'commander';
+import { executeBundleCommand } from './cli/bundle-command';
+import { executeCollectionCommand } from './cli/collection-command';
+import { executeDiscoveryCommand } from './cli/discovery-command';
+import { executeDistillationCommand } from './cli/distillation-command';
+import { OrchestrationCommand } from './cli/orchestration-command';
+import { executePackageCommand } from './cli/package-command';
 import { logger } from './utils/logger';
-import { OrchestrationCommand } from './cli/OrchestrationCommand';
-import { executeDiscoveryCommand } from './cli/DiscoveryCommand';
-import { executeCollectionCommand } from './cli/CollectionCommand';
-import { executeDistillationCommand } from './cli/DistillationCommand';
-import { executePackageCommand } from './cli/PackageCommand';
-import { executeBundleCommand } from './cli/BundleCommand';
 
 const program = new Command();
 
@@ -20,16 +20,35 @@ program
 program
   .command('orchestrate')
   .alias('run')
-  .description('🎬 Interactive pipeline execution with beautiful step-by-step prompts')
-  .option('--cache-dir <path>', 'Cache directory for discovery data', './.discovery-cache')
+  .description(
+    '🎬 Interactive pipeline execution with beautiful step-by-step prompts'
+  )
+  .option(
+    '--cache-dir <path>',
+    'Cache directory for discovery data',
+    './.discovery-cache'
+  )
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--max-concurrent <num>', 'Maximum concurrent operations', '3')
   .option('--gemini-model <model>', 'Gemini model to use', 'gemini-2.5-flash')
-  .option('--bundle-name <name>', 'Bundle name prefix', 'linkie-porting-intelligence')
-  .option('--version <version>', 'Package version (auto-generated if not specified)')
+  .option(
+    '--bundle-name <name>',
+    'Bundle name prefix',
+    'linkie-porting-intelligence'
+  )
+  .option(
+    '--version <version>',
+    'Package version (auto-generated if not specified)'
+  )
   .option('--skip-discovery', 'Skip the discovery phase and use existing data')
-  .option('--skip-collection', 'Skip the collection phase and use existing data')
-  .option('--skip-distillation', 'Skip the distillation phase and use existing data')
+  .option(
+    '--skip-collection',
+    'Skip the collection phase and use existing data'
+  )
+  .option(
+    '--skip-distillation',
+    'Skip the distillation phase and use existing data'
+  )
   .action(async (options) => {
     const orchestration = new OrchestrationCommand();
     await orchestration.execute(options);
@@ -38,16 +57,28 @@ program
 // Individual command components (for advanced users)
 program
   .command('discover')
-  .description('Discover new versions of Minecraft, mod loaders, and other relevant tools.')
+  .description(
+    'Discover new versions of Minecraft, mod loaders, and other relevant tools.'
+  )
   .option(
     '-o, --output <path>',
     'Output file for discovered sources',
     './generated/discovered-sources.json'
   )
-  .option('--cache-dir <path>', 'Cache directory for discovery data', './.discovery-cache')
+  .option(
+    '--cache-dir <path>',
+    'Cache directory for discovery data',
+    './.discovery-cache'
+  )
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
-  .option('--filter-type <type>', 'Filter by source type (primer, blog_post, changelog)')
-  .option('--filter-loader <loader>', 'Filter by loader type (fabric, forge, neoforge)')
+  .option(
+    '--filter-type <type>',
+    'Filter by source type (primer, blog_post, changelog)'
+  )
+  .option(
+    '--filter-loader <loader>',
+    'Filter by loader type (fabric, forge, neoforge)'
+  )
   .option('--min-relevance <score>', 'Minimum relevance score (0-1)', '0.3')
   .action(executeDiscoveryCommand);
 
@@ -71,9 +102,18 @@ program
   )
   .option('--max-concurrent <num>', 'Maximum concurrent downloads', '5')
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
-  .option('--filter-type <type>', 'Filter by source type (primer, blog_post, changelog)')
-  .option('--filter-loader <loader>', 'Filter by loader type (fabric, forge, neoforge, vanilla)')
-  .option('--filter-priority <priority>', 'Filter by priority (low, medium, high, critical)')
+  .option(
+    '--filter-type <type>',
+    'Filter by source type (primer, blog_post, changelog)'
+  )
+  .option(
+    '--filter-loader <loader>',
+    'Filter by loader type (fabric, forge, neoforge, vanilla)'
+  )
+  .option(
+    '--filter-priority <priority>',
+    'Filter by priority (low, medium, high, critical)'
+  )
   .option('--min-relevance <score>', 'Minimum relevance score (0-1)', '0.3')
   .option('--include-retry', 'Include failed sources for retry')
   .option('--resume', 'Resume from previous collection state')
@@ -81,7 +121,9 @@ program
 
 program
   .command('distill')
-  .description('Process and transform raw data into a structured format using AI.')
+  .description(
+    'Process and transform raw data into a structured format using AI.'
+  )
   .option(
     '-i, --input <path>',
     'Input file with collected sources',
@@ -105,9 +147,18 @@ program
   .option('--gemini-model <model>', 'Gemini model to use', 'gemini-2.5-flash')
   .option('--max-concurrent <num>', 'Maximum concurrent distillations', '1')
   .option('--timeout <ms>', 'Processing timeout in milliseconds', '600000')
-  .option('--filter-type <type>', 'Filter by source type (primer, blog_post, changelog)')
-  .option('--filter-loader <loader>', 'Filter by loader type (fabric, forge, neoforge, vanilla)')
-  .option('--filter-priority <priority>', 'Filter by priority (low, medium, high, critical)')
+  .option(
+    '--filter-type <type>',
+    'Filter by source type (primer, blog_post, changelog)'
+  )
+  .option(
+    '--filter-loader <loader>',
+    'Filter by loader type (fabric, forge, neoforge, vanilla)'
+  )
+  .option(
+    '--filter-priority <priority>',
+    'Filter by priority (low, medium, high, critical)'
+  )
   .option('--min-relevance <score>', 'Minimum relevance score (0-1)', '0.3')
   .option('--include-retry', 'Include failed sources for retry')
   .option('--resume', 'Resume from previous distillation state')
@@ -126,13 +177,20 @@ program
     'Output file for package metadata',
     './generated/package-results.json'
   )
-  .option('--package-dir <path>', 'Directory to save packaged content', './generated/packages')
+  .option(
+    '--package-dir <path>',
+    'Directory to save packaged content',
+    './generated/packages'
+  )
   .option(
     '--distilled-dir <path>',
     'Directory containing distilled content',
     './generated/distilled-content'
   )
-  .option('--pkg-version <version>', 'Package version (auto-generated if not specified)')
+  .option(
+    '--pkg-version <version>',
+    'Package version (auto-generated if not specified)'
+  )
   .option('--no-metadata', 'Skip package metadata generation')
   .option('--no-checksums', 'Skip integrity checksum generation')
   .action(executePackageCommand);
@@ -145,9 +203,21 @@ program
     'Output file for bundle metadata',
     './generated/bundle-results.json'
   )
-  .option('--bundle-dir <path>', 'Directory to save bundled content', './generated/bundles')
-  .option('--package-dir <path>', 'Directory containing packages', './generated/packages')
-  .option('--bundle-name <name>', 'Bundle name prefix', 'linkie-porting-intelligence')
+  .option(
+    '--bundle-dir <path>',
+    'Directory to save bundled content',
+    './generated/bundles'
+  )
+  .option(
+    '--package-dir <path>',
+    'Directory containing packages',
+    './generated/packages'
+  )
+  .option(
+    '--bundle-name <name>',
+    'Bundle name prefix',
+    'linkie-porting-intelligence'
+  )
   .option('--no-metadata', 'Skip bundle metadata generation')
   .option('--no-checksums', 'Skip integrity checksum generation')
   .option('--no-archive', 'Skip distribution archive creation')

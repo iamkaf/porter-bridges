@@ -2,8 +2,13 @@
  * @file Pipeline Types - TypeScript types inferred from Zod schemas
  */
 
-import { z } from 'zod';
-import { PipelineStateSchema, PipelineSource, PipelinePhase, PipelineContext } from '../schemas/PipelineStateSchema';
+import type { z } from 'zod';
+import type {
+  PipelineContext,
+  PipelinePhase,
+  PipelineSource,
+  PipelineStateSchema,
+} from '../schemas/pipeline-state-schema';
 
 // Infer TypeScript types from Zod schemas
 export type PipelineState = z.infer<typeof PipelineStateSchema>;
@@ -87,7 +92,11 @@ export interface OrchestrationCLIOptions {
 }
 
 // Progress callback type
-export type ProgressCallback = (current: number, total: number, currentFile: string) => void;
+export type ProgressCallback = (
+  current: number,
+  total: number,
+  currentFile: string
+) => void;
 
 // Module result types
 export interface DiscoveryResult {
