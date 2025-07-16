@@ -150,24 +150,43 @@ export class GeminiProcessor {
       // Check if Gemini created the output file
       let distilledContent;
       let parseError: Error | null = null;
+      let jsonWasHealed = false;
       try {
         await fs.access(absoluteOutputPath);
         const fileContent = await fs.readFile(absoluteOutputPath, 'utf-8');
 
         task.output = 'Parsing generated file...';
 
-        // Parse and validate the file content
+        // Parse and validate the file content (includes JSON healing)
         distilledContent =
           await this.responseParser.parseFileContent(fileContent);
+          
+        // Check if the file content was different from what we got back
+        // (i.e., JSON healing was applied)
+        try {
+          JSON.parse(fileContent);
+        } catch {
+          jsonWasHealed = true;
+          // Overwrite the file with the healed JSON
+          await fs.writeFile(
+            absoluteOutputPath, 
+            JSON.stringify(distilledContent, null, 2), 
+            'utf-8'
+          );
+          logger.info(
+            `💊 Healed JSON written back to: ${absoluteOutputPath}`
+          );
+        }
       } catch (error: any) {
         parseError = new Error(
           `Failed to read or parse generated file: ${error.message}`
         );
 
-        // If JSON parsing failed, move the bad file to a trash directory
+        // If JSON parsing failed even after healing attempt, move the bad file to trash
         if (
           error.message.includes('parse JSON') ||
-          error.message.includes('JSON')
+          error.message.includes('JSON') ||
+          error.message.includes('Healing attempt also failed')
         ) {
           try {
             const trashDir = path.join(
@@ -181,7 +200,7 @@ export class GeminiProcessor {
             );
             await fs.rename(absoluteOutputPath, trashPath);
             logger.warn(
-              `🗑️  Invalid JSON moved to trash for review: ${trashPath}`
+              `🗑️  Invalid JSON moved to trash for review (healing failed): ${trashPath}`
             );
           } catch (moveError: any) {
             logger.warn(
@@ -222,6 +241,7 @@ export class GeminiProcessor {
           confidence_score:
             distilledContent.quality_metrics?.accuracy_confidence || 0.8,
           validation_passed: true,
+          json_was_healed: jsonWasHealed,
         },
       };
 
