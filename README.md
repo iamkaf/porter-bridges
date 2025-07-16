@@ -4,11 +4,15 @@
 
 Just like Sam Porter Bridges delivers packages to reconnect isolated communities in Death Stranding, I built Porter Bridges to collect and deliver porting information that helps reconnect the Minecraft modding community across different game versions.
 
+![Divider](./docs/assets/divider.png)
+
 ## What This Is
 
 Porter Bridges is a comprehensive development utility that discovers, processes, and packages Minecraft mod porting data from across the ecosystem. Think of it as an automated courier service for porting intelligence, I gather breaking changes, API updates, and migration guides from various sources (GitHub repositories, RSS feeds, blog posts) and process them using AI into structured, distributable **Bridge Bundles (BB)**.
 
 These Bridge Bundles serve as literal bridges that mod developers can use to cross the gap between Minecraft versions, just like the infrastructure Sam builds to connect isolated settlements.
+
+![Divider](./docs/assets/divider.png)
 
 ## How It Works
 
@@ -19,6 +23,8 @@ The system operates as a 5-phase pipeline, each phase building on the last:
 3. **🧪 Distillation** — Uses AI (Gemini) to process content into structured intelligence
 4. **📦 Packaging** — Creates versioned data packages with integrity validation
 5. **🌉 Bundling** — Generates compressed Bridge Bundles for distribution
+
+![Divider](./docs/assets/divider.png)
 
 ## Quick Start
 
@@ -41,9 +47,13 @@ bun run package    # Create versioned packages
 bun run bundle     # Generate Bridge Bundles
 ```
 
+![Divider](./docs/assets/divider.png)
+
 ## Getting Bridge Bundles
 
 Pre-built Bridge Bundles are available for download from the [GitHub Releases page](https://github.com/iamkaf/porter-bridges/releases). These contain processed porting intelligence for major Minecraft version transitions, ready to use in your development workflow.
+
+![Divider](./docs/assets/divider.png)
 
 ## Development
 
@@ -63,9 +73,13 @@ bun run format      # Code formatting
 bun run clean       # Clean generated files (preserves distilled-content)
 ```
 
+![Divider](./docs/assets/divider.png)
+
 ## The AI Processing System
 
 The distillation phase uses Gemini CLI with a comprehensive JSON healing system that can automatically repair malformed AI output using multiple repair strategies. This ensures maximum reliability when processing large volumes of content.
+
+![Divider](./docs/assets/divider.png)
 
 ## Why "Porter Bridges"?
 
@@ -73,6 +87,6 @@ The name comes from Death Stranding's Sam Porter Bridges, who delivers packages 
 
 In Death Stranding, each package delivery strengthens the network that connects everyone. Similarly, each Bridge Bundle I create helps strengthen the connections that keep the modding community thriving across Minecraft's evolution.
 
----
+![Divider](./docs/assets/divider.png)
 
 *Keep on keeping on, and happy modding!*
