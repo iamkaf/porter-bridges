@@ -240,6 +240,30 @@ export class DistillationModule {
   }
 
   /**
+   * Update existing distilled status by scanning for existing files
+   * This method only scans and updates status without running distillation
+   */
+  async updateExistingDistilledStatus(sourcesData: any) {
+    try {
+      // Ensure output directory exists
+      await fs.mkdir(this.options.outputDirectory, { recursive: true });
+
+      // Filter sources to update existing distilled status
+      const filterResult = await this.filters.filterSources(sourcesData, {}, this.options.outputDirectory);
+      
+      logger.info(`✅ Skipped ${filterResult.skippedCount} already distilled sources (found existing files in output directory)`);
+      
+      return {
+        skippedCount: filterResult.skippedCount,
+        sources: filterResult.sources
+      };
+    } catch (error: unknown) {
+      logger.error('Failed to update existing distilled status:', error instanceof Error ? error.message : String(error));
+      throw error;
+    }
+  }
+
+  /**
    * Main distillation entry point
    */
   async distill(sourcesData: any, filters: Record<string, any> = {}) {

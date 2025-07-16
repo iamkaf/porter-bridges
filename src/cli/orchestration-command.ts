@@ -316,52 +316,8 @@ export class OrchestrationCommand {
           },
         },
         {
-          title: options.skipDistillation
-            ? '🧪 Step 3: Distillation - Skipped (using existing data)'
-            : '🧪 Step 3: Distillation - AI processing',
+          title: '🧪 Step 3: Distillation - AI processing',
           task: (_ctx, task) => {
-            if (options.skipDistillation) {
-              return task.newListr(
-                [
-                  {
-                    title: 'Loading existing distillation data',
-                    task: async (_subCtx, subTask) => {
-                      subTask.output = 'Reading pipeline state...';
-                      try {
-                        const state = this.pipelineState.getState();
-                        if (!state || state.metadata.total_sources === 0) {
-                          throw new Error(
-                            'No existing sources found in pipeline state'
-                          );
-                        }
-
-                        const distilledCount =
-                          state.metadata.phase_counts.distilled || 0;
-                        if (distilledCount === 0) {
-                          throw new Error(
-                            'No distilled sources found. Run without --skip-distillation first.'
-                          );
-                        }
-
-                        subTask.title = `Loaded ${distilledCount} distilled sources`;
-                        task.title = `🧪 Distillation Skipped - Using ${distilledCount} existing sources`;
-                        return { sources: state.sources };
-                      } catch (error: unknown) {
-                        if (error instanceof Error) {
-                          throw new Error(
-                            `Failed to load existing distillation data: ${error.message}`
-                          );
-                        }
-                        throw new Error(
-                          `Failed to load existing distillation data with unknown error: ${error}`
-                        );
-                      }
-                    },
-                  },
-                ],
-                { concurrent: false }
-              );
-            }
             return task.newListr(
               [
                 {
@@ -373,8 +329,72 @@ export class OrchestrationCommand {
                   },
                 },
                 {
-                  title: 'Process all sources with AI',
+                  title: 'Scan for existing distilled files',
                   task: async (_subCtx, subTask) => {
+                    subTask.output = 'Checking for existing distilled content...';
+                    
+                    // Initialize distillation module to scan for existing files
+                    const distillation = new DistillationModule({
+                      contentDirectory: './generated/collected-content',
+                      outputDirectory: './generated/distilled-content',
+                      geminiModel: options.geminiModel || 'gemini-2.5-flash',
+                      maxConcurrentDistillations: 1,
+                      timeout: Number.parseInt(options.distillTimeout || '600000', 10),
+                    });
+                    
+                    const state = this.pipelineState.getState();
+                    
+                    // Use the distillation module to scan for existing files and update statuses
+                    await distillation.updateExistingDistilledStatus(state);
+                    
+                    // Update the pipeline state manager with the updated sources
+                    for (const [sourceKey, source] of Object.entries(state.sources || {})) {
+                      this.pipelineState.updateSource(sourceKey, source);
+                    }
+                    await this.pipelineState.saveState();
+                    
+                    const updatedState = this.pipelineState.getState();
+                    const distilledCount = updatedState.metadata.phase_counts.distilled || 0;
+                    
+                    subTask.title = `Found ${distilledCount} existing distilled files`;
+                    return { distilledCount };
+                  },
+                },
+                {
+                  title: 'Check if distillation can be skipped',
+                  task: async (ctx, subTask) => {
+                    const { distilledCount } = ctx;
+                    
+                    if (options.skipDistillation) {
+                      if (distilledCount === 0) {
+                        throw new Error(
+                          'No distilled sources found. Run without --skip-distillation first.'
+                        );
+                      }
+                      
+                      subTask.title = `Skipping distillation - Using ${distilledCount} existing sources`;
+                      task.title = `🧪 Distillation Skipped - Using ${distilledCount} existing sources`;
+                      
+                      // Skip the actual processing step
+                      return { skipProcessing: true, distilledCount };
+                    }
+                    
+                    subTask.title = `Proceeding with distillation for remaining sources`;
+                    return { skipProcessing: false, distilledCount };
+                  },
+                },
+                {
+                  title: 'Process all sources with AI',
+                  task: async (ctx, subTask) => {
+                    const { skipProcessing, distilledCount } = ctx;
+                    
+                    // If we're skipping processing, just return the current state
+                    if (skipProcessing) {
+                      const state = this.pipelineState.getState();
+                      subTask.title = `Skipped processing - Using ${distilledCount} existing distilled sources`;
+                      return { sources: state.sources };
+                    }
+
                     const state = this.pipelineState.getState();
                     const sources = Object.values(state.sources || {}).filter(
                       (s) => s.status === 'collected'
@@ -410,11 +430,11 @@ export class OrchestrationCommand {
                     );
                     await this.pipelineState.saveState();
 
-                    const distilledCount = Object.values(
+                    const finalDistilledCount = Object.values(
                       result.sources || {}
                     ).filter((s) => s.status === 'distilled').length;
-                    subTask.title = `Distillation Complete - Processed ${distilledCount}/${totalSources} sources`;
-                    task.title = `🧪 Distillation Complete - Processed ${distilledCount} sources`;
+                    subTask.title = `Distillation Complete - Processed ${finalDistilledCount}/${totalSources} sources`;
+                    task.title = `🧪 Distillation Complete - Processed ${finalDistilledCount} sources`;
                     return result;
                   },
                 },
