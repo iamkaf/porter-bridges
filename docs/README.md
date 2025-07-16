@@ -34,6 +34,9 @@ bun src/index.ts package
 
 # Bundle for distribution
 bun src/index.ts bundle
+
+# Orchestrate the entire pipeline interactively
+bun src/index.ts orchestrate --distill-timeout 600000
 ```
 
 ## Generated Output

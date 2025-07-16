@@ -670,7 +670,7 @@ export class OrchestrationCommand {
       outputDirectory: './generated/distilled-content',
       geminiModel: options.geminiModel || 'gemini-2.5-flash',
       maxConcurrentDistillations: 1,
-      timeout: 600_000,
+      timeout: Number.parseInt(options.distillTimeout || '600000', 10),
     });
 
     const results = await distillation.distill(sourcesData);
@@ -813,7 +813,7 @@ export class OrchestrationCommand {
       outputDirectory: './generated/distilled-content',
       geminiModel: options.geminiModel || 'gemini-2.5-flash',
       maxConcurrentDistillations: 1,
-      timeout: Number.parseInt(options.timeout || '600000', 10),
+      timeout: Number.parseInt(options.distillTimeout || '600000', 10),
       progressCallback: (
         current: number,
         total: number,

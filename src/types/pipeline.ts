@@ -86,6 +86,7 @@ export interface OrchestrationCLIOptions {
   skipDistillation?: boolean;
   cacheDir?: string;
   timeout?: string;
+  distillTimeout?: string;
   maxConcurrent?: string;
   geminiModel?: string;
   version?: string;
