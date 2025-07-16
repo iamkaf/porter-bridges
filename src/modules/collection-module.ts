@@ -19,6 +19,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { request } from 'undici';
 import type { PipelineSourceType } from '../types/pipeline';
+import { generateCollectedContentFilename } from '../utils/filename-utils';
 import { logger } from '../utils/logger';
 import type { PipelineState } from '../utils/pipeline-state-manager';
 import { CollectionStats } from './collection/collection-stats';
@@ -332,7 +333,7 @@ export class CollectionModule {
           const result = await this.downloader.collectSourceWithRetry(source);
 
           // Save content to file
-          const fileName = this._generateFileName(source.url);
+          const fileName = generateCollectedContentFilename(source.url, source.source_type);
           const filePath = path.join(this.options.contentDirectory, fileName);
           await fs.writeFile(filePath, result.content, 'utf8');
 
@@ -393,14 +394,8 @@ export class CollectionModule {
   // Private helper methods
 
   _generateFileName(url: string): string {
-    // Convert URL to safe filename
-    const cleaned = url
-      .replace(/^https?:\/\//, '')
-      .replace(/[^\w\-_.~]/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
-
-    return `${cleaned}.html`;
+    // This method is deprecated - use generateCollectedContentFilename from filename-utils instead
+    return generateCollectedContentFilename(url);
   }
 
   _logSummary() {

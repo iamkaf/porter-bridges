@@ -10,6 +10,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { LoaderType, Priority, SourceType } from '../../constants/enums';
 import { createHttpError, githubClient } from '../../utils/http';
+import { generateCollectedContentFilename } from '../../utils/filename-utils';
 import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
@@ -258,22 +259,20 @@ export class GitHubReleasesDiscovery {
   }
 
   /**
-   * Save API content to file with same naming convention as collection module
+   * Save API content to file with standardized naming convention
    */
   async _saveApiContent(url: string, content: string): Promise<void> {
     try {
       // Ensure content directory exists
       await fs.mkdir(this.options.contentDirectory, { recursive: true });
 
-      // Generate filename using same logic as collection module
-      const fileName = this._generateFileName(url);
+      // Generate filename using standardized logic
+      const fileName = generateCollectedContentFilename(url, 'changelog');
       const filePath = path.join(this.options.contentDirectory, fileName);
 
-      // Save as markdown file instead of HTML since it's clean content
-      const mdFilePath = filePath.replace('.html', '.md');
-      await fs.writeFile(mdFilePath, content, 'utf8');
+      await fs.writeFile(filePath, content, 'utf8');
 
-      logger.debug(`Saved GitHub API content to ${mdFilePath}`);
+      logger.debug(`Saved GitHub API content to ${filePath}`);
     } catch (error: unknown) {
       logger.error(
         { error: error instanceof Error ? error.message : String(error) },

@@ -36,9 +36,8 @@ bun run package       # Phase 4: Packaging
 bun run bundle        # Phase 5: Bundling
 
 # Development commands
-bun run build         # TypeScript compilation
 bun run typecheck     # Type checking without emit
-bun run clean         # Clean generated/ directory
+bun run clean         # Clean generated/ directory (preserves distilled-content)
 bun run lint          # Code linting
 bun run format        # Code formatting
 ```

@@ -8,6 +8,7 @@
 import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { generateSafeFilename, generateRawContentFilename } from '../../utils/filename-utils';
 import { logger } from '../../utils/logger';
 
 export interface IContentProcessResult {
@@ -91,27 +92,24 @@ export class ContentProcessor {
       }
 
       // Copy raw content to /raw/ directory
-      const rawFileName = this.generateRawFileName(source);
+      const rawFileName = generateRawContentFilename(source);
       const rawFilePath = path.join(rawPath, rawFileName);
 
-      // Read and copy original collected content using the same filename logic as CollectionModule
-      const collectedFileName = this.generateCollectedContentFileName(
-        source.url
-      );
-      const collectedPath = path.join(
-        this.options.distilledDirectory,
-        '..',
-        'collected-content',
-        collectedFileName
-      );
-
-      try {
-        await fs.access(collectedPath);
-        await fs.copyFile(collectedPath, rawFilePath);
-        logger.info(`📄 Copied raw content: ${rawFileName}`);
-      } catch (error: any) {
+      // Find and copy original collected content with fallback extensions
+      const collectedPath = await this.findCollectedContentFile(source.url);
+      
+      if (collectedPath) {
+        try {
+          await fs.copyFile(collectedPath, rawFilePath);
+          logger.info(`📄 Copied raw content: ${rawFileName} (from ${path.basename(collectedPath)})`);
+        } catch (error: any) {
+          logger.warn(
+            `⚠️  Could not copy raw content for ${source.url}: ${error.message}`
+          );
+        }
+      } else {
         logger.warn(
-          `⚠️  Could not copy raw content for ${source.url}: ${error.message}`
+          `⚠️  Could not find collected content for ${source.url} (tried .html and .md extensions)`
         );
       }
 
@@ -128,15 +126,21 @@ export class ContentProcessor {
           .digest('hex');
       } else {
         // For skipped sources, use collected content for stats
-        try {
-          fileStats = await fs.stat(collectedPath);
-          const collectedContent = await fs.readFile(collectedPath, 'utf-8');
-          contentChecksum = crypto
-            .createHash('sha256')
-            .update(collectedContent)
-            .digest('hex');
-        } catch (error) {
-          // Use defaults if collected content is not available
+        if (collectedPath) {
+          try {
+            fileStats = await fs.stat(collectedPath);
+            const collectedContent = await fs.readFile(collectedPath, 'utf-8');
+            contentChecksum = crypto
+              .createHash('sha256')
+              .update(collectedContent)
+              .digest('hex');
+          } catch (error) {
+            // Use defaults if collected content is not available
+            fileStats = { size: 0 };
+            contentChecksum = source.checksum || '';
+          }
+        } else {
+          // Use defaults if no collected content found
           fileStats = { size: 0 };
           contentChecksum = source.checksum || '';
         }
@@ -189,24 +193,44 @@ export class ContentProcessor {
   }
 
   /**
+   * Try to find collected content file with fallback extensions and URL encoding variants
+   */
+  async findCollectedContentFile(url: string): Promise<string | null> {
+    const collectedDir = path.join(this.options.distilledDirectory, '..', 'collected-content');
+    
+    // Generate both decoded and encoded versions of the filename
+    const decodedBaseName = generateSafeFilename(url);
+    const encodedBaseName = url
+      .replace(/^https?:\/\//, '')
+      .replace(/[^\w\-_.~]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+    
+    const possibleExtensions = ['.html', '.md', '.txt'];
+    const possibleBaseNames = [decodedBaseName, encodedBaseName];
+    
+    // Try all combinations of base names and extensions
+    for (const baseName of possibleBaseNames) {
+      for (const ext of possibleExtensions) {
+        const filePath = path.join(collectedDir, `${baseName}${ext}`);
+        try {
+          await fs.access(filePath);
+          return filePath;
+        } catch {
+          // Continue to next combination
+        }
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Generate raw filename for /raw/ directory
+   * @deprecated Use generateRawContentFilename from filename-utils instead
    */
   generateRawFileName(source: any): string {
-    const type = source.source_type || 'unknown';
-    const loaderType = source.loader_type || 'unknown';
-    const version = source.minecraft_version || 'unknown';
-
-    // Determine file extension based on source type
-    let extension: string;
-    if (source.source_type === 'primer') {
-      extension = 'md';
-    } else if (source.source_type === 'blog_post') {
-      extension = 'html';
-    } else {
-      extension = 'txt';
-    }
-
-    return `${loaderType}-${type}-${version}.${extension}`;
+    return generateRawContentFilename(source);
   }
 
   /**

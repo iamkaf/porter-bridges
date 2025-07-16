@@ -25,7 +25,10 @@ The system operates as a 5-phase pipeline, each phase building on the last:
 The easiest way to use Porter Bridges is through the interactive orchestration command:
 
 ```bash
-bun run orchestrate
+bun run orchestrate                    # Full interactive pipeline
+bun run orchestrate --skip-discovery  # Skip discovery phase
+bun run orchestrate --skip-collection # Skip collection phase
+bun run orchestrate --skip-distillation # Skip distillation phase
 ```
 
 This launches a beautiful step-by-step interface that guides you through the entire pipeline. You can also run individual phases:
@@ -54,11 +57,10 @@ bun install
 bun run orchestrate
 
 # Individual development commands
-bun run build       # TypeScript compilation
 bun run typecheck   # Type checking
 bun run lint        # Code linting
 bun run format      # Code formatting
-bun run clean       # Clean generated files
+bun run clean       # Clean generated files (preserves distilled-content)
 ```
 
 ## The AI Processing System
