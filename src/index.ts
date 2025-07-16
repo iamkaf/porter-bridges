@@ -36,7 +36,7 @@ program
     'Processing timeout for distillation',
     '600000'
   )
-  .option('--bundle-name <name>', 'Bundle name prefix', 'porter-bridges')
+  .option('--bundle-name <name>', 'Bridge Bundle name prefix', 'porter-bridges')
   .option(
     '--version <version>',
     'Package version (auto-generated if not specified)'
@@ -198,15 +198,15 @@ program
 
 program
   .command('bundle')
-  .description('Bundle packaged content into distributable archives.')
+  .description('Create distributable Bridge Bundles from packaged content.')
   .option(
     '-o, --output <path>',
-    'Output file for bundle metadata',
+    'Output file for Bridge Bundle metadata',
     './generated/bundle-results.json'
   )
   .option(
     '--bundle-dir <path>',
-    'Directory to save bundled content',
+    'Directory to save Bridge Bundle content',
     './generated/bundles'
   )
   .option(
@@ -214,8 +214,8 @@ program
     'Directory containing packages',
     './generated/packages'
   )
-  .option('--bundle-name <name>', 'Bundle name prefix', 'porter-bridges')
-  .option('--no-metadata', 'Skip bundle metadata generation')
+  .option('--bundle-name <name>', 'Bridge Bundle name prefix', 'porter-bridges')
+  .option('--no-metadata', 'Skip Bridge Bundle metadata generation')
   .option('--no-checksums', 'Skip integrity checksum generation')
   .option('--no-archive', 'Skip distribution archive creation')
   .action(executeBundleCommand);

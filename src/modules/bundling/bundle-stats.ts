@@ -1,7 +1,7 @@
 /**
- * @file Bundle Stats - Statistics tracking for bundling operations
+ * @file Bundle Stats - Statistics tracking for Bridge Bundle creation operations
  *
- * This module tracks bundling statistics including timing, success rates,
+ * This module tracks Bridge Bundle creation statistics including timing, success rates,
  * file counts, and bundle size metrics for the bundling phase of the pipeline.
  */
 
@@ -26,7 +26,7 @@ export interface IBundleSummary {
 }
 
 /**
- * Statistics tracking for bundling operations
+ * Statistics tracking for Bridge Bundle creation operations
  */
 export class BundleStats {
   stats: IBundleStats;

@@ -1,13 +1,13 @@
 /**
- * @file Bundle Module - Creates distributable bundles from packaged content
+ * @file Bundle Module - Creates distributable Bridge Bundles from packaged content
  *
  * This module handles the final phase of the pipeline - bundling packaged intelligence
- * into single, distributable archives with compression, validation, and distribution metadata.
+ * into single, distributable Bridge Bundles with compression, validation, and distribution metadata.
  *
  * Key responsibilities:
- * - Aggregate multiple package versions into single bundle
+ * - Aggregate multiple package versions into single Bridge Bundle
  * - Create compressed archives for distribution
- * - Generate bundle manifests and distribution metadata
+ * - Generate Bridge Bundle manifests and distribution metadata
  * - Support incremental bundling and updates
  * - Track bundling statistics and file optimization
  */
@@ -53,7 +53,7 @@ export class BundleModule {
    * Main bundling entry point
    */
   async bundle(options: Record<string, any> = {}) {
-    logger.info('📦 Starting bundling process');
+    logger.info('📦 Starting Bridge Bundle creation process');
     this.stats.startBundling();
 
     try {
@@ -65,26 +65,26 @@ export class BundleModule {
       this.stats.setTotalPackages(availablePackages.length);
 
       if (availablePackages.length === 0) {
-        logger.warn('⚠️  No packages found for bundling');
+        logger.warn('⚠️  No packages found for Bridge Bundle creation');
         this.stats.endBundling();
         return this._buildResults(options);
       }
 
-      logger.info('📋 Found packages to bundle', {
+      logger.info('📋 Found packages to include in Bridge Bundle', {
         count: availablePackages.length,
       });
 
-      // Create bundle structure
+      // Create Bridge Bundle structure
       const bundleName = `${this.options.bundleName}-${this._generateTimestamp()}`;
       const bundlePath = path.join(this.options.bundleDirectory, bundleName);
       await fs.mkdir(bundlePath, { recursive: true });
 
-      // Bundle packages
+      // Bundle packages into Bridge Bundle
       const bundledData: Record<string, any> = {};
 
       for (const packageInfo of availablePackages) {
         try {
-          logger.info(`📦 Bundling package: ${packageInfo.version}`);
+          logger.info(`📦 Adding package to Bridge Bundle: ${packageInfo.version}`);
 
           const packageData = await this._bundleSinglePackage(
             packageInfo,
@@ -99,12 +99,12 @@ export class BundleModule {
         } catch (error: any) {
           this.stats.incrementFailed();
           logger.error(
-            `❌ Bundling failed: ${packageInfo.version} - ${error.message}`
+            `❌ Failed to add package to Bridge Bundle: ${packageInfo.version} - ${error.message}`
           );
         }
       }
 
-      // Generate bundle manifest
+      // Generate Bridge Bundle manifest
       if (this.options.includeMetadata) {
         const manifest = await this._generateBundleManifest(
           bundledData,
@@ -113,7 +113,7 @@ export class BundleModule {
         const manifestPath = path.join(bundlePath, 'manifest.json');
         await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
 
-        logger.info('📋 Bundle manifest generated', { path: manifestPath });
+        logger.info('📋 Bridge Bundle manifest generated', { path: manifestPath });
       }
 
       // Generate integrity checksums
@@ -122,7 +122,7 @@ export class BundleModule {
         const checksumPath = path.join(bundlePath, 'checksums.json');
         await fs.writeFile(checksumPath, JSON.stringify(checksums, null, 2));
 
-        logger.info('🔐 Bundle checksums generated', { path: checksumPath });
+        logger.info('🔐 Bridge Bundle checksums generated', { path: checksumPath });
       }
 
       // Create distribution archive (optional)
@@ -142,7 +142,7 @@ export class BundleModule {
       return this._buildResults(options, bundlePath, archivePath);
     } catch (error: any) {
       this.stats.endBundling();
-      logger.error('💥 Bundling failed', { error: error.message });
+      logger.error('💥 Bridge Bundle creation failed', { error: error.message });
       throw error;
     }
   }
@@ -458,8 +458,8 @@ export class BundleModule {
         // Pipe archive data to output stream
         archive.pipe(output);
 
-        // Add entire bundle directory to archive
-        logger.info('📁 Adding bundle directory to ZIP archive', {
+        // Add entire Bridge Bundle directory to archive
+        logger.info('📁 Adding Bridge Bundle directory to ZIP archive', {
           bundlePath,
         });
         archive.directory(bundlePath, false);
@@ -496,7 +496,7 @@ export class BundleModule {
   _logSummary(bundlePath: string, archivePath: string | null) {
     const summary = this.stats.getSummary();
 
-    logger.info('📊 Bundling Summary', {
+    logger.info('📊 Bridge Bundle Creation Summary', {
       totalPackages: summary.total_packages,
       bundledPackages: summary.bundled_packages,
       failedPackages: summary.failed_packages,

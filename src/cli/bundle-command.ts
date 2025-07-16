@@ -1,5 +1,5 @@
 /**
- * @file Bundle Command - Individual bundling phase execution
+ * @file Bundle Command - Individual Bridge Bundle creation phase execution
  */
 
 import { promises as fs } from 'node:fs';
@@ -18,9 +18,9 @@ export async function executeBundleCommand(options: {
   output: string;
 }) {
   try {
-    logger.info('🚀 Porter Bridges - Bundle Module');
+    logger.info('🚀 Porter Bridges - Bridge Bundle Creation Module');
 
-    // Log bundling configuration
+    // Log Bridge Bundle configuration
     logger.info(
       {
         bundleDirectory: options.bundleDir,
@@ -30,7 +30,7 @@ export async function executeBundleCommand(options: {
         validateIntegrity: options.checksums,
         createArchive: options.archive,
       },
-      '⚙️  Bundling Configuration'
+      '⚙️  Bridge Bundle Configuration'
     );
 
     // Initialize bundle module
@@ -46,13 +46,13 @@ export async function executeBundleCommand(options: {
     // Run bundling
     const results = await bundling.bundle();
 
-    // CRITICAL: Validate bundle output before proceeding
+    // CRITICAL: Validate Bridge Bundle output before proceeding
     try {
       PipelineValidator.validateBundleOutput(results);
-      logger.info('✅ Bundle validation passed');
+      logger.info('✅ Bridge Bundle validation passed');
     } catch (error: unknown) {
       if (error instanceof CriticalError) {
-        logger.error('🚨 CRITICAL BUNDLE FAILURE', error.toLogFormat());
+        logger.error('🚨 CRITICAL BRIDGE BUNDLE FAILURE', error.toLogFormat());
         process.exit(1);
       }
       throw error;
@@ -81,7 +81,7 @@ export async function executeBundleCommand(options: {
         bundledPackages: bundleStats.summary.bundled_packages,
         totalFiles: bundleStats.summary.total_files,
       },
-      '✅ Bundling complete! Results saved'
+      '✅ Bridge Bundle creation complete! Results saved'
     );
 
     // Show completion message
@@ -93,9 +93,9 @@ export async function executeBundleCommand(options: {
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error({ error: error.message }, '💥 Bundling failed');
+      logger.error({ error: error.message }, '💥 Bridge Bundle creation failed');
     } else {
-      logger.error({ error }, '💥 Bundling failed with unknown error');
+      logger.error({ error }, '💥 Bridge Bundle creation failed with unknown error');
     }
     process.exit(1);
   }
