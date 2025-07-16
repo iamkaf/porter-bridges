@@ -49,6 +49,7 @@ generated/
 ├── collected-sources.json     # Collection metadata
 ├── distilled-content/         # AI-extracted JSON
 ├── distilled-sources.json     # Distillation metadata
+├── trash/                     # Invalid files for manual review
 ├── packages/                  # Versioned packages
 ├── package-results.json       # Package metadata
 ├── bundles/                   # Distribution bundles
@@ -62,6 +63,7 @@ generated/
 - **zod** - Schema validation (we love Zod!)
 - **fs** - Native Node.js file operations
 - **Simple logging** - No external logger dependencies
+- **mdream** - HTML → Markdown conversion for AI processing
 
 ## Architecture
 
