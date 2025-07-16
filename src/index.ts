@@ -31,6 +31,11 @@ program
   .option('--timeout <ms>', 'Request timeout in milliseconds', '30000')
   .option('--max-concurrent <num>', 'Maximum concurrent operations', '3')
   .option('--gemini-model <model>', 'Gemini model to use', 'gemini-2.5-flash')
+  .option(
+    '--distill-timeout <ms>',
+    'Processing timeout for distillation',
+    '600000'
+  )
   .option('--bundle-name <name>', 'Bundle name prefix', 'porter-bridges')
   .option(
     '--version <version>',
