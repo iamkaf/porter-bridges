@@ -125,7 +125,7 @@ export class SourceItemFactory {
    */
   createSourceItem(data: ISourceItem) {
     const sourceItem = {
-      status: 'discovered',
+      status: data.status || 'discovered',
       url: data.url,
       source_type: data.source_type,
       title: data.title,
@@ -139,6 +139,9 @@ export class SourceItemFactory {
       tags: data.tags || [],
       relevance_score: data.relevance_score,
       checksum: data.checksum,
+      collected_at: data.collected_at,
+      collection_metadata: data.collection_metadata,
+      metadata: data.metadata,
     };
 
     // Validate against schema

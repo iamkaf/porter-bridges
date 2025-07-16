@@ -8,7 +8,6 @@
         "commander": "^11.0.0",
         "ky": "^1.8.1",
         "listr2": "^8.0.1",
-        "mdream": "^0.8.0",
         "ora": "^8.0.1",
         "remeda": "^2.25.0",
         "undici": "^7.11.0",
@@ -338,8 +337,6 @@
     "lru-cache": ["lru-cache@10.4.3", "", {}, "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="],
 
     "magic-string": ["magic-string@0.30.17", "", { "dependencies": { "@jridgewell/sourcemap-codec": "^1.5.0" } }, "sha512-sNPKHvyjVf7gyjwS4xGTaW/mCnF8wnjtifKBEhxfZ7E/S8tQ0rssrwGNn6q8JH/ohItJfSQp9mBtQYuTlH5QnA=="],
-
-    "mdream": ["mdream@0.8.0", "", { "dependencies": { "cac": "^6.7.14", "pathe": "^2.0.3", "tinyglobby": "^0.2.14" }, "bin": { "mdream": "bin/mdream.mjs" } }, "sha512-3NYUp2moh5DUqRf9wLw7gnMCDjY0wKCFl+w/s9gcSeNXLTV6xOJ+s0ZLVoRnt3nPHVsROKHjeEOxw/BpNFIc2A=="],
 
     "mimic-function": ["mimic-function@5.0.1", "", {}, "sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA=="],
 

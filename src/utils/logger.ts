@@ -7,7 +7,11 @@ import path from 'node:path';
 import winston from 'winston';
 
 const winstonLogger = winston.createLogger({
-  level: 'info',
+  level: 'debug',
+  defaultMeta: {
+    project: 'linkie',
+    source: 'porter-bridges'
+  },
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.errors({ stack: true }),
@@ -45,21 +49,6 @@ const winstonLogger = winston.createLogger({
       ssl: false,
       batch: true,
       batchInterval: 5000,
-      level: 'debug',
-      format: winston.format.combine(
-        winston.format.timestamp(),
-        winston.format.printf(({ level, message, timestamp, ...meta }) => {
-          return JSON.stringify({
-            level,
-            message,
-            project: 'linkie',
-            source: 'porter-bridges',
-            timestamp,
-            tags: meta.tags || [],
-            customFields: meta,
-          });
-        })
-      ),
     }),
   ],
 });
@@ -94,6 +83,16 @@ const logger = {
       winstonLogger.error('Object data', message);
     } else {
       winstonLogger.error(message, metadata);
+    }
+  },
+
+  debug(message: string | object, metadata?: string | object) {
+    if (typeof message === 'object' && typeof metadata === 'string') {
+      winstonLogger.debug(metadata, message);
+    } else if (typeof message === 'object') {
+      winstonLogger.debug('Object data', message);
+    } else {
+      winstonLogger.debug(message, metadata);
     }
   },
 };

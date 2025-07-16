@@ -53,7 +53,14 @@ class DistillationFilters {
         // Update the source status to distilled if file exists
         (source as any).status = 'distilled';
         (source as any).distilled_at = (source as any).distilled_at || new Date().toISOString();
-        logger.info(`⏭️  Skipping already distilled: ${(source as any).url}`);
+        
+        // CRITICAL: Apply this update back to the sourcesData immediately
+        if (sourcesData.sources && sourcesData.sources[sourceKey]) {
+          sourcesData.sources[sourceKey].status = 'distilled';
+          sourcesData.sources[sourceKey].distilled_at = (source as any).distilled_at;
+        }
+        
+        logger.info(`⏭️  Skipping already distilled: ${(source as any).url} (found ${outputFilename})`);
         skippedCount++;
         continue;
       }
@@ -102,7 +109,7 @@ class DistillationFilters {
     }
 
     if (skippedCount > 0) {
-      logger.info(`✅ Skipped ${skippedCount} already distilled sources`);
+      logger.info(`✅ Skipped ${skippedCount} already distilled sources (found existing files in output directory)`);
     }
 
     return { sources, skippedCount };

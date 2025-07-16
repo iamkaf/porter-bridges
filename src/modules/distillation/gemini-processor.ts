@@ -9,8 +9,6 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { htmlToMarkdown } from 'mdream';
-import { withMinimalPreset } from 'mdream/dist/preset/minimal.mjs';
 import { logger } from '../../utils/logger';
 import { PromptBuilder } from './prompt-builder';
 import { ResponseParser } from './response-parser';
@@ -99,18 +97,15 @@ export class GeminiProcessor {
         throw new Error(`Content file not found: ${contentPath}`);
       }
 
-      // Convert to Markdown for processing
-      const markdownPath = await this._convertHtmlToMarkdown(contentPath);
-
       // Read content for checksum calculation (processed Markdown)
-      const rawContent = await fs.readFile(markdownPath, 'utf-8');
+      const rawContent = await fs.readFile(contentPath, 'utf-8');
       const contentChecksum = crypto
         .createHash('sha256')
         .update(rawContent)
         .digest('hex');
 
       // Get absolute path for Gemini to read directly
-      const absoluteContentPath = path.resolve(markdownPath);
+      const absoluteContentPath = path.resolve(contentPath);
 
       task.output = 'Preparing prompt with file path...';
 
@@ -360,26 +355,6 @@ export class GeminiProcessor {
     }
 
     return null;
-  }
-
-  /**
-   * Convert collected HTML to Markdown using mdream
-   */
-  async _convertHtmlToMarkdown(htmlPath: string): Promise<string> {
-    const markdownPath = htmlPath.replace(/\.html$/, '.md');
-
-    try {
-      await fs.access(markdownPath);
-      return markdownPath;
-    } catch {
-      // continue to convert
-    }
-
-    const html = await fs.readFile(htmlPath, 'utf8');
-    const options = withMinimalPreset({});
-    const markdown = htmlToMarkdown(html, options);
-    await fs.writeFile(markdownPath, markdown, 'utf8');
-    return markdownPath;
   }
 
   /**

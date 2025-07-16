@@ -6,6 +6,8 @@
  */
 
 import { createHash } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import type { LoaderType, Priority, SourceType } from '../../constants/enums';
 import { createHttpError, githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
@@ -17,6 +19,7 @@ export interface IGitHubReleasesDiscoveryOptions {
   timeout: number;
   maxReleases: number;
   includePreReleases: boolean;
+  contentDirectory: string;
 }
 
 /**
@@ -32,6 +35,7 @@ export class GitHubReleasesDiscovery {
       includePreReleases: true,
       timeout: options.timeout || 30_000,
       maxReleases: options.maxReleases || 20, // Limit to recent releases
+      contentDirectory: options.contentDirectory || './generated/collected-content',
       ...options,
     };
 
@@ -76,10 +80,10 @@ export class GitHubReleasesDiscovery {
         // Extract version information
         const version = this._extractVersionFromRelease(release);
 
-        // Create source item
+        // Create source item with API content instead of HTML URL
         const sourceItem = await this.sourceFactory.createSourceItem({
-          status: 'discovered',
-          url: release.html_url as string, // Use HTML URL for direct access
+          status: 'collected', // Mark as collected since we have the content from API
+          url: release.html_url as string, // Keep HTML URL for reference
           source_type: sourceConfig.source_type as SourceType,
           loader_type: sourceConfig.loader_type as LoaderType,
           title:
@@ -95,6 +99,17 @@ export class GitHubReleasesDiscovery {
           tags: this._generateTags(release, sourceConfig),
           relevance_score: relevanceScore,
           priority: this._calculatePriority(release, relevanceScore),
+          collected_at: new Date().toISOString(),
+          collection_metadata: {
+            status_code: 200,
+            content_type: 'application/json; charset=utf-8',
+            content_length: String(Buffer.byteLength(release.body as string || '', 'utf8')),
+            size_bytes: Buffer.byteLength(release.body as string || '', 'utf8'),
+            size_kb: Math.round(Buffer.byteLength(release.body as string || '', 'utf8') / 1024),
+            collection_attempt: 1,
+            final_url: release.html_url as string,
+            source: 'github_api',
+          },
           metadata: {
             release_tag: release.tag_name as string,
             published_at: release.published_at as string,
@@ -102,8 +117,12 @@ export class GitHubReleasesDiscovery {
             assets_count:
               (release.assets as unknown[] | undefined)?.length || 0,
             download_count: this._calculateDownloadCount(release),
+            github_api_content: release.body as string, // Store API content directly
           },
         });
+
+        // Save API content to file
+        await this._saveApiContent(release.html_url as string, release.body as string || '');
 
         sources.push(sourceItem);
       }
@@ -236,6 +255,45 @@ export class GitHubReleasesDiscovery {
     }
 
     return `${text.substring(0, maxLength - 3)}...`;
+  }
+
+  /**
+   * Save API content to file with same naming convention as collection module
+   */
+  async _saveApiContent(url: string, content: string): Promise<void> {
+    try {
+      // Ensure content directory exists
+      await fs.mkdir(this.options.contentDirectory, { recursive: true });
+
+      // Generate filename using same logic as collection module
+      const fileName = this._generateFileName(url);
+      const filePath = path.join(this.options.contentDirectory, fileName);
+
+      // Save as markdown file instead of HTML since it's clean content
+      const mdFilePath = filePath.replace('.html', '.md');
+      await fs.writeFile(mdFilePath, content, 'utf8');
+
+      logger.debug(`Saved GitHub API content to ${mdFilePath}`);
+    } catch (error: unknown) {
+      logger.error(
+        { error: error instanceof Error ? error.message : String(error) },
+        `Failed to save API content for ${url}`
+      );
+    }
+  }
+
+  /**
+   * Generate filename from URL (same logic as collection module)
+   */
+  _generateFileName(url: string): string {
+    // Convert URL to safe filename
+    const cleaned = url
+      .replace(/^https?:\/\//, '')
+      .replace(/[^\w\-_.~]/g, '_')
+      .replace(/_+/g, '_')
+      .replace(/^_|_$/g, '');
+
+    return `${cleaned}.html`;
   }
 }
 

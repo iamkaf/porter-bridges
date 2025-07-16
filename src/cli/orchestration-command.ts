@@ -822,10 +822,8 @@ export class OrchestrationCommand {
       },
     });
 
-    // Update status for any existing distilled files (for resume functionality)
-    await this._updateExistingDistilledStatus(sourcesData);
-
     // Execute distillation with direct progress callbacks
+    // Note: Existing distilled files are now automatically detected and handled by DistillationModule
     const results = await distillation.distill(sourcesData);
 
     // CRITICAL: Validate distillation output
