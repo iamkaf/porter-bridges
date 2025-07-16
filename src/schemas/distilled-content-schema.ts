@@ -34,10 +34,9 @@ const SimpleApiUpdateSchema = z.object({
 const SimpleMigrationGuideSchema = z.object({
   id: z.string(),
   title: z.string(),
-  from_version: z.string(),
-  to_version: z.string(),
   description: z.string(),
-  steps: z.array(z.string()),
+  code_example: z.string(),
+  minecraft_version: z.string(),
 });
 
 /**
@@ -45,9 +44,7 @@ const SimpleMigrationGuideSchema = z.object({
  */
 const SimpleDependencyUpdateSchema = z.object({
   id: z.string(),
-  name: z.string(),
-  from_version: z.string(),
-  to_version: z.string(),
+  title: z.string(),
   description: z.string(),
   minecraft_version: z.string(),
 });
