@@ -24,8 +24,21 @@ import { GeminiProcessor } from './distillation/gemini-processor';
  * Simple filters for distillation sources
  */
 class DistillationFilters {
-  filterSources(sourcesData: any, filters: any) {
+  async filterSources(sourcesData: any, filters: any, outputDirectory: string) {
     const sources = [];
+    let skippedCount = 0;
+
+    // Check for existing distilled files
+    let existingFiles: Set<string> = new Set();
+    try {
+      const files = await fs.readdir(outputDirectory);
+      existingFiles = new Set(files.filter(f => f.endsWith('.json')));
+      if (existingFiles.size > 0) {
+        logger.info(`🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`);
+      }
+    } catch (error) {
+      // Directory might not exist yet, that's okay
+    }
 
     // Preserve the original keys for proper updating
     for (const [sourceKey, source] of Object.entries(
@@ -33,6 +46,17 @@ class DistillationFilters {
     )) {
       // Add the source key to the source object for later reference
       const sourceWithKey = { ...(source as any), _sourceKey: sourceKey };
+
+      // Check if this source already has a distilled file
+      const outputFilename = `${(source as any).url.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+      if (existingFiles.has(outputFilename) && !filters.forceReprocess) {
+        // Update the source status to distilled if file exists
+        (source as any).status = 'distilled';
+        (source as any).distilled_at = (source as any).distilled_at || new Date().toISOString();
+        logger.info(`⏭️  Skipping already distilled: ${(source as any).url}`);
+        skippedCount++;
+        continue;
+      }
 
       // Only process collected sources (unless retrying)
       if (!filters.includeRetry && (source as any).status !== 'collected') {
@@ -77,7 +101,11 @@ class DistillationFilters {
       sources.push(sourceWithKey);
     }
 
-    return sources;
+    if (skippedCount > 0) {
+      logger.info(`✅ Skipped ${skippedCount} already distilled sources`);
+    }
+
+    return { sources, skippedCount };
   }
 }
 
@@ -122,6 +150,10 @@ class DistillationStats {
 
   incrementSkipped() {
     this.stats.skipped_sources++;
+  }
+
+  addSkipped(count: number) {
+    this.stats.skipped_sources += count;
   }
 
   endDistillation() {
@@ -194,11 +226,22 @@ export class DistillationModule {
       await this.geminiProcessor.verifyGeminiCLI();
 
       // Filter sources based on criteria
-      const sources = this.filters.filterSources(sourcesData, filters);
+      const filterResult = await this.filters.filterSources(sourcesData, filters, this.options.outputDirectory);
+      const sources = filterResult.sources;
       this.stats.setTotalSources(sources.length);
+      if (filterResult.skippedCount > 0) {
+        this.stats.addSkipped(filterResult.skippedCount);
+      }
 
       if (sources.length === 0) {
-        logger.warn('⚠️  No sources match the distillation criteria');
+        const distilledCount = Object.values(sourcesData.sources || {}).filter(
+          (s: any) => s.status === 'distilled'
+        ).length;
+        if (distilledCount > 0) {
+          logger.info(`✅ All ${distilledCount} sources are already distilled`);
+        } else {
+          logger.warn('⚠️  No sources match the distillation criteria');
+        }
         this.stats.endDistillation();
         return this._buildResults(sourcesData, filters);
       }
@@ -207,8 +250,13 @@ export class DistillationModule {
 
       // Group sources by type for better progress reporting
       const sourcesByType = this._groupSourcesByType(sources);
+      const alreadyDistilledCount = Object.values(sourcesData.sources || {}).filter(
+        (s: any) => s.status === 'distilled'
+      ).length;
       logger.info('📋 Distillation plan', {
         breakdown: this._getBreakdownCounts(sourcesByType),
+        alreadyDistilled: alreadyDistilledCount,
+        toProcess: sources.length,
       });
 
       // Estimate processing time
@@ -385,6 +433,10 @@ export class DistillationModule {
       totalOutputTokens: this.stats.stats.total_output_tokens,
       durationSeconds: summary.duration_seconds,
     });
+
+    if (this.stats.stats.skipped_sources > 0) {
+      logger.info(`⏭️  Skipped ${this.stats.stats.skipped_sources} already distilled sources (files exist in output directory)`);
+    }
 
     if (summary.distilled_sources > 0) {
       const avgTime = summary.duration_seconds / summary.distilled_sources;

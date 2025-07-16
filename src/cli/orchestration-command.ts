@@ -751,30 +751,21 @@ export class OrchestrationCommand {
           continue;
         }
 
-        // Convert filename back to source URL
-        const url = filename
-          .replace(/^https?___/, 'https://')
-          .replace(/_/g, '/')
-          .replace(/\.json$/, '');
-
-        // Find the source and update its status
-        for (const [sourceUrl, source] of Object.entries(
+        // Find matching source by checking URL patterns
+        for (const [sourceKey, source] of Object.entries(
           sourcesData.sources || {}
         )) {
-          if (
-            sourceUrl.includes(url) ||
-            url.includes(sourceUrl.split('/').pop())
-          ) {
-            const typedSource = source as any;
-            if (typedSource.status !== 'distilled') {
-              typedSource.status = 'distilled';
-              typedSource.distilled_at =
-                typedSource.distilled_at || new Date().toISOString();
-              updatedCount++;
-              logger.info(
-                `✅ Updated existing distilled file status: ${sourceUrl}`
-              );
-            }
+          const typedSource = source as any;
+          // Generate the expected filename for this source
+          const expectedFilename = `${typedSource.url.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
+          
+          if (filename === expectedFilename && typedSource.status !== 'distilled') {
+            typedSource.status = 'distilled';
+            typedSource.distilled_at =
+              typedSource.distilled_at || new Date().toISOString();
+            updatedCount++;
+            this.pipelineState.updateSource(sourceKey, typedSource);
+            logger.info(`✅ Updated existing distilled file status: ${sourceKey}`);
             break;
           }
         }
