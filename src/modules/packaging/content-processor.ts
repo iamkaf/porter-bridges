@@ -50,23 +50,45 @@ export class ContentProcessor {
     _versionPath: string
   ): Promise<IContentProcessResult> {
     try {
-      // Read distilled content
-      const distilledFilePath = this.getDistilledPath(source.url);
+      // Check if this source skipped distillation
+      const skippedDistillation = source.processing_hints?.skip_distillation;
+      
+      let distilledData = null;
+      let distilledContent = '';
+      
+      if (!skippedDistillation) {
+        // Read distilled content for sources that went through distillation
+        const distilledFilePath = this.getDistilledPath(source.url);
 
-      let distilledExists: boolean;
-      try {
-        await fs.access(distilledFilePath);
-        distilledExists = true;
-      } catch {
-        distilledExists = false;
+        let distilledExists: boolean;
+        try {
+          await fs.access(distilledFilePath);
+          distilledExists = true;
+        } catch {
+          distilledExists = false;
+        }
+
+        if (!distilledExists) {
+          throw new Error(`Distilled file not found: ${distilledFilePath}`);
+        }
+
+        distilledContent = await fs.readFile(distilledFilePath, 'utf-8');
+        distilledData = JSON.parse(distilledContent);
+      } else {
+        // For sources that skipped distillation, use empty structure
+        distilledData = {
+          breaking_changes: [],
+          api_updates: [],
+          migration_guides: [],
+          dependency_updates: [],
+          summaries: [],
+          metadata: {
+            source_type: source.source_type,
+            skipped_distillation: true,
+            reason: 'Changelog content - preserved as-is'
+          }
+        };
       }
-
-      if (!distilledExists) {
-        throw new Error(`Distilled file not found: ${distilledFilePath}`);
-      }
-
-      const distilledContent = await fs.readFile(distilledFilePath, 'utf-8');
-      const distilledData = JSON.parse(distilledContent);
 
       // Copy raw content to /raw/ directory
       const rawFileName = this.generateRawFileName(source);
@@ -93,11 +115,32 @@ export class ContentProcessor {
         );
       }
 
-      const contentChecksum = crypto
-        .createHash('sha256')
-        .update(distilledContent)
-        .digest('hex');
-      const fileStats = await fs.stat(distilledFilePath);
+      // For sources that skipped distillation, get stats from collected content
+      let fileStats;
+      let contentChecksum;
+      
+      if (!skippedDistillation) {
+        const distilledFilePath = this.getDistilledPath(source.url);
+        fileStats = await fs.stat(distilledFilePath);
+        contentChecksum = crypto
+          .createHash('sha256')
+          .update(distilledContent)
+          .digest('hex');
+      } else {
+        // For skipped sources, use collected content for stats
+        try {
+          fileStats = await fs.stat(collectedPath);
+          const collectedContent = await fs.readFile(collectedPath, 'utf-8');
+          contentChecksum = crypto
+            .createHash('sha256')
+            .update(collectedContent)
+            .digest('hex');
+        } catch (error) {
+          // Use defaults if collected content is not available
+          fileStats = { size: 0 };
+          contentChecksum = source.checksum || '';
+        }
+      }
 
       return {
         sourceProgress: {

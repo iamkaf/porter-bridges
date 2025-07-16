@@ -65,6 +65,27 @@ class DistillationFilters {
         continue;
       }
 
+      // Skip sources marked to skip distillation
+      if ((source as any).processing_hints?.skip_distillation) {
+        // Update status to indicate it was skipped
+        (source as any).status = 'packaged';
+        (source as any).distillation_metadata = {
+          skipped: true,
+          reason: 'skip_distillation hint',
+          timestamp: new Date().toISOString()
+        };
+        
+        // CRITICAL: Apply this update back to the sourcesData immediately
+        if (sourcesData.sources && sourcesData.sources[sourceKey]) {
+          sourcesData.sources[sourceKey].status = 'packaged';
+          sourcesData.sources[sourceKey].distillation_metadata = (source as any).distillation_metadata;
+        }
+        
+        logger.info(`⏭️  Skipping distillation (marked to skip): ${(source as any).url}`);
+        skippedCount++;
+        continue;
+      }
+
       // Only process collected sources (unless retrying)
       if (!filters.includeRetry && (source as any).status !== 'collected') {
         continue;

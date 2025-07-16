@@ -142,6 +142,10 @@ export class SourceItemFactory {
       collected_at: data.collected_at,
       collection_metadata: data.collection_metadata,
       metadata: data.metadata,
+      // Mark changelogs to skip distillation
+      processing_hints: data.source_type === 'changelog' ? {
+        skip_distillation: true
+      } : undefined,
     };
 
     // Validate against schema

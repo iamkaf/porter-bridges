@@ -397,7 +397,11 @@ export class PackageModule {
 
   _getDistilledSources(sourcesData: PipelineState) {
     const sources = Object.values(sourcesData.sources || {});
-    return sources.filter((source) => source.status === 'distilled');
+    // Include both distilled sources and sources that skipped distillation
+    return sources.filter((source) => 
+      source.status === 'distilled' || 
+      (source.status === 'packaged' && source.processing_hints?.skip_distillation)
+    );
   }
 
   /**

@@ -286,7 +286,7 @@ export class OrchestrationCommand {
                           fileName.length > 40
                             ? `${fileName.substring(0, 37)}...`
                             : fileName;
-                        subTask.output = `[${current}/${total}] (${percentage}%) Downloading: ${shortFileName} | ${remaining} remaining`;
+                        subTask.output = `[${current}/${total}] (${percentage}%) ${shortFileName} | ${remaining} remaining`;
                       }
                     );
 
@@ -394,7 +394,7 @@ export class OrchestrationCommand {
                           fileName.length > 40
                             ? `${fileName.substring(0, 37)}...`
                             : fileName;
-                        subTask.output = `[${current}/${total}] (${percentage}%) Processing: ${shortFileName} | ${remaining} remaining`;
+                        subTask.output = `[${current}/${total}] (${percentage}%) ${shortFileName} | ${remaining} remaining`;
                       }
                     );
 
@@ -715,7 +715,7 @@ export class OrchestrationCommand {
         progressCallback(
           current + 1,
           total,
-          `Currently downloading: ${shortFileName}`
+          shortFileName
         );
       },
     });
@@ -817,7 +817,7 @@ export class OrchestrationCommand {
         progressCallback(
           current + 1,
           total,
-          `Currently processing: ${shortFileName}`
+          shortFileName
         );
       },
     });

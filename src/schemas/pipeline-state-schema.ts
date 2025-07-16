@@ -138,6 +138,28 @@ export const PipelineSource = z
     // Legacy fields (for backward compatibility)
     size_kb: z.number().min(0).optional(),
     content_type: z.string().optional(),
+    
+    // Processing hints
+    processing_hints: z
+      .object({
+        skip_distillation: z
+          .boolean()
+          .optional()
+          .describe('Whether to skip AI distillation for this source'),
+        high_priority_distillation: z
+          .boolean()
+          .optional()
+          .describe('Whether to prioritize this source for distillation'),
+        custom_prompt: z
+          .string()
+          .optional()
+          .describe('Custom distillation prompt for this source'),
+        expected_categories: z
+          .array(z.string())
+          .optional()
+          .describe('Expected content categories'),
+      })
+      .optional(),
   })
   .merge(SourceMetadata);
 
