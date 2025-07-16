@@ -6,7 +6,7 @@ Just like Sam Porter Bridges delivers packages to reconnect isolated communities
 
 ## What This Is
 
-Porter Bridges is a comprehensive development utility that discovers, processes, and packages Minecraft mod porting data from across the ecosystem. Think of it as an automated courier service for porting intelligence — I gather breaking changes, API updates, and migration guides from various sources (GitHub repositories, RSS feeds, blog posts) and process them using AI into structured, distributable **Bridge Bundles**.
+Porter Bridges is a comprehensive development utility that discovers, processes, and packages Minecraft mod porting data from across the ecosystem. Think of it as an automated courier service for porting intelligence, I gather breaking changes, API updates, and migration guides from various sources (GitHub repositories, RSS feeds, blog posts) and process them using AI into structured, distributable **Bridge Bundles (BB)**.
 
 These Bridge Bundles serve as literal bridges that mod developers can use to cross the gap between Minecraft versions, just like the infrastructure Sam builds to connect isolated settlements.
 
