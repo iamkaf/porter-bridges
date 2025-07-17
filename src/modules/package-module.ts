@@ -415,9 +415,11 @@ export class PackageModule {
   _getDistilledSources(sourcesData: PipelineState) {
     const sources = Object.values(sourcesData.sources || {});
     // Include both distilled sources and sources that skipped distillation
+    // Exclude failed sources as they are blocking states
     return sources.filter((source) => 
-      source.status === 'distilled' || 
-      (source.status === 'packaged' && source.processing_hints?.skip_distillation)
+      (source.status === 'distilled' || 
+      (source.status === 'packaged' && source.processing_hints?.skip_distillation)) &&
+      source.status !== 'failed'
     );
   }
 

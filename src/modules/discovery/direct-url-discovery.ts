@@ -168,12 +168,12 @@ export class DirectUrlDiscovery {
       }
     }
 
-    // For EventBus guide, it's for recent versions
+    // For EventBus guide, it's specifically for Forge on 1.21.7
     if (
       sourceConfig.url.includes('PaintNinja') &&
       sourceConfig.url.includes('ad82c224')
     ) {
-      return '1.21'; // EventBus 7 is for MC 1.21+
+      return '1.21.7'; // EventBus 7 is specifically for Forge on MC 1.21.7
     }
 
     return null;

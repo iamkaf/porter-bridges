@@ -628,6 +628,30 @@ export class OrchestrationCommand {
   }
 
   /**
+   * Check if there are any failed sources that should block pipeline progression
+   */
+  _checkForBlockingFailures(state: PipelineState, phase: string): void {
+    const sources = Object.values(state.sources || {});
+    const failedSources = sources.filter(source => source.status === 'failed');
+    
+    if (failedSources.length > 0) {
+      const failedUrls = failedSources.map(s => s.url).slice(0, 5);
+      const additionalCount = failedSources.length > 5 ? ` (and ${failedSources.length - 5} more)` : '';
+      
+      throw new CriticalError(
+        `Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`,
+        phase,
+        {
+          failedCount: failedSources.length,
+          failedUrls: failedUrls.join(', ') + additionalCount,
+          impact: `Failed sources must be resolved before continuing the pipeline`,
+          resolution: 'Fix the failed sources or remove them from the pipeline state'
+        }
+      );
+    }
+  }
+
+  /**
    * Execute discovery phase
    */
   async _executeDiscovery(
@@ -658,6 +682,9 @@ export class OrchestrationCommand {
     sourcesData: PipelineState,
     options: Partial<OrchestrationCLIOptions>
   ): Promise<CollectionResult> {
+    // Check for failed sources before proceeding
+    this._checkForBlockingFailures(sourcesData, 'collection');
+    
     const collection = new CollectionModule({
       contentDirectory: './generated/collected-content',
       maxConcurrent: Number.parseInt(options.maxConcurrent || '3', 10),
@@ -685,6 +712,9 @@ export class OrchestrationCommand {
     sourcesData: PipelineState,
     options: Partial<OrchestrationCLIOptions>
   ): Promise<DistillationResult> {
+    // Check for failed sources before proceeding
+    this._checkForBlockingFailures(sourcesData, 'distillation');
+    
     const distillation = new DistillationModule({
       contentDirectory: './generated/collected-content',
       outputDirectory: './generated/distilled-content',
@@ -866,6 +896,9 @@ export class OrchestrationCommand {
     sourcesData: PipelineState,
     options: Partial<OrchestrationCLIOptions>
   ): Promise<PipelineStateWithPackageResult> {
+    // Check for failed sources before proceeding
+    this._checkForBlockingFailures(sourcesData, 'packaging');
+    
     const packaging = new PackageModule({
       packageDirectory: './generated/packages',
       distilledDirectory: './generated/distilled-content',
@@ -900,6 +933,10 @@ export class OrchestrationCommand {
    * Execute bundling phase
    */
   async _executeBundling(options: Partial<OrchestrationCLIOptions>) {
+    // Check for failed sources before proceeding
+    const state = this.pipelineState.getState();
+    this._checkForBlockingFailures(state, 'bundling');
+    
     const bundling = new BundleModule({
       bundleDirectory: './generated/bundles',
       packageDirectory: './generated/packages',

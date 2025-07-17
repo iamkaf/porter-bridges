@@ -39,6 +39,8 @@ CRITICAL INSTRUCTIONS:
 4. Do NOT output anything to stdout - write directly to the file
 5. Be thorough - extract more rather than less
 6. Use specific technical details, class names, method signatures
+7. Focus on content quality and usefulness over rigid schema compliance
+8. Extract what's actually available rather than forcing information into inappropriate categories
 
 SOURCE CONTEXT:
 - Type: ${contextInfo.source_type} (${this._getSourceTypeGuidance(contextInfo.source_type)})
@@ -90,6 +92,7 @@ VALIDATION CHECKLIST:
 - Did I include specific class/method names?
 - Did I identify ALL breaking changes?
 - Is my summary comprehensive?
+- Is my JSON properly formatted and valid?
 
 RESPONSE FORMAT:
 {
@@ -106,7 +109,7 @@ Each breaking_change should include:
   "id": "unique-kebab-case-id",
   "title": "Specific descriptive title",
   "description": "Detailed technical description with class/method names",
-  "severity": "high|medium|low",
+  "severity": "appropriate level (low, medium, high, critical)",
   "affected_apis": ["full.class.name.Method", "package.ClassName"],
   "minecraft_version": "x.y.z"
 }
@@ -116,8 +119,25 @@ Each api_update should include:
   "id": "unique-kebab-case-id", 
   "title": "Specific descriptive title",
   "description": "Detailed description of new functionality",
-  "type": "new_api|enhancement|performance",
+  "type": "appropriate type (new_api, enhancement, deprecation, etc.)",
   "affected_apis": ["full.class.name.Method"],
+  "minecraft_version": "x.y.z"
+}
+
+Each migration_guide should include:
+{
+  "id": "unique-kebab-case-id",
+  "title": "Specific descriptive title",
+  "description": "Detailed migration instructions",
+  "code_example": "Include if available in source content",
+  "minecraft_version": "x.y.z"
+}
+
+Each dependency_update should include:
+{
+  "id": "unique-kebab-case-id",
+  "title": "Specific descriptive title", 
+  "description": "Detailed description of dependency changes",
   "minecraft_version": "x.y.z"
 }
 

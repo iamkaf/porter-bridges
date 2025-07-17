@@ -125,6 +125,39 @@ export class BundleModule {
         logger.info('🔐 Bridge Bundle checksums generated', { path: checksumPath });
       }
 
+      // Validate Bridge Bundle quality and content expectations
+      const validationResult = await this._validateBundleQuality(bundlePath, bundledData);
+      if (!validationResult.isValid) {
+        logger.warn('⚠️  Bridge Bundle validation warnings detected', {
+          warnings: validationResult.warnings,
+          bundlePath,
+        });
+      } else {
+        logger.info('✅ Bridge Bundle validation passed', {
+          fileCount: validationResult.metrics.fileCount,
+          sizeKB: validationResult.metrics.sizeKB,
+          distilledVersions: validationResult.metrics.distilledVersions,
+          loaderTypes: validationResult.metrics.loaderTypes,
+        });
+      }
+
+      // Perform comprehensive integrity validation
+      const integrityResult = await this._validateBundleIntegrity(bundlePath, bundledData);
+      if (!integrityResult.isValid) {
+        logger.error('❌ Bridge Bundle integrity validation failed', {
+          errors: integrityResult.errors,
+          bundlePath,
+        });
+        // Note: We continue with bundle creation even if integrity checks fail
+        // This allows for debugging and partial recovery
+      } else {
+        logger.info('🔒 Bridge Bundle integrity validation passed', {
+          checksumValidation: integrityResult.metrics.checksumValidation,
+          metadataValidation: integrityResult.metrics.metadataValidation,
+          fileIntegrityScore: integrityResult.metrics.fileIntegrityScore,
+        });
+      }
+
       // Create distribution archive (optional)
       let archivePath = null;
       if (this.options.createArchive) {
@@ -239,24 +272,15 @@ export class BundleModule {
       );
       await fs.mkdir(packageBundlePath, { recursive: true });
 
-      // Copy all package files
-      const packageFiles = await fs.readdir(packageInfo.path);
-      let totalSize = 0;
-
-      for (const file of packageFiles) {
-        const sourcePath = path.join(packageInfo.path, file);
-        const destPath = path.join(packageBundlePath, file);
-
-        const stats = await fs.stat(sourcePath);
-        if (stats.isFile()) {
-          await fs.copyFile(sourcePath, destPath);
-          totalSize += stats.size;
-        }
-      }
+      // Copy all package files and directories recursively
+      const { fileCount, totalSize } = await this._copyDirectoryRecursive(
+        packageInfo.path,
+        packageBundlePath
+      );
 
       return {
         version: packageInfo.version,
-        file_count: packageFiles.length,
+        file_count: fileCount,
         total_size: totalSize,
         manifest,
         bundled_at: new Date().toISOString(),
@@ -366,6 +390,42 @@ export class BundleModule {
     return files;
   }
 
+  /**
+   * Recursively copy a directory and all its contents
+   */
+  async _copyDirectoryRecursive(
+    sourcePath: string,
+    destPath: string
+  ): Promise<{ fileCount: number; totalSize: number }> {
+    let fileCount = 0;
+    let totalSize = 0;
+
+    try {
+      const entries = await fs.readdir(sourcePath, { withFileTypes: true });
+
+      for (const entry of entries) {
+        const srcPath = path.join(sourcePath, entry.name);
+        const dstPath = path.join(destPath, entry.name);
+
+        if (entry.isDirectory()) {
+          await fs.mkdir(dstPath, { recursive: true });
+          const subResult = await this._copyDirectoryRecursive(srcPath, dstPath);
+          fileCount += subResult.fileCount;
+          totalSize += subResult.totalSize;
+        } else if (entry.isFile()) {
+          await fs.copyFile(srcPath, dstPath);
+          const stats = await fs.stat(srcPath);
+          fileCount++;
+          totalSize += stats.size;
+        }
+      }
+    } catch (error: any) {
+      logger.warn(`Failed to copy directory: ${sourcePath}`, { error: error.message });
+    }
+
+    return { fileCount, totalSize };
+  }
+
   _createDistributionArchive(
     bundlePath: string,
     bundleName: string
@@ -403,6 +463,26 @@ export class BundleModule {
               totalBytes: archive.pointer(),
             });
 
+            // Clean up temporary bundle directory after successful ZIP creation
+            try {
+              await fs.rm(bundlePath, { recursive: true, force: true });
+              logger.info('🧹 Cleaned up temporary bundle directory', {
+                bundlePath,
+              });
+            } catch (cleanupError: unknown) {
+              if (cleanupError instanceof Error) {
+                logger.warn('Failed to clean up temporary bundle directory', {
+                  bundlePath,
+                  error: cleanupError.message,
+                });
+              } else {
+                logger.warn('Failed to clean up temporary bundle directory with unknown error', {
+                  bundlePath,
+                  cleanupError,
+                });
+              }
+            }
+
             resolve(archivePath);
           } catch (error: unknown) {
             if (error instanceof Error) {
@@ -419,7 +499,7 @@ export class BundleModule {
           }
         });
 
-        output.on('error', (error: unknown) => {
+        output.on('error', async (error: unknown) => {
           if (error instanceof Error) {
             logger.error('Archive output stream error', {
               error: error.message,
@@ -430,6 +510,27 @@ export class BundleModule {
               'Archive output stream error with unknown error'
             );
           }
+
+          // Clean up temporary bundle directory on error
+          try {
+            await fs.rm(bundlePath, { recursive: true, force: true });
+            logger.info('🧹 Cleaned up temporary bundle directory after error', {
+              bundlePath,
+            });
+          } catch (cleanupError: unknown) {
+            if (cleanupError instanceof Error) {
+              logger.warn('Failed to clean up temporary bundle directory after error', {
+                bundlePath,
+                error: cleanupError.message,
+              });
+            } else {
+              logger.warn('Failed to clean up temporary bundle directory after error with unknown error', {
+                bundlePath,
+                cleanupError,
+              });
+            }
+          }
+
           reject(error);
         });
 
@@ -446,12 +547,33 @@ export class BundleModule {
           }
         });
 
-        archive.on('error', (error: unknown) => {
+        archive.on('error', async (error: unknown) => {
           if (error instanceof Error) {
             logger.error('Archive error', { error: error.message });
           } else {
             logger.error({ error }, 'Archive error with unknown type');
           }
+
+          // Clean up temporary bundle directory on error
+          try {
+            await fs.rm(bundlePath, { recursive: true, force: true });
+            logger.info('🧹 Cleaned up temporary bundle directory after archive error', {
+              bundlePath,
+            });
+          } catch (cleanupError: unknown) {
+            if (cleanupError instanceof Error) {
+              logger.warn('Failed to clean up temporary bundle directory after archive error', {
+                bundlePath,
+                error: cleanupError.message,
+              });
+            } else {
+              logger.warn('Failed to clean up temporary bundle directory after archive error with unknown error', {
+                bundlePath,
+                cleanupError,
+              });
+            }
+          }
+
           reject(error);
         });
 
@@ -507,6 +629,360 @@ export class BundleModule {
       bundlePath,
       archivePath: archivePath || 'none',
     });
+  }
+
+  /**
+   * Comprehensive Bridge Bundle integrity validation
+   */
+  async _validateBundleIntegrity(
+    bundlePath: string,
+    bundledData: Record<string, any>
+  ): Promise<{
+    isValid: boolean;
+    errors: string[];
+    metrics: {
+      checksumValidation: 'passed' | 'failed' | 'partial';
+      metadataValidation: 'passed' | 'failed' | 'partial';
+      fileIntegrityScore: number;
+      corruptedFiles: string[];
+      missingRequiredFiles: string[];
+      invalidMetadataFiles: string[];
+    };
+  }> {
+    const errors: string[] = [];
+    const metrics = {
+      checksumValidation: 'passed' as 'passed' | 'failed' | 'partial',
+      metadataValidation: 'passed' as 'passed' | 'failed' | 'partial',
+      fileIntegrityScore: 100,
+      corruptedFiles: [] as string[],
+      missingRequiredFiles: [] as string[],
+      invalidMetadataFiles: [] as string[],
+    };
+
+    try {
+      // 1. Validate checksums if they exist
+      if (this.options.validateIntegrity) {
+        const checksumPath = path.join(bundlePath, 'checksums.json');
+        try {
+          const checksumContent = await fs.readFile(checksumPath, 'utf-8');
+          const checksumData = JSON.parse(checksumContent);
+          
+          if (!checksumData.checksums || typeof checksumData.checksums !== 'object') {
+            errors.push('Checksum file format is invalid');
+            metrics.checksumValidation = 'failed';
+          } else {
+            // Validate each file's checksum
+            let validChecksums = 0;
+            let totalChecksums = 0;
+
+            for (const [filePath, checksumInfo] of Object.entries(checksumData.checksums)) {
+              totalChecksums++;
+              const fullPath = path.join(bundlePath, filePath);
+              
+              try {
+                await fs.access(fullPath);
+                const fileContent = await fs.readFile(fullPath);
+                const actualChecksum = crypto.createHash('sha256').update(fileContent).digest('hex');
+                
+                if (actualChecksum === (checksumInfo as any).sha256) {
+                  validChecksums++;
+                } else {
+                  metrics.corruptedFiles.push(filePath);
+                  errors.push(`Checksum mismatch for file: ${filePath}`);
+                }
+              } catch {
+                metrics.missingRequiredFiles.push(filePath);
+                errors.push(`File referenced in checksums but missing: ${filePath}`);
+              }
+            }
+
+            if (validChecksums === totalChecksums) {
+              metrics.checksumValidation = 'passed';
+            } else if (validChecksums > 0) {
+              metrics.checksumValidation = 'partial';
+            } else {
+              metrics.checksumValidation = 'failed';
+            }
+
+            metrics.fileIntegrityScore = totalChecksums > 0 ? Math.round((validChecksums / totalChecksums) * 100) : 0;
+          }
+        } catch (error: any) {
+          errors.push(`Failed to validate checksums: ${error.message}`);
+          metrics.checksumValidation = 'failed';
+        }
+      }
+
+      // 2. Validate manifest and metadata completeness
+      if (this.options.includeMetadata) {
+        const manifestPath = path.join(bundlePath, 'manifest.json');
+        try {
+          const manifestContent = await fs.readFile(manifestPath, 'utf-8');
+          const manifest = JSON.parse(manifestContent);
+          
+          // Check required manifest fields
+          const requiredFields = ['bundle_info', 'bundle_contents', 'package_details'];
+          const missingFields = requiredFields.filter(field => !(field in manifest));
+          
+          if (missingFields.length > 0) {
+            errors.push(`Manifest missing required fields: ${missingFields.join(', ')}`);
+            metrics.invalidMetadataFiles.push('manifest.json');
+          }
+
+          // Validate bundle_info structure
+          if (manifest.bundle_info) {
+            const requiredBundleInfo = ['name', 'created_at', 'generator'];
+            const missingBundleInfo = requiredBundleInfo.filter(field => !(field in manifest.bundle_info));
+            if (missingBundleInfo.length > 0) {
+              errors.push(`Manifest bundle_info missing fields: ${missingBundleInfo.join(', ')}`);
+              metrics.invalidMetadataFiles.push('manifest.json');
+            }
+          }
+
+          // Validate package details match bundled data
+          if (manifest.package_details) {
+            const manifestPackages = Object.keys(manifest.package_details);
+            const bundlePackages = Object.keys(bundledData);
+            
+            const missingInManifest = bundlePackages.filter(pkg => !manifestPackages.includes(pkg));
+            const extraInManifest = manifestPackages.filter(pkg => !bundlePackages.includes(pkg));
+            
+            if (missingInManifest.length > 0) {
+              errors.push(`Manifest missing package details for: ${missingInManifest.join(', ')}`);
+            }
+            if (extraInManifest.length > 0) {
+              errors.push(`Manifest has extra package details for: ${extraInManifest.join(', ')}`);
+            }
+          }
+
+          if (metrics.invalidMetadataFiles.length === 0) {
+            metrics.metadataValidation = 'passed';
+          } else {
+            metrics.metadataValidation = 'partial';
+          }
+        } catch (error: any) {
+          errors.push(`Failed to validate manifest: ${error.message}`);
+          metrics.metadataValidation = 'failed';
+          metrics.invalidMetadataFiles.push('manifest.json');
+        }
+      }
+
+      // 3. Validate package structure integrity
+      const packagesDir = path.join(bundlePath, 'packages');
+      try {
+        const packageEntries = await fs.readdir(packagesDir, { withFileTypes: true });
+        
+        for (const entry of packageEntries) {
+          if (entry.isDirectory()) {
+            const packagePath = path.join(packagesDir, entry.name);
+            
+            // Check for required package files
+            const packageJsonPath = path.join(packagePath, 'package.json');
+            try {
+              await fs.access(packageJsonPath);
+              
+              // Validate package.json structure
+              const packageContent = await fs.readFile(packageJsonPath, 'utf-8');
+              const packageJson = JSON.parse(packageContent);
+              
+              if (!packageJson.name || !packageJson.version) {
+                errors.push(`Package ${entry.name} has invalid package.json structure`);
+                metrics.invalidMetadataFiles.push(`packages/${entry.name}/package.json`);
+              }
+            } catch {
+              errors.push(`Package ${entry.name} missing package.json`);
+              metrics.missingRequiredFiles.push(`packages/${entry.name}/package.json`);
+            }
+
+            // Check for distilled directory structure
+            const distilledDir = path.join(packagePath, 'distilled');
+            try {
+              await fs.access(distilledDir);
+              
+              // Validate that distilled content is valid JSON
+              const distilledVersions = await fs.readdir(distilledDir, { withFileTypes: true });
+              for (const versionDir of distilledVersions) {
+                if (versionDir.isDirectory()) {
+                  const versionPath = path.join(distilledDir, versionDir.name);
+                  const loaderDirs = await fs.readdir(versionPath, { withFileTypes: true });
+                  
+                  for (const loaderDir of loaderDirs) {
+                    if (loaderDir.isDirectory()) {
+                      const loaderPath = path.join(versionPath, loaderDir.name);
+                      const jsonFiles = await fs.readdir(loaderPath);
+                      
+                      for (const jsonFile of jsonFiles) {
+                        if (jsonFile.endsWith('.json')) {
+                          try {
+                            const jsonPath = path.join(loaderPath, jsonFile);
+                            const jsonContent = await fs.readFile(jsonPath, 'utf-8');
+                            JSON.parse(jsonContent); // Validate JSON syntax
+                          } catch {
+                            errors.push(`Invalid JSON file: packages/${entry.name}/distilled/${versionDir.name}/${loaderDir.name}/${jsonFile}`);
+                            metrics.corruptedFiles.push(`packages/${entry.name}/distilled/${versionDir.name}/${loaderDir.name}/${jsonFile}`);
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            } catch {
+              errors.push(`Package ${entry.name} missing distilled directory`);
+              metrics.missingRequiredFiles.push(`packages/${entry.name}/distilled/`);
+            }
+          }
+        }
+      } catch (error: any) {
+        errors.push(`Failed to validate package structure: ${error.message}`);
+      }
+
+      // Adjust file integrity score based on corruption and missing files
+      const totalIssues = metrics.corruptedFiles.length + metrics.missingRequiredFiles.length + metrics.invalidMetadataFiles.length;
+      if (totalIssues > 0) {
+        metrics.fileIntegrityScore = Math.max(0, metrics.fileIntegrityScore - (totalIssues * 10));
+      }
+
+    } catch (error: any) {
+      errors.push(`Integrity validation error: ${error.message}`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      metrics,
+    };
+  }
+
+  /**
+   * Validate Bridge Bundle quality and content expectations
+   */
+  async _validateBundleQuality(
+    bundlePath: string,
+    bundledData: Record<string, any>
+  ): Promise<{
+    isValid: boolean;
+    warnings: string[];
+    metrics: {
+      fileCount: number;
+      sizeKB: number;
+      distilledVersions: number;
+      loaderTypes: string[];
+    };
+  }> {
+    const warnings: string[] = [];
+    const metrics = {
+      fileCount: 0,
+      sizeKB: 0,
+      distilledVersions: 0,
+      loaderTypes: new Set<string>(),
+    };
+
+    try {
+      // 1. Validate basic file count and size
+      const allFiles = await this._getAllFiles(bundlePath);
+      metrics.fileCount = allFiles.length;
+
+      if (metrics.fileCount < 10) {
+        warnings.push(`Low file count: ${metrics.fileCount} files (expected at least 10)`);
+      }
+
+      // Calculate total bundle size
+      let totalSize = 0;
+      for (const file of allFiles) {
+        const stats = await fs.stat(file);
+        totalSize += stats.size;
+      }
+      metrics.sizeKB = Math.round(totalSize / 1024);
+
+      if (metrics.sizeKB < 50) {
+        warnings.push(`Small bundle size: ${metrics.sizeKB}KB (expected at least 50KB)`);
+      }
+
+      // 2. Validate expected directory structure
+      const packagesDir = path.join(bundlePath, 'packages');
+      try {
+        await fs.access(packagesDir);
+      } catch {
+        warnings.push('Missing required packages/ directory');
+      }
+
+      // 3. Validate required files
+      if (this.options.includeMetadata) {
+        const manifestPath = path.join(bundlePath, 'manifest.json');
+        try {
+          await fs.access(manifestPath);
+        } catch {
+          warnings.push('Missing required manifest.json file');
+        }
+      }
+
+      if (this.options.validateIntegrity) {
+        const checksumPath = path.join(bundlePath, 'checksums.json');
+        try {
+          await fs.access(checksumPath);
+        } catch {
+          warnings.push('Missing required checksums.json file');
+        }
+      }
+
+      // 4. Validate distilled content structure
+      try {
+        const packageEntries = await fs.readdir(packagesDir, { withFileTypes: true });
+        for (const entry of packageEntries) {
+          if (entry.isDirectory()) {
+            metrics.distilledVersions++;
+            
+            const distilledDir = path.join(packagesDir, entry.name, 'distilled');
+            try {
+              await fs.access(distilledDir);
+              
+              // Check for loader-specific organization
+              const versionEntries = await fs.readdir(distilledDir, { withFileTypes: true });
+              for (const versionEntry of versionEntries) {
+                if (versionEntry.isDirectory()) {
+                  const loaderDirs = await fs.readdir(path.join(distilledDir, versionEntry.name), { withFileTypes: true });
+                  for (const loaderDir of loaderDirs) {
+                    if (loaderDir.isDirectory() && ['vanilla', 'fabric', 'neoforge', 'forge'].includes(loaderDir.name)) {
+                      metrics.loaderTypes.add(loaderDir.name);
+                    }
+                  }
+                }
+              }
+            } catch {
+              warnings.push(`Package ${entry.name} missing distilled/ directory`);
+            }
+          }
+        }
+      } catch {
+        warnings.push('Unable to validate distilled content structure');
+      }
+
+      if (metrics.distilledVersions === 0) {
+        warnings.push('No distilled versions found in bundle');
+      }
+
+      if (metrics.loaderTypes.size === 0) {
+        warnings.push('No loader-specific content directories found');
+      }
+
+      // 5. Validate content consistency with bundled data
+      const expectedPackages = Object.keys(bundledData).length;
+      if (metrics.distilledVersions !== expectedPackages) {
+        warnings.push(`Package count mismatch: found ${metrics.distilledVersions}, expected ${expectedPackages}`);
+      }
+
+    } catch (error: any) {
+      warnings.push(`Validation error: ${error.message}`);
+    }
+
+    return {
+      isValid: warnings.length === 0,
+      warnings,
+      metrics: {
+        ...metrics,
+        loaderTypes: Array.from(metrics.loaderTypes).sort(),
+      },
+    };
   }
 
   _buildResults(

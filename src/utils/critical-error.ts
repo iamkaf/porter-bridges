@@ -93,10 +93,10 @@ export class PipelineValidator {
         .map((s) => s.id || s.url)
         .slice(0, 5);
       throw new CriticalError(
-        'Missing critical EventBus 7 Migration Guide',
+        'Missing critical EventBus 7 Migration Guide for Forge 1.21.7',
         'discovery',
         {
-          impact: 'Critical Forge porting information unavailable',
+          impact: 'Critical Forge 1.21.7 porting information unavailable',
           evidence: `EventBus guide not found. Sample source IDs: ${sourceIds.join(', ')}`,
           recommendedAction:
             'Verify EventBus guide URL in source configurations',

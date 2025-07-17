@@ -76,7 +76,7 @@ export class SourceConfigs {
         url: 'https://gist.github.com/PaintNinja/ad82c224aecee25efac1ea3e2cf19b91',
         source_type: 'guide',
         loader_type: 'forge',
-        description: 'EventBus 7 migration guide for MinecraftForge',
+        description: 'EventBus 7 migration guide for MinecraftForge 1.21.7',
       },
     };
   }
