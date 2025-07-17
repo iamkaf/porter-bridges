@@ -90,6 +90,7 @@ export interface OrchestrationCLIOptions {
   maxConcurrent?: string;
   geminiModel?: string;
   version?: string;
+  forceProceed?: boolean;
 }
 
 // Progress callback type

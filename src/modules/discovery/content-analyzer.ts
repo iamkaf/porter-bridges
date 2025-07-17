@@ -5,10 +5,25 @@
  * priority determination, and metadata extraction.
  */
 
+import { MLContentAnalyzer } from '../../utils/ml-content-analyzer';
+
 /**
- * Content analyzer class
+ * Content analyzer class with ML enhancement
  */
 export class ContentAnalyzer {
+  private mlAnalyzer: MLContentAnalyzer;
+
+  constructor() {
+    this.mlAnalyzer = new MLContentAnalyzer();
+  }
+
+  /**
+   * Analyze content with ML enhancement
+   */
+  async analyzeContentWithML(content: { id: string; title: string; content: string; source_type: string; minecraft_version?: string; loader_type?: string }) {
+    return await this.mlAnalyzer.analyzeContent(content);
+  }
+
   /**
    * Determine if a blog post is relevant to mod porting
    */

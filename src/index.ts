@@ -3,8 +3,10 @@ import { executeBundleCommand } from './cli/bundle-command';
 import { executeCollectionCommand } from './cli/collection-command';
 import { executeDiscoveryCommand } from './cli/discovery-command';
 import { executeDistillationCommand } from './cli/distillation-command';
+import createHealthCommand from './cli/health-command';
 import { OrchestrationCommand } from './cli/orchestration-command';
 import { executePackageCommand } from './cli/package-command';
+import { AdvancedDiscoveryDemoCommand } from './cli/advanced-discovery-demo';
 import { logger } from './utils/logger';
 
 const program = new Command();
@@ -219,6 +221,13 @@ program
   .option('--no-checksums', 'Skip integrity checksum generation')
   .option('--no-archive', 'Skip distribution archive creation')
   .action(executeBundleCommand);
+
+// Health check command
+program.addCommand(createHealthCommand());
+
+// Advanced Discovery Demo command
+const advancedDiscoveryDemo = new AdvancedDiscoveryDemoCommand();
+program.addCommand(advancedDiscoveryDemo.getCommand());
 
 // Setup graceful shutdown
 process.on('SIGINT', () => {

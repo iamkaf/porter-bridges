@@ -23,12 +23,20 @@ import { type IMavenDiscoveryOptions, MavenDiscovery } from './maven-discovery';
 import { type IRSSDiscoveryOptions, RSSDiscovery } from './rss-discovery';
 import { type ISourceConfig, SourceConfigs } from './source-configs';
 import type { ISourceItem } from './source-item-factory';
+import { DiscordDiscovery, type IDiscordDiscoveryOptions } from './discord-discovery';
+import { VideoDiscovery, type IVideoDiscoveryOptions } from './video-discovery';
+import { DynamicDiscovery, type IDynamicDiscoveryOptions } from './dynamic-discovery';
+import { CommunityDiscovery, type ICommunityDiscoveryOptions } from './community-discovery';
 
 type IDiscoveryOptions = { cacheDirectory: string } & IGitHubDiscoveryOptions &
   IRSSDiscoveryOptions &
   IGitHubReleasesDiscoveryOptions &
   IMavenDiscoveryOptions &
-  IDirectUrlDiscoveryOptions;
+  IDirectUrlDiscoveryOptions &
+  IDiscordDiscoveryOptions &
+  IVideoDiscoveryOptions &
+  IDynamicDiscoveryOptions &
+  ICommunityDiscoveryOptions;
 
 /**
  * Core Discovery Module class
@@ -41,6 +49,10 @@ export class DiscoveryCore {
   githubReleasesDiscovery: GitHubReleasesDiscovery;
   mavenDiscovery: MavenDiscovery;
   directUrlDiscovery: DirectUrlDiscovery;
+  discordDiscovery: DiscordDiscovery;
+  videoDiscovery: VideoDiscovery;
+  dynamicDiscovery: DynamicDiscovery;
+  communityDiscovery: CommunityDiscovery;
   discoveredSources: Map<string, ISourceItem>;
   options: IDiscoveryOptions;
 
@@ -65,6 +77,10 @@ export class DiscoveryCore {
     this.githubReleasesDiscovery = new GitHubReleasesDiscovery(this.options);
     this.mavenDiscovery = new MavenDiscovery(this.options);
     this.directUrlDiscovery = new DirectUrlDiscovery(this.options);
+    this.discordDiscovery = new DiscordDiscovery(this.options);
+    this.videoDiscovery = new VideoDiscovery(this.options);
+    this.dynamicDiscovery = new DynamicDiscovery(this.options);
+    this.communityDiscovery = new CommunityDiscovery(this.options);
     this.discoveredSources = new Map();
   }
 
@@ -152,6 +168,21 @@ export class DiscoveryCore {
         break;
       case 'direct_url':
         await this._discoverFromDirectUrl(sourceId, config);
+        break;
+      case 'discord_channel':
+        await this._discoverFromDiscordChannel(sourceId, config);
+        break;
+      case 'discord_webhook':
+        await this._discoverFromDiscordWebhook(sourceId, config);
+        break;
+      case 'video_discovery':
+        await this._discoverFromVideos(sourceId, config);
+        break;
+      case 'dynamic_discovery':
+        await this._discoverFromDynamicSources(sourceId, config);
+        break;
+      case 'community_discovery':
+        await this._discoverFromCommunitySubmissions(sourceId, config);
         break;
       default:
         throw new Error(`Unknown source type: ${config.type}`);
@@ -365,6 +396,152 @@ export class DiscoveryCore {
         logger.error(
           { error },
           `❌ Failed to discover from direct URL ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources from Discord channel
+   */
+  async _discoverFromDiscordChannel(sourceId: string, config: ISourceConfig) {
+    try {
+      await this.discordDiscovery.discoverFromDiscordChannel(
+        sourceId,
+        config as any,
+        this.discoveredSources
+      );
+
+      logger.info(
+        { sourceId },
+        `📊 ${sourceId}: discovered Discord channel sources`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from Discord channel ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from Discord channel ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources from Discord webhook
+   */
+  async _discoverFromDiscordWebhook(sourceId: string, config: ISourceConfig) {
+    try {
+      await this.discordDiscovery.discoverFromDiscordWebhook(
+        sourceId,
+        config as any,
+        this.discoveredSources
+      );
+
+      logger.info(
+        { sourceId },
+        `📊 ${sourceId}: discovered Discord webhook sources`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from Discord webhook ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from Discord webhook ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources from videos
+   */
+  async _discoverFromVideos(sourceId: string, config: ISourceConfig) {
+    try {
+      await this.videoDiscovery.discoverFromVideos(
+        sourceId,
+        config,
+        this.discoveredSources
+      );
+
+      logger.info(
+        { sourceId },
+        `📊 ${sourceId}: discovered video sources`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from videos ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from videos ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources dynamically
+   */
+  async _discoverFromDynamicSources(sourceId: string, config: ISourceConfig) {
+    try {
+      const insights = await this.dynamicDiscovery.discoverDynamicSources(
+        sourceId,
+        config,
+        this.discoveredSources
+      );
+
+      logger.info(
+        { sourceId, insights: insights.length },
+        `📊 ${sourceId}: discovered ${insights.length} dynamic insights`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from dynamic sources ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from dynamic sources ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources from community submissions
+   */
+  async _discoverFromCommunitySubmissions(sourceId: string, config: ISourceConfig) {
+    try {
+      await this.communityDiscovery.initialize();
+      const approvedSources = await this.communityDiscovery.getApprovedSources();
+
+      for (const source of approvedSources) {
+        this.discoveredSources.set(source.url, source);
+      }
+
+      logger.info(
+        { sourceId, count: approvedSources.length },
+        `📊 ${sourceId}: discovered ${approvedSources.length} community sources`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from community submissions ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from community submissions ${sourceId}: unknown error`
         );
       }
     }

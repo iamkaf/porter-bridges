@@ -630,13 +630,44 @@ export class OrchestrationCommand {
   /**
    * Check if there are any failed sources that should block pipeline progression
    */
-  _checkForBlockingFailures(state: PipelineState, phase: string): void {
+  _checkForBlockingFailures(state: PipelineState, phase: string, forceProceed: boolean = false): void {
     const sources = Object.values(state.sources || {});
     const failedSources = sources.filter(source => source.status === 'failed');
     
     if (failedSources.length > 0) {
       const failedUrls = failedSources.map(s => s.url).slice(0, 5);
       const additionalCount = failedSources.length > 5 ? ` (and ${failedSources.length - 5} more)` : '';
+      
+      if (forceProceed) {
+        // Log warning and proceed
+        logger.warn(`⚠️  WARNING: Proceeding to ${phase} phase with ${failedSources.length} failed sources (--force-proceed enabled)`, {
+          failedCount: failedSources.length,
+          failedUrls: failedUrls.join(', ') + additionalCount,
+          impact: `Failed sources will be excluded from the ${phase} phase`,
+          note: 'This bypasses normal safety checks. Failed sources should be investigated and fixed.'
+        });
+        
+        console.warn('\n⚠️  Warning: Proceeding despite failed sources due to --force-proceed flag');
+        console.warn('   Failed sources will be excluded from processing');
+        console.warn('   This may result in incomplete data in the final bundle\n');
+        
+        return; // Allow progression despite failures
+      }
+      
+      // Log detailed information about the failed sources
+      logger.error(`❌ Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`, {
+        failedCount: failedSources.length,
+        failedUrls: failedUrls.join(', ') + additionalCount,
+        impact: `Failed sources must be resolved before continuing the pipeline`,
+        resolution: 'Fix the failed sources or remove them from the pipeline state'
+      });
+      
+      // Show specific resolution steps
+      console.error('\n📋 Resolution steps:');
+      console.error('1. Check logs for specific error details for each failed source');
+      console.error('2. Fix network issues, authentication problems, or URL changes');
+      console.error('3. Remove permanently broken sources from the pipeline state');
+      console.error('4. Or use --force-proceed flag to continue despite failures (not recommended)');
       
       throw new CriticalError(
         `Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`,
@@ -683,7 +714,7 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<CollectionResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'collection');
+    this._checkForBlockingFailures(sourcesData, 'collection', options.forceProceed);
     
     const collection = new CollectionModule({
       contentDirectory: './generated/collected-content',
@@ -713,7 +744,7 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<DistillationResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'distillation');
+    this._checkForBlockingFailures(sourcesData, 'distillation', options.forceProceed);
     
     const distillation = new DistillationModule({
       contentDirectory: './generated/collected-content',
@@ -897,7 +928,7 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<PipelineStateWithPackageResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'packaging');
+    this._checkForBlockingFailures(sourcesData, 'packaging', options.forceProceed);
     
     const packaging = new PackageModule({
       packageDirectory: './generated/packages',
@@ -935,7 +966,7 @@ export class OrchestrationCommand {
   async _executeBundling(options: Partial<OrchestrationCLIOptions>) {
     // Check for failed sources before proceeding
     const state = this.pipelineState.getState();
-    this._checkForBlockingFailures(state, 'bundling');
+    this._checkForBlockingFailures(state, 'bundling', options.forceProceed);
     
     const bundling = new BundleModule({
       bundleDirectory: './generated/bundles',

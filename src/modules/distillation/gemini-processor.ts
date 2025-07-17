@@ -10,6 +10,8 @@ import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { logger } from '../../utils/logger';
+import { createEnhancedFileAIProcessor } from '../../utils/ai-processing';
+import { executeWithDegradation } from '../../utils/graceful-degradation';
 import { PromptBuilder } from './prompt-builder';
 import { ResponseParser } from './response-parser';
 
@@ -27,6 +29,7 @@ export interface IGeminiProcessorOptions {
 export class GeminiProcessor {
   private promptBuilder: PromptBuilder;
   private responseParser: ResponseParser;
+  private aiProcessor: any;
   options: IGeminiProcessorOptions;
 
   constructor(options: Partial<IGeminiProcessorOptions> = {}) {
@@ -43,33 +46,43 @@ export class GeminiProcessor {
 
     this.promptBuilder = new PromptBuilder();
     this.responseParser = new ResponseParser(this.options.geminiModel);
+    this.aiProcessor = createEnhancedFileAIProcessor(
+      'gemini_distillation',
+      this.options.contentDirectory,
+      this.options.outputDirectory,
+      {
+        command: this.options.geminiCommand,
+        model: this.options.geminiModel,
+        timeout: this.options.timeout
+      }
+    );
   }
 
   /**
    * Verify Gemini CLI is available
    */
-  verifyGeminiCLI() {
-    return new Promise((resolve, reject) => {
-      const testProcess = spawn(this.options.geminiCommand, ['--version'], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-
-      testProcess.on('close', (code) => {
-        if (code === 0) {
-          logger.info('✅ Gemini CLI verified');
-          resolve(undefined);
-        } else {
-          reject(
-            new Error(
-              "Gemini CLI not found or not working. Please ensure it's installed and configured."
-            )
+  async verifyGeminiCLI() {
+    return executeWithDegradation(
+      async () => {
+        const isHealthy = await this.aiProcessor.verifyAI();
+        if (!isHealthy) {
+          throw new Error(
+            "Gemini CLI not found or not working. Please ensure it's installed and configured."
           );
         }
-      });
-
-      testProcess.on('error', (error) => {
-        reject(new Error(`Gemini CLI not found: ${error.message}`));
-      });
+        return true;
+      },
+      'gemini_cli',
+      'verify_gemini_cli',
+      {
+        allowDegradation: false,
+        required: true
+      }
+    ).then(result => {
+      if (!result.success) {
+        throw new Error(result.errors[0]?.message || 'Gemini CLI verification failed');
+      }
+      return result.data;
     });
   }
 

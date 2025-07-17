@@ -7,8 +7,9 @@
 
 import { createHash } from 'node:crypto';
 import type { LoaderType, SourceType } from '../../constants/enums';
-import { createHttpError, githubClient } from '../../utils/http';
+import { githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
+import { executeWithDegradation } from '../../utils/graceful-degradation';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
 import { type ISourceItem, SourceItemFactory } from './source-item-factory';
@@ -57,85 +58,102 @@ export class GitHubDiscovery {
     config: ISourceConfig,
     discoveredSources: Map<string, ISourceItem>
   ): Promise<number> {
-    try {
-      const files = await githubClient.get(config.url).json<
-        Array<{
-          name: string;
-          type: 'file' | 'dir';
-          download_url?: string;
-          url: string;
-          size: number;
-        }>
-      >();
-      let discovered = 0;
+    return executeWithDegradation(
+      async () => {
+        const files = await githubClient.getJson<
+          Array<{
+            name: string;
+            type: 'file' | 'dir';
+            download_url?: string;
+            url: string;
+            size: number;
+          }>
+        >(config.url);
+        
+        let discovered = 0;
 
-      for (const item of files) {
-        // Look for directories (version folders)
-        if (item.type === 'dir') {
-          const version = item.name;
-          const sourceItemId = `${sourceId}-${version}`;
+        for (const item of files) {
+          // Look for directories (version folders)
+          if (item.type === 'dir') {
+            const version = item.name;
+            const sourceItemId = `${sourceId}-${version}`;
 
-          const sourceItem = await this.sourceItemFactory.createSourceItem({
-            id: sourceItemId,
-            status: 'discovered',
-            url: `https://raw.githubusercontent.com/neoforged/.github/main/primers/${version}/index.md`,
-            source_type: config.source_type as SourceType,
-            loader_type: config.loader_type as LoaderType,
-            minecraft_version: version,
-            title: `Vanilla Minecraft primer for ${version}`,
-            file_size_bytes: undefined,
-            checksum: await this._generateUrlChecksum(item.url),
-            tags: ['primer', 'vanilla', 'minecraft', version],
-            priority: this.contentAnalyzer.determinePriority(version),
-            relevance_score: this.contentAnalyzer.calculateRelevance(
-              version,
-              config.source_type
-            ),
-          });
+            const sourceItem = await this.sourceItemFactory.createSourceItem({
+              id: sourceItemId,
+              status: 'discovered',
+              url: `https://raw.githubusercontent.com/neoforged/.github/main/primers/${version}/index.md`,
+              source_type: config.source_type as SourceType,
+              loader_type: config.loader_type as LoaderType,
+              minecraft_version: version,
+              title: `Vanilla Minecraft primer for ${version}`,
+              file_size_bytes: undefined,
+              checksum: await this._generateUrlChecksum(item.url),
+              tags: ['primer', 'vanilla', 'minecraft', version],
+              priority: this.contentAnalyzer.determinePriority(version),
+              relevance_score: this.contentAnalyzer.calculateRelevance(
+                version,
+                config.source_type
+              ),
+            });
 
-          discoveredSources.set(sourceItemId, sourceItem);
-          discovered++;
-        } else if (item.name.endsWith('.md') && item.type === 'file') {
-          // Also check for direct .md files in the root directory
-          const version = item.name.replace('.md', '');
-          const sourceItemId = `${sourceId}-${version}`;
+            discoveredSources.set(sourceItemId, sourceItem);
+            discovered++;
+          } else if (item.name.endsWith('.md') && item.type === 'file') {
+            // Also check for direct .md files in the root directory
+            const version = item.name.replace('.md', '');
+            const sourceItemId = `${sourceId}-${version}`;
 
-          const sourceItem = await this.sourceItemFactory.createSourceItem({
-            id: sourceItemId,
-            status: 'discovered',
-            url: item.download_url,
-            source_type: config.source_type as SourceType,
-            loader_type: config.loader_type as LoaderType,
-            minecraft_version: version,
-            title:
-              version === 'README'
-                ? 'Vanilla Minecraft primers README'
-                : `Vanilla Minecraft primer for ${version}`,
-            file_size_bytes: item.size,
-            checksum: await this._generateUrlChecksum(item.download_url),
-            tags: ['primer', 'vanilla', 'minecraft', version],
-            priority: this.contentAnalyzer.determinePriority(version),
-            relevance_score: this.contentAnalyzer.calculateRelevance(
-              version,
-              config.source_type
-            ),
-          });
+            const sourceItem = await this.sourceItemFactory.createSourceItem({
+              id: sourceItemId,
+              status: 'discovered',
+              url: item.download_url,
+              source_type: config.source_type as SourceType,
+              loader_type: config.loader_type as LoaderType,
+              minecraft_version: version,
+              title:
+                version === 'README'
+                  ? 'Vanilla Minecraft primers README'
+                  : `Vanilla Minecraft primer for ${version}`,
+              file_size_bytes: item.size,
+              checksum: await this._generateUrlChecksum(item.download_url),
+              tags: ['primer', 'vanilla', 'minecraft', version],
+              priority: this.contentAnalyzer.determinePriority(version),
+              relevance_score: this.contentAnalyzer.calculateRelevance(
+                version,
+                config.source_type
+              ),
+            });
 
-          discoveredSources.set(sourceItemId, sourceItem);
-          discovered++;
+            discoveredSources.set(sourceItemId, sourceItem);
+            discovered++;
+          }
         }
-      }
 
-      logger.info({ sourceId, count: discovered }, 'Discovered primers');
-      return discovered;
-    } catch (error: unknown) {
-      const httpError = createHttpError(error, config.url);
-      logger.error(
-        { error: httpError.message },
-        'Failed to discover from GitHub directory'
-      );
-      throw httpError;
-    }
+        logger.info({ sourceId, count: discovered }, 'Discovered primers');
+        return discovered;
+      },
+      'github_discovery',
+      `discover_from_github_directory_${sourceId}`,
+      {
+        allowDegradation: true,
+        fallbackData: 0,
+        skipOnFailure: false,
+        required: false
+      }
+    ).then(result => {
+      if (result.degraded) {
+        logger.warn(
+          `🔄 GitHub discovery completed with degradation`,
+          {
+            sourceId,
+            degradationLevel: result.degradationLevel,
+            strategy: result.strategy,
+            warnings: result.warnings
+          }
+        );
+      }
+      return result.data || 0;
+    });
   }
 
   /**
