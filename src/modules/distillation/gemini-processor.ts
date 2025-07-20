@@ -10,6 +10,7 @@ import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createEnhancedFileAIProcessor } from '../../utils/ai-processing';
+import { generateCollectedContentFilename } from '../../utils/filename-utils';
 import { executeWithDegradation } from '../../utils/graceful-degradation';
 import { logger } from '../../utils/logger';
 import { PromptBuilder } from './prompt-builder';
@@ -100,6 +101,7 @@ export class GeminiProcessor {
 
       // Check if content file exists
       const contentPath = this._getContentPath(source.url);
+      logger.debug(`Attempting to access content at: ${contentPath} for source URL: ${source.url}`);
       let contentExists;
       try {
         await fs.access(contentPath);
@@ -395,13 +397,7 @@ export class GeminiProcessor {
    */
   _getContentPath(url: string): string {
     // Use the same filename generation logic as CollectionModule
-    const cleaned = url
-      .replace(/^https?:\/\//, '')
-      .replace(/[^\w\-_.~]/g, '_')
-      .replace(/_+/g, '_')
-      .replace(/^_|_$/g, '');
-
-    const filename = `${cleaned}.html`;
+    const filename = generateCollectedContentFilename(url);
     return path.join(this.options.contentDirectory, filename);
   }
 

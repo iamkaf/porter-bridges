@@ -42,7 +42,7 @@ export function generateCollectedContentFilename(
     }
   } else if (url.includes('github.com') && url.includes('releases')) {
     extension = '.md'; // GitHub releases are markdown
-  } else if (url.includes('.md')) {
+  } else if (url.endsWith('.md')) {
     extension = '.md';
   }
 
@@ -70,7 +70,7 @@ export function generateRawContentFilename(source: any): string {
   if (source.source_type === 'primer') {
     extension = 'md';
   } else if (source.source_type === 'blog_post') {
-    extension = 'html';
+    extension = 'md';
   } else if (source.source_type === 'changelog') {
     extension = 'txt';
   } else {
