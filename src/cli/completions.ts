@@ -1,6 +1,6 @@
 /**
  * @file Shell Auto-completion
- * 
+ *
  * Provides shell auto-completion scripts for bash, zsh, and fish
  * to enhance the CLI user experience with tab completion.
  */
@@ -425,7 +425,9 @@ export class CompletionInstaller {
    * Install completions for all supported shells
    */
   async installAll(): Promise<void> {
-    console.log(chalk.cyan('🔧 Installing shell completions for Porter Bridges...\n'));
+    console.log(
+      chalk.cyan('🔧 Installing shell completions for Porter Bridges...\n')
+    );
 
     try {
       // Create completion scripts directory
@@ -444,16 +446,21 @@ export class CompletionInstaller {
       const fishResult = results[2];
 
       console.log(chalk.green('✅ Completion installation summary:'));
-      console.log(`   Bash: ${bashResult.status === 'fulfilled' ? '✓' : '✗'} ${bashResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`);
-      console.log(`   Zsh: ${zshResult.status === 'fulfilled' ? '✓' : '✗'} ${zshResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`);
-      console.log(`   Fish: ${fishResult.status === 'fulfilled' ? '✓' : '✗'} ${fishResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`);
+      console.log(
+        `   Bash: ${bashResult.status === 'fulfilled' ? '✓' : '✗'} ${bashResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`
+      );
+      console.log(
+        `   Zsh: ${zshResult.status === 'fulfilled' ? '✓' : '✗'} ${zshResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`
+      );
+      console.log(
+        `   Fish: ${fishResult.status === 'fulfilled' ? '✓' : '✗'} ${fishResult.status === 'fulfilled' ? 'Installed' : 'Failed'}`
+      );
 
       console.log(chalk.yellow('\n⚠️  To enable completions, you may need to:'));
       console.log('   1. Restart your shell or source your profile');
       console.log('   2. Run: source ~/.bashrc (for bash)');
       console.log('   3. Run: source ~/.zshrc (for zsh)');
       console.log('   4. Fish completions should work immediately');
-
     } catch (error) {
       logger.error('Failed to install completions:', error);
       throw error;
@@ -464,7 +471,10 @@ export class CompletionInstaller {
    * Install bash completions
    */
   async installBash(): Promise<void> {
-    const bashCompletionPath = path.join(this.completionDir, 'porter-bridges.bash');
+    const bashCompletionPath = path.join(
+      this.completionDir,
+      'porter-bridges.bash'
+    );
     await fs.writeFile(bashCompletionPath, BASH_COMPLETION);
 
     // Try to add to bash completion directory
@@ -490,7 +500,7 @@ export class CompletionInstaller {
       // Fall back to adding to .bashrc
       const bashrcPath = path.join(this.homeDir, '.bashrc');
       const sourceCommand = `\n# Porter Bridges completions\nsource "${bashCompletionPath}"\n`;
-      
+
       try {
         const bashrcContent = await fs.readFile(bashrcPath, 'utf-8');
         if (!bashrcContent.includes('Porter Bridges completions')) {
@@ -534,7 +544,7 @@ export class CompletionInstaller {
       const zshrcPath = path.join(this.homeDir, '.zshrc');
       const fpath = path.dirname(zshCompletionPath);
       const sourceCommand = `\n# Porter Bridges completions\nfpath=(${fpath} $fpath)\nautoload -U compinit && compinit\n`;
-      
+
       try {
         const zshrcContent = await fs.readFile(zshrcPath, 'utf-8');
         if (!zshrcContent.includes('Porter Bridges completions')) {
@@ -551,7 +561,10 @@ export class CompletionInstaller {
    * Install fish completions
    */
   async installFish(): Promise<void> {
-    const fishCompletionPath = path.join(this.completionDir, 'porter-bridges.fish');
+    const fishCompletionPath = path.join(
+      this.completionDir,
+      'porter-bridges.fish'
+    );
     await fs.writeFile(fishCompletionPath, FISH_COMPLETION);
 
     // Try to add to fish completion directory
@@ -564,7 +577,10 @@ export class CompletionInstaller {
     for (const dir of fishCompletionDirs) {
       try {
         await fs.mkdir(dir, { recursive: true });
-        await fs.copyFile(fishCompletionPath, path.join(dir, 'porter-bridges.fish'));
+        await fs.copyFile(
+          fishCompletionPath,
+          path.join(dir, 'porter-bridges.fish')
+        );
         break;
       } catch {
         // Continue to next directory
@@ -615,9 +631,15 @@ export class CompletionInstaller {
    * Check if completions are installed
    */
   async isInstalled(): Promise<{ bash: boolean; zsh: boolean; fish: boolean }> {
-    const bashPath = path.join(this.homeDir, '.bash_completion.d/porter-bridges');
+    const bashPath = path.join(
+      this.homeDir,
+      '.bash_completion.d/porter-bridges'
+    );
     const zshPath = path.join(this.homeDir, '.zsh/completions/_porter-bridges');
-    const fishPath = path.join(this.homeDir, '.config/fish/completions/porter-bridges.fish');
+    const fishPath = path.join(
+      this.homeDir,
+      '.config/fish/completions/porter-bridges.fish'
+    );
 
     const [bashExists, zshExists, fishExists] = await Promise.allSettled([
       fs.access(bashPath),

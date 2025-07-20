@@ -20,7 +20,14 @@ export class ContentAnalyzer {
   /**
    * Analyze content with ML enhancement
    */
-  async analyzeContentWithML(content: { id: string; title: string; content: string; source_type: string; minecraft_version?: string; loader_type?: string }) {
+  async analyzeContentWithML(content: {
+    id: string;
+    title: string;
+    content: string;
+    source_type: string;
+    minecraft_version?: string;
+    loader_type?: string;
+  }) {
     return await this.mlAnalyzer.analyzeContent(content);
   }
 

@@ -6,16 +6,16 @@
  */
 
 import { DistilledContentSchema } from '../../schemas/distilled-content-schema';
+import { healJSON, logHealingStatsSummary } from '../../utils/json-healer';
 import { logger } from '../../utils/logger';
 import { ValidationFixer } from './validation-fixer';
-import { healJSON, logHealingStatsSummary } from '../../utils/json-healer';
 
 /**
  * Response parser class
  */
 export class ResponseParser {
   private validationFixer: ValidationFixer;
-  private parseCount: number = 0;
+  private parseCount = 0;
 
   constructor(_geminiModel: string) {
     this.validationFixer = new ValidationFixer();
@@ -26,12 +26,12 @@ export class ResponseParser {
    */
   parseFileContent(fileContent: string) {
     this.parseCount++;
-    
+
     // Log healing statistics summary every 10 parse attempts
     if (this.parseCount % 10 === 0) {
       logHealingStatsSummary();
     }
-    
+
     try {
       // First try to parse JSON directly
       const parsed = JSON.parse(fileContent);
@@ -42,10 +42,10 @@ export class ResponseParser {
         { error: initialError.message },
         '⚠️  Initial JSON parsing failed, attempting to heal JSON...'
       );
-      
+
       // Try to heal the JSON
       const healResult = healJSON(fileContent);
-      
+
       if (healResult.valid && healResult.repaired) {
         try {
           const parsed = JSON.parse(healResult.repaired);
@@ -61,17 +61,17 @@ export class ResponseParser {
           );
         }
       }
-      
+
       // JSON healing failed or didn't produce valid JSON
       logger.error(
-        { 
+        {
           initialError: initialError.message,
           healError: healResult.error,
-          fileContent: fileContent.substring(0, 500) 
+          fileContent: fileContent.substring(0, 500),
         },
         '❌ Failed to parse JSON from file content even after healing attempt'
       );
-      
+
       throw new Error(
         `Failed to parse JSON from file content: ${initialError.message}. Healing attempt also failed: ${healResult.error || 'Unknown error'}`
       );

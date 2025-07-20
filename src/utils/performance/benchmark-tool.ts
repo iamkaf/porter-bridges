@@ -8,13 +8,16 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from '../logger';
-import { performanceMonitor, type BenchmarkResult } from './performance-monitor';
-import { performanceConfig } from './performance-config';
-import { cachedHttpClient } from '../http-cached';
 import { globalCache } from '../cache/cache-manager';
-import { compressionManager } from './compression-manager';
+import { cachedHttpClient } from '../http-cached';
+import { logger } from '../logger';
 import { streamingProcessor } from '../streaming/streaming-file-processor';
+import { compressionManager } from './compression-manager';
+import { performanceConfig } from './performance-config';
+import {
+  type BenchmarkResult,
+  performanceMonitor,
+} from './performance-monitor';
 
 export interface BenchmarkConfig {
   iterations: number;
@@ -35,7 +38,13 @@ export interface BenchmarkSuite {
 export interface BenchmarkTest {
   name: string;
   description: string;
-  category: 'collection' | 'distillation' | 'bundling' | 'compression' | 'streaming' | 'caching';
+  category:
+    | 'collection'
+    | 'distillation'
+    | 'bundling'
+    | 'compression'
+    | 'streaming'
+    | 'caching';
   setup?: () => Promise<void>;
   test: () => Promise<any>;
   teardown?: () => Promise<void>;
@@ -113,9 +122,9 @@ export class BenchmarkTool {
       iterations: config.iterations || 5,
       warmupIterations: config.warmupIterations || 2,
       sampleSize: config.sampleSize || 10,
-      enableProfiling: config.enableProfiling || false,
+      enableProfiling: config.enableProfiling,
       outputDirectory: config.outputDirectory || './generated/benchmarks',
-      compareWithBaseline: config.compareWithBaseline || false,
+      compareWithBaseline: config.compareWithBaseline,
       baselineFile: config.baselineFile,
     };
 
@@ -132,10 +141,10 @@ export class BenchmarkTool {
    */
   async runBenchmarkSuite(suite: BenchmarkSuite): Promise<BenchmarkReport> {
     logger.info(`🚀 Starting benchmark suite: ${suite.name}`);
-    
+
     // Ensure output directory exists
     await fs.mkdir(this.config.outputDirectory, { recursive: true });
-    
+
     // Load baseline if requested
     if (this.config.compareWithBaseline && this.config.baselineFile) {
       await this.loadBaseline(this.config.baselineFile);
@@ -150,11 +159,11 @@ export class BenchmarkTool {
     // Run each benchmark test
     for (const test of suite.benchmarks) {
       logger.info(`🧪 Running benchmark: ${test.name}`);
-      
+
       try {
         const result = await this.runBenchmarkTest(test);
         this.results.push(result);
-        
+
         logger.info(`✅ Benchmark completed: ${test.name}`, {
           averageTime: `${result.metrics.averageTime.toFixed(2)}ms`,
           throughput: `${result.metrics.throughput.toFixed(2)} ops/sec`,
@@ -183,7 +192,7 @@ export class BenchmarkTool {
 
     // Save report
     await this.saveReport(report);
-    
+
     // Log summary
     this.logSummary(summary, totalTime);
 
@@ -213,10 +222,17 @@ export class BenchmarkTool {
     const unoptimizedReport = await this.runBenchmarkSuite(unoptimizedSuite);
 
     // Generate comparison
-    const comparison = this.generateComparison(optimizedReport, unoptimizedReport);
+    const comparison = this.generateComparison(
+      optimizedReport,
+      unoptimizedReport
+    );
 
     // Save comparison report
-    await this.saveComparisonReport(optimizedReport, unoptimizedReport, comparison);
+    await this.saveComparisonReport(
+      optimizedReport,
+      unoptimizedReport,
+      comparison
+    );
 
     return {
       optimized: optimizedReport,
@@ -230,7 +246,7 @@ export class BenchmarkTool {
    */
   async runBenchmarkTest(test: BenchmarkTest): Promise<BenchmarkTestResult> {
     const operationName = `benchmark-${test.name}`;
-    
+
     // Setup
     if (test.setup) {
       await test.setup();
@@ -251,13 +267,13 @@ export class BenchmarkTool {
 
     for (let i = 0; i < this.config.iterations; i++) {
       const iterationName = `${operationName}-${i}`;
-      
+
       // Measure memory before
       const memoryBefore = process.memoryUsage();
-      
+
       // Measure disk usage before
       const diskBefore = await this.measureDiskUsage();
-      
+
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
@@ -265,11 +281,11 @@ export class BenchmarkTool {
 
       // Run test
       performanceMonitor.startMonitoring(iterationName, { iteration: i });
-      
+
       const startTime = Date.now();
       await test.test();
       const endTime = Date.now();
-      
+
       performanceMonitor.endMonitoring(iterationName, test.category, {
         iteration: i,
         duration: endTime - startTime,
@@ -277,8 +293,9 @@ export class BenchmarkTool {
 
       // Measure memory after
       const memoryAfter = process.memoryUsage();
-      const memoryDiff = (memoryAfter.heapUsed - memoryBefore.heapUsed) / 1024 / 1024; // MB
-      
+      const memoryDiff =
+        (memoryAfter.heapUsed - memoryBefore.heapUsed) / 1024 / 1024; // MB
+
       // Measure disk usage after
       const diskAfter = await this.measureDiskUsage();
       const diskDiff = diskAfter - diskBefore;
@@ -288,7 +305,7 @@ export class BenchmarkTool {
       diskUsages.push(diskDiff);
 
       // Small delay between iterations
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     // Teardown
@@ -297,13 +314,16 @@ export class BenchmarkTool {
     }
 
     // Calculate metrics
-    const averageTime = times.reduce((sum, time) => sum + time, 0) / times.length;
+    const averageTime =
+      times.reduce((sum, time) => sum + time, 0) / times.length;
     const minTime = Math.min(...times);
     const maxTime = Math.max(...times);
     const standardDeviation = this.calculateStandardDeviation(times);
     const throughput = 1000 / averageTime; // ops/sec
-    const averageMemoryUsage = memoryUsages.reduce((sum, mem) => sum + mem, 0) / memoryUsages.length;
-    const averageDiskUsage = diskUsages.reduce((sum, disk) => sum + disk, 0) / diskUsages.length;
+    const averageMemoryUsage =
+      memoryUsages.reduce((sum, mem) => sum + mem, 0) / memoryUsages.length;
+    const averageDiskUsage =
+      diskUsages.reduce((sum, disk) => sum + disk, 0) / diskUsages.length;
 
     // Get cache and compression stats
     const cacheStats = globalCache.getStats();
@@ -336,10 +356,22 @@ export class BenchmarkTool {
       const baseline = this.baseline.get(baselineKey)!;
       result.baseline = baseline;
       result.improvement = {
-        timeReduction: ((baseline.metrics.averageTime - averageTime) / baseline.metrics.averageTime) * 100,
-        memoryReduction: ((baseline.metrics.memoryUsage - averageMemoryUsage) / baseline.metrics.memoryUsage) * 100,
-        diskReduction: ((baseline.metrics.diskUsage - averageDiskUsage) / baseline.metrics.diskUsage) * 100,
-        throughputIncrease: ((throughput - baseline.metrics.throughput) / baseline.metrics.throughput) * 100,
+        timeReduction:
+          ((baseline.metrics.averageTime - averageTime) /
+            baseline.metrics.averageTime) *
+          100,
+        memoryReduction:
+          ((baseline.metrics.memoryUsage - averageMemoryUsage) /
+            baseline.metrics.memoryUsage) *
+          100,
+        diskReduction:
+          ((baseline.metrics.diskUsage - averageDiskUsage) /
+            baseline.metrics.diskUsage) *
+          100,
+        throughputIncrease:
+          ((throughput - baseline.metrics.throughput) /
+            baseline.metrics.throughput) *
+          100,
       };
     }
 
@@ -364,7 +396,9 @@ export class BenchmarkTool {
           },
           test: async () => {
             const urls = this.generateTestUrls(this.config.sampleSize);
-            const promises = urls.map(url => cachedHttpClient.get(url).catch(() => null));
+            const promises = urls.map((url) =>
+              cachedHttpClient.get(url).catch(() => null)
+            );
             await Promise.all(promises);
           },
         },
@@ -376,9 +410,15 @@ export class BenchmarkTool {
             await this.createTestFiles(this.config.sampleSize);
           },
           test: async () => {
-            const inputPath = path.join(this.config.outputDirectory, 'test-input.txt');
-            const outputPath = path.join(this.config.outputDirectory, 'test-output.txt');
-            
+            const inputPath = path.join(
+              this.config.outputDirectory,
+              'test-input.txt'
+            );
+            const outputPath = path.join(
+              this.config.outputDirectory,
+              'test-output.txt'
+            );
+
             await streamingProcessor.copyFile(inputPath, outputPath, {
               compress: true,
             });
@@ -392,8 +432,9 @@ export class BenchmarkTool {
           description: 'Content compression with optimal settings',
           category: 'compression',
           test: async () => {
-            const testData = Buffer.from('a'.repeat(100000)); // 100KB of data
-            const { compressed } = await compressionManager.compressBuffer(testData);
+            const testData = Buffer.from('a'.repeat(100_000)); // 100KB of data
+            const { compressed } =
+              await compressionManager.compressBuffer(testData);
             await compressionManager.decompressBuffer(compressed, 'gzip');
           },
         },
@@ -407,9 +448,11 @@ export class BenchmarkTool {
           test: async () => {
             // Populate cache
             for (let i = 0; i < this.config.sampleSize; i++) {
-              await globalCache.getOrSet(`key-${i}`, async () => ({ data: `value-${i}` }));
+              await globalCache.getOrSet(`key-${i}`, async () => ({
+                data: `value-${i}`,
+              }));
             }
-            
+
             // Test cache hits
             for (let i = 0; i < this.config.sampleSize; i++) {
               globalCache.get(`key-${i}`);
@@ -435,8 +478,14 @@ export class BenchmarkTool {
           setup: async () => {
             performanceConfig.setPerformanceProfile('conservative');
             performanceConfig.updateConfig({
-              caching: { ...performanceConfig.getConfig().caching, enabled: false },
-              parallelProcessing: { ...performanceConfig.getConfig().parallelProcessing, enabled: false },
+              caching: {
+                ...performanceConfig.getConfig().caching,
+                enabled: false,
+              },
+              parallelProcessing: {
+                ...performanceConfig.getConfig().parallelProcessing,
+                enabled: false,
+              },
             });
           },
           test: async () => {
@@ -458,9 +507,15 @@ export class BenchmarkTool {
             await this.createTestFiles(this.config.sampleSize);
           },
           test: async () => {
-            const inputPath = path.join(this.config.outputDirectory, 'test-input.txt');
-            const outputPath = path.join(this.config.outputDirectory, 'test-output.txt');
-            
+            const inputPath = path.join(
+              this.config.outputDirectory,
+              'test-input.txt'
+            );
+            const outputPath = path.join(
+              this.config.outputDirectory,
+              'test-output.txt'
+            );
+
             // Read entire file into memory
             const content = await fs.readFile(inputPath);
             await fs.writeFile(outputPath, content);
@@ -474,7 +529,7 @@ export class BenchmarkTool {
           description: 'Content storage without compression',
           category: 'compression',
           test: async () => {
-            const testData = Buffer.from('a'.repeat(100000)); // 100KB of data
+            const testData = Buffer.from('a'.repeat(100_000)); // 100KB of data
             // Just return the data without compression
             return testData;
           },
@@ -486,7 +541,7 @@ export class BenchmarkTool {
           test: async () => {
             // Simulate repeated expensive operations without caching
             for (let i = 0; i < this.config.sampleSize; i++) {
-              await new Promise(resolve => setTimeout(resolve, 10)); // Simulate work
+              await new Promise((resolve) => setTimeout(resolve, 10)); // Simulate work
             }
           },
         },
@@ -500,12 +555,12 @@ export class BenchmarkTool {
     try {
       const content = await fs.readFile(baselineFile, 'utf-8');
       const report: BenchmarkReport = JSON.parse(content);
-      
+
       for (const result of report.results) {
         const key = `${result.category}-${result.test}`;
         this.baseline.set(key, result);
       }
-      
+
       logger.info('📊 Baseline loaded successfully', {
         baselineFile,
         tests: this.baseline.size,
@@ -520,7 +575,7 @@ export class BenchmarkTool {
 
   private async getSystemInfo(): Promise<SystemInfo> {
     const os = require('os');
-    
+
     return {
       platform: os.platform(),
       arch: os.arch(),
@@ -533,8 +588,9 @@ export class BenchmarkTool {
 
   private calculateStandardDeviation(values: number[]): number {
     const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
-    const squaredDiffs = values.map(val => Math.pow(val - mean, 2));
-    const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
+    const squaredDiffs = values.map((val) => (val - mean) ** 2);
+    const variance =
+      squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
     return Math.sqrt(variance);
   }
 
@@ -549,23 +605,39 @@ export class BenchmarkTool {
 
   private generateSummary(): BenchmarkSummary {
     const totalTests = this.results.length;
-    const totalTime = this.results.reduce((sum, result) => sum + result.metrics.averageTime, 0);
-    
-    const improvements = this.results
-      .filter(result => result.improvement)
-      .map(result => result.improvement!);
+    const totalTime = this.results.reduce(
+      (sum, result) => sum + result.metrics.averageTime,
+      0
+    );
 
-    const averageImprovement = improvements.length > 0 ? {
-      timeReduction: improvements.reduce((sum, imp) => sum + imp.timeReduction, 0) / improvements.length,
-      memoryReduction: improvements.reduce((sum, imp) => sum + imp.memoryReduction, 0) / improvements.length,
-      diskReduction: improvements.reduce((sum, imp) => sum + imp.diskReduction, 0) / improvements.length,
-      throughputIncrease: improvements.reduce((sum, imp) => sum + imp.throughputIncrease, 0) / improvements.length,
-    } : {
-      timeReduction: 0,
-      memoryReduction: 0,
-      diskReduction: 0,
-      throughputIncrease: 0,
-    };
+    const improvements = this.results
+      .filter((result) => result.improvement)
+      .map((result) => result.improvement!);
+
+    const averageImprovement =
+      improvements.length > 0
+        ? {
+            timeReduction:
+              improvements.reduce((sum, imp) => sum + imp.timeReduction, 0) /
+              improvements.length,
+            memoryReduction:
+              improvements.reduce((sum, imp) => sum + imp.memoryReduction, 0) /
+              improvements.length,
+            diskReduction:
+              improvements.reduce((sum, imp) => sum + imp.diskReduction, 0) /
+              improvements.length,
+            throughputIncrease:
+              improvements.reduce(
+                (sum, imp) => sum + imp.throughputIncrease,
+                0
+              ) / improvements.length,
+          }
+        : {
+            timeReduction: 0,
+            memoryReduction: 0,
+            diskReduction: 0,
+            throughputIncrease: 0,
+          };
 
     const targetsAchieved = {
       timeReduction50: averageImprovement.timeReduction >= 50,
@@ -575,13 +647,17 @@ export class BenchmarkTool {
 
     // Find top performers and those needing improvement
     const topPerformers = this.results
-      .filter(result => result.improvement && result.improvement.timeReduction > 40)
-      .map(result => result.test)
+      .filter(
+        (result) => result.improvement && result.improvement.timeReduction > 40
+      )
+      .map((result) => result.test)
       .slice(0, 3);
 
     const needsImprovement = this.results
-      .filter(result => result.improvement && result.improvement.timeReduction < 20)
-      .map(result => result.test)
+      .filter(
+        (result) => result.improvement && result.improvement.timeReduction < 20
+      )
+      .map((result) => result.test)
       .slice(0, 3);
 
     return {
@@ -599,44 +675,77 @@ export class BenchmarkTool {
     const summary = this.generateSummary();
 
     if (!summary.targetsAchieved.timeReduction50) {
-      recommendations.push('Consider increasing parallel processing concurrency to achieve 50% time reduction target');
+      recommendations.push(
+        'Consider increasing parallel processing concurrency to achieve 50% time reduction target'
+      );
     }
 
     if (!summary.targetsAchieved.memoryReduction30) {
-      recommendations.push('Enable streaming for large file operations to achieve 30% memory reduction target');
+      recommendations.push(
+        'Enable streaming for large file operations to achieve 30% memory reduction target'
+      );
     }
 
     if (!summary.targetsAchieved.diskReduction40) {
-      recommendations.push('Increase compression levels to achieve 40% disk reduction target');
+      recommendations.push(
+        'Increase compression levels to achieve 40% disk reduction target'
+      );
     }
 
     if (summary.needsImprovement.length > 0) {
-      recommendations.push(`Focus optimization efforts on: ${summary.needsImprovement.join(', ')}`);
+      recommendations.push(
+        `Focus optimization efforts on: ${summary.needsImprovement.join(', ')}`
+      );
     }
 
     // Add cache-specific recommendations
-    const cacheResults = this.results.filter(r => r.category === 'caching');
+    const cacheResults = this.results.filter((r) => r.category === 'caching');
     if (cacheResults.length > 0) {
-      const avgCacheHitRate = cacheResults.reduce((sum, r) => sum + r.metrics.cacheHitRate, 0) / cacheResults.length;
+      const avgCacheHitRate =
+        cacheResults.reduce((sum, r) => sum + r.metrics.cacheHitRate, 0) /
+        cacheResults.length;
       if (avgCacheHitRate < 80) {
-        recommendations.push('Improve cache hit rate by increasing cache size or TTL');
+        recommendations.push(
+          'Improve cache hit rate by increasing cache size or TTL'
+        );
       }
     }
 
     return recommendations;
   }
 
-  private generateComparison(optimized: BenchmarkReport, unoptimized: BenchmarkReport): ComparisonResult {
+  private generateComparison(
+    optimized: BenchmarkReport,
+    unoptimized: BenchmarkReport
+  ): ComparisonResult {
     const comparisons: TestComparison[] = [];
 
     for (const optimizedResult of optimized.results) {
-      const unoptimizedResult = unoptimized.results.find(r => r.test === optimizedResult.test);
-      
+      const unoptimizedResult = unoptimized.results.find(
+        (r) => r.test === optimizedResult.test
+      );
+
       if (unoptimizedResult) {
-        const timeImprovement = ((unoptimizedResult.metrics.averageTime - optimizedResult.metrics.averageTime) / unoptimizedResult.metrics.averageTime) * 100;
-        const memoryImprovement = ((unoptimizedResult.metrics.memoryUsage - optimizedResult.metrics.memoryUsage) / unoptimizedResult.metrics.memoryUsage) * 100;
-        const diskImprovement = ((unoptimizedResult.metrics.diskUsage - optimizedResult.metrics.diskUsage) / unoptimizedResult.metrics.diskUsage) * 100;
-        const throughputImprovement = ((optimizedResult.metrics.throughput - unoptimizedResult.metrics.throughput) / unoptimizedResult.metrics.throughput) * 100;
+        const timeImprovement =
+          ((unoptimizedResult.metrics.averageTime -
+            optimizedResult.metrics.averageTime) /
+            unoptimizedResult.metrics.averageTime) *
+          100;
+        const memoryImprovement =
+          ((unoptimizedResult.metrics.memoryUsage -
+            optimizedResult.metrics.memoryUsage) /
+            unoptimizedResult.metrics.memoryUsage) *
+          100;
+        const diskImprovement =
+          ((unoptimizedResult.metrics.diskUsage -
+            optimizedResult.metrics.diskUsage) /
+            unoptimizedResult.metrics.diskUsage) *
+          100;
+        const throughputImprovement =
+          ((optimizedResult.metrics.throughput -
+            unoptimizedResult.metrics.throughput) /
+            unoptimizedResult.metrics.throughput) *
+          100;
 
         comparisons.push({
           test: optimizedResult.test,
@@ -654,10 +763,20 @@ export class BenchmarkTool {
     }
 
     const overallImprovement = {
-      timeReduction: comparisons.reduce((sum, c) => sum + c.improvement.timeReduction, 0) / comparisons.length,
-      memoryReduction: comparisons.reduce((sum, c) => sum + c.improvement.memoryReduction, 0) / comparisons.length,
-      diskReduction: comparisons.reduce((sum, c) => sum + c.improvement.diskReduction, 0) / comparisons.length,
-      throughputIncrease: comparisons.reduce((sum, c) => sum + c.improvement.throughputIncrease, 0) / comparisons.length,
+      timeReduction:
+        comparisons.reduce((sum, c) => sum + c.improvement.timeReduction, 0) /
+        comparisons.length,
+      memoryReduction:
+        comparisons.reduce((sum, c) => sum + c.improvement.memoryReduction, 0) /
+        comparisons.length,
+      diskReduction:
+        comparisons.reduce((sum, c) => sum + c.improvement.diskReduction, 0) /
+        comparisons.length,
+      throughputIncrease:
+        comparisons.reduce(
+          (sum, c) => sum + c.improvement.throughputIncrease,
+          0
+        ) / comparisons.length,
     };
 
     const targetsAchieved = {
@@ -676,9 +795,9 @@ export class BenchmarkTool {
   private async saveReport(report: BenchmarkReport): Promise<void> {
     const filename = `benchmark-${report.suite.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.json`;
     const filepath = path.join(this.config.outputDirectory, filename);
-    
+
     await fs.writeFile(filepath, JSON.stringify(report, null, 2));
-    
+
     logger.info('📊 Benchmark report saved', {
       filepath,
       tests: report.results.length,
@@ -686,7 +805,11 @@ export class BenchmarkTool {
     });
   }
 
-  private async saveComparisonReport(optimized: BenchmarkReport, unoptimized: BenchmarkReport, comparison: ComparisonResult): Promise<void> {
+  private async saveComparisonReport(
+    optimized: BenchmarkReport,
+    unoptimized: BenchmarkReport,
+    comparison: ComparisonResult
+  ): Promise<void> {
     const comparisonReport = {
       timestamp: new Date().toISOString(),
       optimized,
@@ -696,9 +819,9 @@ export class BenchmarkTool {
 
     const filename = `performance-comparison-${new Date().toISOString().split('T')[0]}.json`;
     const filepath = path.join(this.config.outputDirectory, filename);
-    
+
     await fs.writeFile(filepath, JSON.stringify(comparisonReport, null, 2));
-    
+
     logger.info('📊 Performance comparison report saved', {
       filepath,
       overallImprovement: comparison.overallImprovement,
@@ -718,7 +841,9 @@ export class BenchmarkTool {
       },
       targetsAchieved: {
         timeReduction50: summary.targetsAchieved.timeReduction50 ? '✅' : '❌',
-        memoryReduction30: summary.targetsAchieved.memoryReduction30 ? '✅' : '❌',
+        memoryReduction30: summary.targetsAchieved.memoryReduction30
+          ? '✅'
+          : '❌',
         diskReduction40: summary.targetsAchieved.diskReduction40 ? '✅' : '❌',
       },
       topPerformers: summary.topPerformers,
@@ -742,9 +867,15 @@ export class BenchmarkTool {
 
   private async cleanupTestFiles(): Promise<void> {
     try {
-      const inputPath = path.join(this.config.outputDirectory, 'test-input.txt');
-      const outputPath = path.join(this.config.outputDirectory, 'test-output.txt');
-      
+      const inputPath = path.join(
+        this.config.outputDirectory,
+        'test-input.txt'
+      );
+      const outputPath = path.join(
+        this.config.outputDirectory,
+        'test-output.txt'
+      );
+
       await fs.unlink(inputPath).catch(() => {});
       await fs.unlink(outputPath).catch(() => {});
     } catch {

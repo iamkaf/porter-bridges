@@ -1,6 +1,6 @@
 /**
  * @file Filename Utilities - Standardized filename generation across modules
- * 
+ *
  * This module provides consistent filename generation logic to avoid mismatches
  * between discovery, collection, and packaging modules.
  */
@@ -11,26 +11,29 @@
 export function generateSafeFilename(url: string): string {
   // Decode URL-encoded characters first to handle %2B, %20, etc.
   const decoded = decodeURIComponent(url);
-  
+
   // Convert to safe filename
   const cleaned = decoded
     .replace(/^https?:\/\//, '')
     .replace(/[^\w\-_.~]/g, '_')
     .replace(/_+/g, '_')
     .replace(/^_|_$/g, '');
-  
+
   return cleaned;
 }
 
 /**
  * Generate collected content filename with appropriate extension
  */
-export function generateCollectedContentFilename(url: string, sourceType?: string): string {
+export function generateCollectedContentFilename(
+  url: string,
+  sourceType?: string
+): string {
   const baseName = generateSafeFilename(url);
-  
+
   // Determine extension based on source type or URL
   let extension = '.html'; // default
-  
+
   if (sourceType === 'changelog' || url.includes('changelog')) {
     if (url.includes('github.com') && url.includes('releases')) {
       extension = '.md'; // GitHub releases are markdown
@@ -42,7 +45,7 @@ export function generateCollectedContentFilename(url: string, sourceType?: strin
   } else if (url.includes('.md')) {
     extension = '.md';
   }
-  
+
   return `${baseName}${extension}`;
 }
 

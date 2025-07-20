@@ -6,10 +6,10 @@
  */
 
 import { createHash } from 'node:crypto';
-import { gzip, gunzip } from 'node:zlib';
 import { promisify } from 'node:util';
+import { gunzip, gzip } from 'node:zlib';
 import { logger } from '../logger';
-import { CacheManager, createCacheManager } from './cache-manager';
+import { type CacheManager, createCacheManager } from './cache-manager';
 
 const gzipAsync = promisify(gzip);
 const gunzipAsync = promisify(gunzip);
@@ -86,13 +86,16 @@ export class HttpCache {
   /**
    * Get cached response
    */
-  async get(url: string, method: string = 'GET'): Promise<{
+  async get(
+    url: string,
+    method = 'GET'
+  ): Promise<{
     entry: HttpCacheEntry | null;
     hitInfo: CacheHitInfo;
   }> {
     const key = this.generateCacheKey(url, method);
     const entry = this.cache.get(key);
-    
+
     this.stats.totalRequests++;
 
     if (!entry) {
@@ -114,7 +117,7 @@ export class HttpCache {
     if (isStale && !this.config.staleWhileRevalidate) {
       this.stats.misses++;
       this.cache.delete(key);
-      
+
       return {
         entry: null,
         hitInfo: {
@@ -143,7 +146,7 @@ export class HttpCache {
           url,
           error: error instanceof Error ? error.message : String(error),
         });
-        
+
         this.cache.delete(key);
         return {
           entry: null,
@@ -173,7 +176,9 @@ export class HttpCache {
         key,
         age,
         stale: isStale,
-        compressionRatio: entry.compressed ? this.calculateCompressionRatio(entry) : undefined,
+        compressionRatio: entry.compressed
+          ? this.calculateCompressionRatio(entry)
+          : undefined,
       },
     };
   }
@@ -190,7 +195,7 @@ export class HttpCache {
     responseTime: number
   ): Promise<void> {
     const key = this.generateCacheKey(url, method);
-    
+
     // Check if response is cacheable
     if (!this.isCacheable(method, status, headers)) {
       logger.debug('🌐 Response not cacheable', {
@@ -208,17 +213,22 @@ export class HttpCache {
     // Compress response if enabled and body is large enough
     let finalBody = body;
     let compressed = false;
-    
-    if (this.config.compressResponses && body.length >= this.config.minSizeForCompression) {
+
+    if (
+      this.config.compressResponses &&
+      body.length >= this.config.minSizeForCompression
+    ) {
       try {
         const compressedBody = await gzipAsync(body);
-        const compressionRatio = (body.length - compressedBody.length) / body.length;
-        
-        if (compressionRatio > 0.1) { // Only use compression if it saves at least 10%
+        const compressionRatio =
+          (body.length - compressedBody.length) / body.length;
+
+        if (compressionRatio > 0.1) {
+          // Only use compression if it saves at least 10%
           finalBody = compressedBody;
           compressed = true;
           this.stats.compressionSavings += body.length - compressedBody.length;
-          
+
           logger.debug('🌐 Response compressed', {
             url,
             originalSize: body.length,
@@ -271,20 +281,20 @@ export class HttpCache {
   /**
    * Generate conditional request headers
    */
-  getConditionalHeaders(url: string, method: string = 'GET'): Record<string, string> {
+  getConditionalHeaders(url: string, method = 'GET'): Record<string, string> {
     const key = this.generateCacheKey(url, method);
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return {};
     }
 
     const headers: Record<string, string> = {};
-    
+
     if (entry.etag) {
       headers['if-none-match'] = entry.etag;
     }
-    
+
     if (entry.lastModified) {
       headers['if-modified-since'] = entry.lastModified;
     }
@@ -295,10 +305,14 @@ export class HttpCache {
   /**
    * Handle 304 Not Modified response
    */
-  handleNotModified(url: string, method: string = 'GET', responseTime: number): HttpCacheEntry | null {
+  handleNotModified(
+    url: string,
+    method = 'GET',
+    responseTime: number
+  ): HttpCacheEntry | null {
     const key = this.generateCacheKey(url, method);
     const entry = this.cache.get(key);
-    
+
     if (!entry) {
       return null;
     }
@@ -306,7 +320,7 @@ export class HttpCache {
     // Update timestamp to refresh TTL
     entry.timestamp = Date.now();
     entry.responseTime = responseTime;
-    
+
     this.cache.set(key, entry);
     this.stats.hits++;
 
@@ -328,8 +342,10 @@ export class HttpCache {
       this.cache.delete(key);
     } else {
       // Invalidate all methods for this URL
-      const keys = this.cache.keys().filter(key => key.startsWith(this.normalizeUrl(url)));
-      keys.forEach(key => this.cache.delete(key));
+      const keys = this.cache
+        .keys()
+        .filter((key) => key.startsWith(this.normalizeUrl(url)));
+      keys.forEach((key) => this.cache.delete(key));
     }
 
     logger.debug('🌐 Cache invalidated', { url, method });
@@ -349,9 +365,12 @@ export class HttpCache {
     memoryUsageMB: number;
   } {
     const cacheStats = this.cache.getStats();
-    const hitRate = this.stats.totalRequests > 0 
-      ? ((this.stats.hits + this.stats.staleHits) / this.stats.totalRequests) * 100
-      : 0;
+    const hitRate =
+      this.stats.totalRequests > 0
+        ? ((this.stats.hits + this.stats.staleHits) /
+            this.stats.totalRequests) *
+          100
+        : 0;
 
     return {
       ...this.stats,
@@ -373,7 +392,7 @@ export class HttpCache {
       compressionSavings: 0,
       totalRequests: 0,
     };
-    
+
     logger.info('🌐 HTTP cache cleared');
   }
 
@@ -402,7 +421,11 @@ export class HttpCache {
     }
   }
 
-  private isCacheable(method: string, status: number, headers: Record<string, string>): boolean {
+  private isCacheable(
+    method: string,
+    status: number,
+    headers: Record<string, string>
+  ): boolean {
     // Only cache GET and HEAD requests
     if (!['GET', 'HEAD'].includes(method.toUpperCase())) {
       return false;
@@ -416,8 +439,11 @@ export class HttpCache {
     // Check cache-control headers
     const cacheControl = headers['cache-control'];
     if (cacheControl) {
-      const directives = cacheControl.toLowerCase().split(',').map(d => d.trim());
-      
+      const directives = cacheControl
+        .toLowerCase()
+        .split(',')
+        .map((d) => d.trim());
+
       if (directives.includes('no-cache') || directives.includes('no-store')) {
         return false;
       }
@@ -428,7 +454,7 @@ export class HttpCache {
 
   private calculateTTL(headers: Record<string, string>): number | undefined {
     if (!this.config.respectCacheHeaders) {
-      return undefined; // Use default TTL
+      return; // Use default TTL
     }
 
     const cacheControl = headers['cache-control'];
@@ -445,26 +471,26 @@ export class HttpCache {
       const expiresDate = new Date(expires);
       const now = new Date();
       const ttl = expiresDate.getTime() - now.getTime();
-      
+
       if (ttl > 0) {
         return ttl;
       }
     }
 
-    return undefined; // Use default TTL
+    return; // Use default TTL
   }
 
   private parseMaxAge(cacheControl?: string): number | undefined {
     if (!cacheControl) {
-      return undefined;
+      return;
     }
 
     const maxAgeMatch = cacheControl.match(/max-age=(\d+)/);
     if (maxAgeMatch) {
-      return parseInt(maxAgeMatch[1]!, 10);
+      return Number.parseInt(maxAgeMatch[1]!, 10);
     }
 
-    return undefined;
+    return;
   }
 
   private isEntryStale(entry: HttpCacheEntry, age: number): boolean {
@@ -479,7 +505,7 @@ export class HttpCache {
 
   private calculateCompressionRatio(entry: HttpCacheEntry): number | undefined {
     if (!entry.compressed) {
-      return undefined;
+      return;
     }
 
     // This is approximate since we don't store original size

@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { AdvancedDiscoveryDemoCommand } from './cli/advanced-discovery-demo';
 import { executeBundleCommand } from './cli/bundle-command';
 import { executeCollectionCommand } from './cli/collection-command';
 import { executeDiscoveryCommand } from './cli/discovery-command';
@@ -6,7 +7,6 @@ import { executeDistillationCommand } from './cli/distillation-command';
 import createHealthCommand from './cli/health-command';
 import { OrchestrationCommand } from './cli/orchestration-command';
 import { executePackageCommand } from './cli/package-command';
-import { AdvancedDiscoveryDemoCommand } from './cli/advanced-discovery-demo';
 import { logger } from './utils/logger';
 
 const program = new Command();

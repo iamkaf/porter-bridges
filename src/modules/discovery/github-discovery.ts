@@ -7,9 +7,9 @@
 
 import { createHash } from 'node:crypto';
 import type { LoaderType, SourceType } from '../../constants/enums';
+import { executeWithDegradation } from '../../utils/graceful-degradation';
 import { githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
-import { executeWithDegradation } from '../../utils/graceful-degradation';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
 import { type ISourceItem, SourceItemFactory } from './source-item-factory';
@@ -69,7 +69,7 @@ export class GitHubDiscovery {
             size: number;
           }>
         >(config.url);
-        
+
         let discovered = 0;
 
         for (const item of files) {
@@ -138,19 +138,16 @@ export class GitHubDiscovery {
         allowDegradation: true,
         fallbackData: 0,
         skipOnFailure: false,
-        required: false
+        required: false,
       }
-    ).then(result => {
+    ).then((result) => {
       if (result.degraded) {
-        logger.warn(
-          `🔄 GitHub discovery completed with degradation`,
-          {
-            sourceId,
-            degradationLevel: result.degradationLevel,
-            strategy: result.strategy,
-            warnings: result.warnings
-          }
-        );
+        logger.warn('🔄 GitHub discovery completed with degradation', {
+          sourceId,
+          degradationLevel: result.degradationLevel,
+          strategy: result.strategy,
+          warnings: result.warnings,
+        });
       }
       return result.data || 0;
     });
@@ -167,25 +164,33 @@ export class GitHubDiscovery {
     return executeWithDegradation(
       async () => {
         const { owner, repo, path, glob } = config;
-        if (!owner || !repo || !path || !glob) {
-          throw new Error('Missing owner, repo, path, or glob in GitHub repo config');
+        if (!(owner && repo && path && glob)) {
+          throw new Error(
+            'Missing owner, repo, path, or glob in GitHub repo config'
+          );
         }
 
         const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-        const files = await githubClient.getJson<
-          Array<{
-            name: string;
-            type: 'file' | 'dir';
-            download_url?: string;
-            url: string;
-            size: number;
-          }>
-        >(apiUrl);
+        const files =
+          await githubClient.getJson<
+            Array<{
+              name: string;
+              type: 'file' | 'dir';
+              download_url?: string;
+              url: string;
+              size: number;
+            }>
+          >(apiUrl);
 
         let discovered = 0;
 
         for (const item of files) {
-          if (item.type === 'file' && item.name.match(new RegExp(glob.replace('.', '\.').replace('*', '.*')))) {
+          if (
+            item.type === 'file' &&
+            item.name.match(
+              new RegExp(glob.replace('.', '.').replace('*', '.*'))
+            )
+          ) {
             const sourceItemId = `${sourceId}-${item.name}`;
             const rawContentUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}/${item.name}`;
 
@@ -211,7 +216,10 @@ export class GitHubDiscovery {
           }
         }
 
-        logger.info({ sourceId, count: discovered }, 'Discovered GitHub repo files');
+        logger.info(
+          { sourceId, count: discovered },
+          'Discovered GitHub repo files'
+        );
         return discovered;
       },
       'github_discovery',
@@ -220,19 +228,16 @@ export class GitHubDiscovery {
         allowDegradation: true,
         fallbackData: 0,
         skipOnFailure: false,
-        required: false
+        required: false,
       }
-    ).then(result => {
+    ).then((result) => {
       if (result.degraded) {
-        logger.warn(
-          `🔄 GitHub repo discovery completed with degradation`,
-          {
-            sourceId,
-            degradationLevel: result.degradationLevel,
-            strategy: result.strategy,
-            warnings: result.warnings
-          }
-        );
+        logger.warn('🔄 GitHub repo discovery completed with degradation', {
+          sourceId,
+          degradationLevel: result.degradationLevel,
+          strategy: result.strategy,
+          warnings: result.warnings,
+        });
       }
       return result.data || 0;
     });

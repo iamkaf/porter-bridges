@@ -1,15 +1,15 @@
 /**
  * @file Interactive Configuration Wizard
- * 
+ *
  * Provides an interactive CLI wizard for first-time setup and advanced configuration
  * of Porter Bridges. Guides users through all configuration options with validation.
  */
 
-import inquirer from 'inquirer';
-import chalk from 'chalk';
-import ora from 'ora';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import chalk from 'chalk';
+import inquirer from 'inquirer';
+import ora from 'ora';
 import { logger } from '../utils/logger';
 
 /**
@@ -55,7 +55,7 @@ const PRESETS = {
   development: {
     general: {
       maxConcurrency: 3,
-      timeout: 30000,
+      timeout: 30_000,
       retryAttempts: 2,
       logLevel: 'debug' as const,
     },
@@ -84,7 +84,7 @@ const PRESETS = {
   production: {
     general: {
       maxConcurrency: 8,
-      timeout: 60000,
+      timeout: 60_000,
       retryAttempts: 3,
       logLevel: 'info' as const,
     },
@@ -121,7 +121,7 @@ const PRESETS = {
   ci: {
     general: {
       maxConcurrency: 16,
-      timeout: 120000,
+      timeout: 120_000,
       retryAttempts: 5,
       logLevel: 'warn' as const,
     },
@@ -164,7 +164,7 @@ export class ConfigWizard {
   private configPath: string;
   private config: PorterBridgesConfig;
 
-  constructor(configPath: string = './porter-bridges.config.json') {
+  constructor(configPath = './porter-bridges.config.json') {
     this.configPath = configPath;
     this.config = this.getDefaultConfig();
   }
@@ -176,7 +176,7 @@ export class ConfigWizard {
     return {
       general: {
         maxConcurrency: 8,
-        timeout: 60000,
+        timeout: 60_000,
         retryAttempts: 3,
         logLevel: 'info',
       },
@@ -228,8 +228,12 @@ export class ConfigWizard {
    * Welcome message
    */
   private showWelcome(): void {
-    console.log(chalk.cyan.bold('\n🌉 Welcome to Porter Bridges Configuration Wizard!\n'));
-    console.log(chalk.gray('This wizard will guide you through setting up Porter Bridges'));
+    console.log(
+      chalk.cyan.bold('\n🌉 Welcome to Porter Bridges Configuration Wizard!\n')
+    );
+    console.log(
+      chalk.gray('This wizard will guide you through setting up Porter Bridges')
+    );
     console.log(chalk.gray('for your specific use case and environment.\n'));
   }
 
@@ -238,7 +242,7 @@ export class ConfigWizard {
    */
   private showSummary(): void {
     console.log(chalk.green.bold('\n📋 Configuration Summary:\n'));
-    
+
     console.log(chalk.cyan('General Settings:'));
     console.log(`  Max Concurrency: ${this.config.general.maxConcurrency}`);
     console.log(`  Timeout: ${this.config.general.timeout}ms`);
@@ -246,28 +250,48 @@ export class ConfigWizard {
     console.log(`  Log Level: ${this.config.general.logLevel}`);
 
     console.log(chalk.cyan('\nDiscovery Settings:'));
-    console.log(`  Enabled Sources: ${this.config.discovery.enabledSources.length}`);
-    console.log(`  GitHub Token: ${this.config.discovery.githubToken ? '✓ Configured' : '✗ Not set'}`);
-    console.log(`  Discord Bot Token: ${this.config.discovery.discordBotToken ? '✓ Configured' : '✗ Not set'}`);
-    console.log(`  YouTube API Key: ${this.config.discovery.youtubeApiKey ? '✓ Configured' : '✗ Not set'}`);
+    console.log(
+      `  Enabled Sources: ${this.config.discovery.enabledSources.length}`
+    );
+    console.log(
+      `  GitHub Token: ${this.config.discovery.githubToken ? '✓ Configured' : '✗ Not set'}`
+    );
+    console.log(
+      `  Discord Bot Token: ${this.config.discovery.discordBotToken ? '✓ Configured' : '✗ Not set'}`
+    );
+    console.log(
+      `  YouTube API Key: ${this.config.discovery.youtubeApiKey ? '✓ Configured' : '✗ Not set'}`
+    );
 
     console.log(chalk.cyan('\nDistillation Settings:'));
     console.log(`  Gemini Model: ${this.config.distillation.geminiModel}`);
     console.log(`  Max Tokens: ${this.config.distillation.maxTokens}`);
     console.log(`  Temperature: ${this.config.distillation.temperature}`);
-    console.log(`  Max Concurrent: ${this.config.distillation.maxConcurrentDistillations}`);
+    console.log(
+      `  Max Concurrent: ${this.config.distillation.maxConcurrentDistillations}`
+    );
 
     console.log(chalk.cyan('\nPerformance Settings:'));
-    console.log(`  Caching: ${this.config.performance.enableCaching ? '✓ Enabled' : '✗ Disabled'}`);
-    console.log(`  Compression: ${this.config.performance.enableCompression ? '✓ Enabled' : '✗ Disabled'}`);
+    console.log(
+      `  Caching: ${this.config.performance.enableCaching ? '✓ Enabled' : '✗ Disabled'}`
+    );
+    console.log(
+      `  Compression: ${this.config.performance.enableCompression ? '✓ Enabled' : '✗ Disabled'}`
+    );
     console.log(`  Cache Memory: ${this.config.performance.cacheMemoryMB}MB`);
-    console.log(`  Compression Level: ${this.config.performance.compressionLevel}`);
+    console.log(
+      `  Compression Level: ${this.config.performance.compressionLevel}`
+    );
 
     console.log(chalk.cyan('\nOutput Settings:'));
     console.log(`  Package Directory: ${this.config.output.packageDirectory}`);
     console.log(`  Bundle Directory: ${this.config.output.bundleDirectory}`);
-    console.log(`  Metadata: ${this.config.output.enableMetadata ? '✓ Enabled' : '✗ Disabled'}`);
-    console.log(`  Integrity Checks: ${this.config.output.enableIntegrityChecks ? '✓ Enabled' : '✗ Disabled'}`);
+    console.log(
+      `  Metadata: ${this.config.output.enableMetadata ? '✓ Enabled' : '✗ Disabled'}`
+    );
+    console.log(
+      `  Integrity Checks: ${this.config.output.enableIntegrityChecks ? '✓ Enabled' : '✗ Disabled'}`
+    );
   }
 
   /**
@@ -280,8 +304,11 @@ export class ConfigWizard {
     const existingConfig = await this.loadExistingConfig();
     if (existingConfig) {
       this.config = existingConfig;
-      console.log(chalk.yellow('⚠️  Existing configuration found at:'), this.configPath);
-      
+      console.log(
+        chalk.yellow('⚠️  Existing configuration found at:'),
+        this.configPath
+      );
+
       const { useExisting } = await inquirer.prompt([
         {
           type: 'confirm',
@@ -317,8 +344,14 @@ export class ConfigWizard {
         name: 'usePreset',
         message: 'Would you like to use a preset configuration?',
         choices: [
-          { name: 'Development - Optimized for local development', value: 'development' },
-          { name: 'Production - Optimized for production use', value: 'production' },
+          {
+            name: 'Development - Optimized for local development',
+            value: 'development',
+          },
+          {
+            name: 'Production - Optimized for production use',
+            value: 'production',
+          },
           { name: 'CI/CD - Optimized for continuous integration', value: 'ci' },
           { name: 'Custom - Manual configuration', value: 'custom' },
         ],
@@ -366,9 +399,19 @@ export class ConfigWizard {
       try {
         await this.saveConfig();
         spinner.succeed(`Configuration saved to ${this.configPath}`);
-        console.log(chalk.green.bold('\n🎉 Configuration wizard completed successfully!\n'));
-        console.log(chalk.gray('You can now run Porter Bridges with your custom configuration.'));
-        console.log(chalk.gray('To reconfigure, run: porter-bridges config-wizard\n'));
+        console.log(
+          chalk.green.bold(
+            '\n🎉 Configuration wizard completed successfully!\n'
+          )
+        );
+        console.log(
+          chalk.gray(
+            'You can now run Porter Bridges with your custom configuration.'
+          )
+        );
+        console.log(
+          chalk.gray('To reconfigure, run: porter-bridges config-wizard\n')
+        );
       } catch (error) {
         spinner.fail('Failed to save configuration');
         logger.error('Configuration save failed:', error);
@@ -391,21 +434,23 @@ export class ConfigWizard {
         name: 'maxConcurrency',
         message: 'Max concurrent operations:',
         default: this.config.general.maxConcurrency,
-        validate: (value) => value > 0 && value <= 32 ? true : 'Must be between 1 and 32',
+        validate: (value) =>
+          value > 0 && value <= 32 ? true : 'Must be between 1 and 32',
       },
       {
         type: 'number',
         name: 'timeout',
         message: 'Request timeout (ms):',
         default: this.config.general.timeout,
-        validate: (value) => value > 0 ? true : 'Must be greater than 0',
+        validate: (value) => (value > 0 ? true : 'Must be greater than 0'),
       },
       {
         type: 'number',
         name: 'retryAttempts',
         message: 'Retry attempts:',
         default: this.config.general.retryAttempts,
-        validate: (value) => value >= 0 && value <= 10 ? true : 'Must be between 0 and 10',
+        validate: (value) =>
+          value >= 0 && value <= 10 ? true : 'Must be between 0 and 10',
       },
       {
         type: 'list',
@@ -436,7 +481,8 @@ export class ConfigWizard {
         message: 'Select discovery sources:',
         choices: availableSources,
         default: this.config.discovery.enabledSources,
-        validate: (choices) => choices.length > 0 ? true : 'Select at least one source',
+        validate: (choices) =>
+          choices.length > 0 ? true : 'Select at least one source',
       },
     ]);
 
@@ -456,25 +502,30 @@ export class ConfigWizard {
         name: 'maxTokens',
         message: 'Max tokens:',
         default: this.config.distillation.maxTokens,
-        validate: (value) => value > 0 ? true : 'Must be greater than 0',
+        validate: (value) => (value > 0 ? true : 'Must be greater than 0'),
       },
       {
         type: 'number',
         name: 'temperature',
         message: 'Temperature (0.0-1.0):',
         default: this.config.distillation.temperature,
-        validate: (value) => value >= 0 && value <= 1 ? true : 'Must be between 0.0 and 1.0',
+        validate: (value) =>
+          value >= 0 && value <= 1 ? true : 'Must be between 0.0 and 1.0',
       },
       {
         type: 'number',
         name: 'maxConcurrentDistillations',
         message: 'Max concurrent distillations:',
         default: this.config.distillation.maxConcurrentDistillations,
-        validate: (value) => value > 0 && value <= 8 ? true : 'Must be between 1 and 8',
+        validate: (value) =>
+          value > 0 && value <= 8 ? true : 'Must be between 1 and 8',
       },
     ]);
 
-    this.config.distillation = { ...this.config.distillation, ...distillationSettings };
+    this.config.distillation = {
+      ...this.config.distillation,
+      ...distillationSettings,
+    };
 
     // Performance settings
     const performanceSettings = await inquirer.prompt([
@@ -495,18 +546,22 @@ export class ConfigWizard {
         name: 'cacheMemoryMB',
         message: 'Cache memory (MB):',
         default: this.config.performance.cacheMemoryMB,
-        validate: (value) => value > 0 ? true : 'Must be greater than 0',
+        validate: (value) => (value > 0 ? true : 'Must be greater than 0'),
       },
       {
         type: 'number',
         name: 'compressionLevel',
         message: 'Compression level (1-9):',
         default: this.config.performance.compressionLevel,
-        validate: (value) => value >= 1 && value <= 9 ? true : 'Must be between 1 and 9',
+        validate: (value) =>
+          value >= 1 && value <= 9 ? true : 'Must be between 1 and 9',
       },
     ]);
 
-    this.config.performance = { ...this.config.performance, ...performanceSettings };
+    this.config.performance = {
+      ...this.config.performance,
+      ...performanceSettings,
+    };
 
     // Output settings
     const outputSettings = await inquirer.prompt([
@@ -515,14 +570,16 @@ export class ConfigWizard {
         name: 'packageDirectory',
         message: 'Package directory:',
         default: this.config.output.packageDirectory,
-        validate: (value) => value.trim() !== '' ? true : 'Directory path cannot be empty',
+        validate: (value) =>
+          value.trim() !== '' ? true : 'Directory path cannot be empty',
       },
       {
         type: 'input',
         name: 'bundleDirectory',
         message: 'Bundle directory:',
         default: this.config.output.bundleDirectory,
-        validate: (value) => value.trim() !== '' ? true : 'Directory path cannot be empty',
+        validate: (value) =>
+          value.trim() !== '' ? true : 'Directory path cannot be empty',
       },
       {
         type: 'confirm',
@@ -546,7 +603,9 @@ export class ConfigWizard {
    */
   private async configureApiTokens(): Promise<void> {
     console.log(chalk.yellow('\n🔐 API Token Configuration\n'));
-    console.log(chalk.gray('Optional: Configure API tokens for enhanced functionality\n'));
+    console.log(
+      chalk.gray('Optional: Configure API tokens for enhanced functionality\n')
+    );
 
     const { configureTokens } = await inquirer.prompt([
       {
@@ -608,4 +667,4 @@ export class ConfigWizard {
 /**
  * Export configuration types and presets
  */
-export { PorterBridgesConfig, PRESETS };
+export { type PorterBridgesConfig, PRESETS };

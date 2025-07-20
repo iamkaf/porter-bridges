@@ -6,7 +6,11 @@
 import { promises as fs } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { ConfigSchema, DEFAULT_CONFIG, type Config } from '../schemas/config-schema';
+import {
+  type Config,
+  ConfigSchema,
+  DEFAULT_CONFIG,
+} from '../schemas/config-schema';
 import { logger } from './logger';
 
 export class ConfigManager {
@@ -40,7 +44,7 @@ export class ConfigManager {
       try {
         const configData = await fs.readFile(this.configPath, 'utf-8');
         const parsedConfig = JSON.parse(configData);
-        
+
         // Validate and merge with defaults
         const validatedConfig = ConfigSchema.parse({
           ...DEFAULT_CONFIG,
@@ -48,14 +52,20 @@ export class ConfigManager {
         });
 
         this.config = validatedConfig;
-        logger.debug('Configuration loaded successfully', { path: this.configPath });
+        logger.debug('Configuration loaded successfully', {
+          path: this.configPath,
+        });
       } catch (error) {
         // Config file doesn't exist or is invalid - use defaults
-        logger.info('Using default configuration', { reason: error instanceof Error ? error.message : 'Unknown error' });
+        logger.info('Using default configuration', {
+          reason: error instanceof Error ? error.message : 'Unknown error',
+        });
         this.config = DEFAULT_CONFIG;
       }
     } catch (error) {
-      logger.error('Failed to load configuration', { error: error instanceof Error ? error.message : error });
+      logger.error('Failed to load configuration', {
+        error: error instanceof Error ? error.message : error,
+      });
       this.config = DEFAULT_CONFIG;
     }
 
@@ -74,10 +84,18 @@ export class ConfigManager {
       this.config.user.last_config_update = new Date().toISOString();
 
       // Write configuration
-      await fs.writeFile(this.configPath, JSON.stringify(this.config, null, 2), 'utf-8');
-      logger.debug('Configuration saved successfully', { path: this.configPath });
+      await fs.writeFile(
+        this.configPath,
+        JSON.stringify(this.config, null, 2),
+        'utf-8'
+      );
+      logger.debug('Configuration saved successfully', {
+        path: this.configPath,
+      });
     } catch (error) {
-      logger.error('Failed to save configuration', { error: error instanceof Error ? error.message : error });
+      logger.error('Failed to save configuration', {
+        error: error instanceof Error ? error.message : error,
+      });
       throw error;
     }
   }
@@ -216,7 +234,9 @@ export class ConfigManager {
       ConfigSchema.parse(this.config);
       return true;
     } catch (error) {
-      logger.error('Configuration validation failed', { error: error instanceof Error ? error.message : error });
+      logger.error('Configuration validation failed', {
+        error: error instanceof Error ? error.message : error,
+      });
       return false;
     }
   }

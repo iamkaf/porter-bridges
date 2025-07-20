@@ -40,8 +40,10 @@ class CollectionFilters {
 
     return sources.filter((source) => {
       // Skip sources that are already collected from GitHub API
-      if (source.status === 'collected' && 
-          source.collection_metadata?.source === 'github_api') {
+      if (
+        source.status === 'collected' &&
+        source.collection_metadata?.source === 'github_api'
+      ) {
         return false;
       }
 
@@ -281,21 +283,28 @@ export class CollectionModule {
 
       // Filter sources - this will exclude already collected GitHub API sources
       const sources = this.filters.filterSources(sourcesData, filters);
-      
+
       // Also count already collected GitHub API sources for stats
       const alreadyCollectedSources = Object.values(sourcesData.sources).filter(
-        source => source.status === 'collected' && 
-                  source.collection_metadata?.source === 'github_api'
+        (source) =>
+          source.status === 'collected' &&
+          source.collection_metadata?.source === 'github_api'
       );
 
       // Set total including both sources needing collection and already collected
-      this.stats.setTotalSources(sources.length + alreadyCollectedSources.length);
+      this.stats.setTotalSources(
+        sources.length + alreadyCollectedSources.length
+      );
 
       // Count already collected sources and their bytes
       if (alreadyCollectedSources.length > 0) {
-        logger.info(`📋 Found ${alreadyCollectedSources.length} sources already collected from GitHub API`);
+        logger.info(
+          `📋 Found ${alreadyCollectedSources.length} sources already collected from GitHub API`
+        );
         for (const source of alreadyCollectedSources) {
-          this.stats.incrementCollected(source.collection_metadata?.size_bytes || 0);
+          this.stats.incrementCollected(
+            source.collection_metadata?.size_bytes || 0
+          );
         }
       }
 
@@ -306,14 +315,16 @@ export class CollectionModule {
       }
 
       if (sources.length === 0) {
-        logger.info(`✅ All ${alreadyCollectedSources.length} sources already collected from GitHub API`);
+        logger.info(
+          `✅ All ${alreadyCollectedSources.length} sources already collected from GitHub API`
+        );
         this.stats.endCollection();
         return this._buildResults(sourcesData, filters);
       }
 
-      logger.info('🎯 Found sources to collect', { 
+      logger.info('🎯 Found sources to collect', {
         count: sources.length,
-        alreadyCollected: alreadyCollectedSources.length 
+        alreadyCollected: alreadyCollectedSources.length,
       });
 
       // Process sources sequentially
@@ -333,7 +344,10 @@ export class CollectionModule {
           const result = await this.downloader.collectSourceWithRetry(source);
 
           // Save content to file
-          const fileName = generateCollectedContentFilename(source.url, source.source_type);
+          const fileName = generateCollectedContentFilename(
+            source.url,
+            source.source_type
+          );
           const filePath = path.join(this.options.contentDirectory, fileName);
           await fs.writeFile(filePath, result.content, 'utf8');
 

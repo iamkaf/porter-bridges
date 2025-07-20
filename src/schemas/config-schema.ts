@@ -35,10 +35,10 @@ export const ConfigSchema = z.object({
   }),
   defaults: z.object({
     cache_dir: z.string().default('./.discovery-cache'),
-    timeout: z.number().default(30000),
+    timeout: z.number().default(30_000),
     max_concurrent: z.number().default(3),
     gemini_model: z.string().default('gemini-2.5-flash'),
-    distill_timeout: z.number().default(600000),
+    distill_timeout: z.number().default(600_000),
     bundle_name: z.string().default('porter-bridges'),
     min_relevance: z.number().min(0).max(1).default(0.3),
     include_retry: z.boolean().default(false),
@@ -72,10 +72,10 @@ export const DEFAULT_CONFIG: Config = {
   },
   defaults: {
     cache_dir: './.discovery-cache',
-    timeout: 30000,
+    timeout: 30_000,
     max_concurrent: 3,
     gemini_model: 'gemini-2.5-flash',
-    distill_timeout: 600000,
+    distill_timeout: 600_000,
     bundle_name: 'porter-bridges',
     min_relevance: 0.3,
     include_retry: false,
@@ -103,7 +103,7 @@ export const BUILT_IN_PRESETS: Record<string, ConfigPreset> = {
   development: {
     name: 'Development',
     description: 'Fast iteration with debug features enabled',
-    timeout: 15000,
+    timeout: 15_000,
     max_concurrent: 2,
     gemini_model: 'gemini-2.5-flash',
     min_relevance: 0.2,
@@ -113,7 +113,7 @@ export const BUILT_IN_PRESETS: Record<string, ConfigPreset> = {
   production: {
     name: 'Production',
     description: 'Optimized for stability and complete processing',
-    timeout: 60000,
+    timeout: 60_000,
     max_concurrent: 5,
     gemini_model: 'gemini-2.5-flash',
     min_relevance: 0.5,
@@ -123,7 +123,7 @@ export const BUILT_IN_PRESETS: Record<string, ConfigPreset> = {
   ci_cd: {
     name: 'CI/CD',
     description: 'Automated pipeline execution with minimal interaction',
-    timeout: 30000,
+    timeout: 30_000,
     max_concurrent: 3,
     gemini_model: 'gemini-2.5-flash',
     min_relevance: 0.3,
@@ -136,7 +136,7 @@ export const BUILT_IN_PRESETS: Record<string, ConfigPreset> = {
   quick_test: {
     name: 'Quick Test',
     description: 'Minimal processing for testing and validation',
-    timeout: 10000,
+    timeout: 10_000,
     max_concurrent: 1,
     gemini_model: 'gemini-2.5-flash',
     min_relevance: 0.1,
@@ -147,7 +147,7 @@ export const BUILT_IN_PRESETS: Record<string, ConfigPreset> = {
   comprehensive: {
     name: 'Comprehensive',
     description: 'Full processing with all sources and maximum quality',
-    timeout: 120000,
+    timeout: 120_000,
     max_concurrent: 8,
     gemini_model: 'gemini-2.5-flash',
     min_relevance: 0.1,

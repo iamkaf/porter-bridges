@@ -5,11 +5,8 @@
  * fail, allowing the pipeline to produce partial results rather than failing completely.
  */
 
+import { type EnhancedError, ErrorClassifier } from './error-handling';
 import { logger } from './logger';
-import {
-  EnhancedError,
-  ErrorClassifier
-} from './error-handling';
 
 /**
  * Degradation levels for different types of failures
@@ -19,7 +16,7 @@ export enum DegradationLevel {
   MINIMAL = 'minimal',
   PARTIAL = 'partial',
   SIGNIFICANT = 'significant',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 /**
@@ -31,7 +28,7 @@ export enum DegradationStrategy {
   SKIP = 'skip',
   CACHED = 'cached',
   MINIMAL_RESULT = 'minimal_result',
-  ABORT = 'abort'
+  ABORT = 'abort',
 }
 
 /**
@@ -94,7 +91,7 @@ export class GracefulDegradationManager {
       activeServices: [],
       failedServices: [],
       lastUpdate: new Date().toISOString(),
-      metadata: {}
+      metadata: {},
     };
   }
 
@@ -107,7 +104,7 @@ export class GracefulDegradationManager {
       healthy: true,
       lastCheckTime: new Date().toISOString(),
       consecutiveFailures: 0,
-      metadata
+      metadata,
     });
 
     this.updateDegradationContext();
@@ -133,14 +130,11 @@ export class GracefulDegradationManager {
       serviceHealth.consecutiveFailures++;
       serviceHealth.lastError = enhancedError;
 
-      logger.warn(
-        `⚠️ Service ${serviceName} reported failure`,
-        {
-          service: serviceName,
-          consecutiveFailures: serviceHealth.consecutiveFailures,
-          error: enhancedError.toLogFormat()
-        }
-      );
+      logger.warn(`⚠️ Service ${serviceName} reported failure`, {
+        service: serviceName,
+        consecutiveFailures: serviceHealth.consecutiveFailures,
+        error: enhancedError.toLogFormat(),
+      });
     } else {
       // Register the service if it doesn't exist
       this.registerService(serviceName);
@@ -163,10 +157,9 @@ export class GracefulDegradationManager {
       serviceHealth.consecutiveFailures = 0;
       serviceHealth.lastError = undefined;
 
-      logger.info(
-        `✅ Service ${serviceName} recovered`,
-        { service: serviceName }
-      );
+      logger.info(`✅ Service ${serviceName} recovered`, {
+        service: serviceName,
+      });
     }
 
     this.updateDegradationContext();
@@ -191,12 +184,12 @@ export class GracefulDegradationManager {
       allowDegradation = true,
       fallbackData,
       skipOnFailure = false,
-      required = false
+      required = false,
     } = options;
 
     try {
       const result = await operation();
-      
+
       // Mark service as healthy if operation succeeded
       this.reportRecovery(serviceName);
 
@@ -213,12 +206,12 @@ export class GracefulDegradationManager {
           serviceName,
           operationName,
           duration: Date.now() - startTime,
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
     } catch (error) {
       const enhancedError = ErrorClassifier.classify(error, serviceName);
-      
+
       // Report failure to the service
       this.reportFailure(serviceName, enhancedError);
 
@@ -243,8 +236,8 @@ export class GracefulDegradationManager {
             duration: Date.now() - startTime,
             timestamp: new Date().toISOString(),
             required,
-            allowDegradation
-          }
+            allowDegradation,
+          },
         };
       }
 
@@ -271,8 +264,8 @@ export class GracefulDegradationManager {
           duration: Date.now() - startTime,
           timestamp: new Date().toISOString(),
           originalError: enhancedError.toLogFormat(),
-          degradationContext: this.degradationContext
-        }
+          degradationContext: this.degradationContext,
+        },
       };
     }
   }
@@ -287,15 +280,19 @@ export class GracefulDegradationManager {
   /**
    * Get service health status
    */
-  getServiceHealth(serviceName?: string): ServiceHealth | Map<string, ServiceHealth> {
+  getServiceHealth(
+    serviceName?: string
+  ): ServiceHealth | Map<string, ServiceHealth> {
     if (serviceName) {
-      return this.serviceHealth.get(serviceName) || {
-        name: serviceName,
-        healthy: false,
-        lastCheckTime: new Date().toISOString(),
-        consecutiveFailures: 0,
-        metadata: {}
-      };
+      return (
+        this.serviceHealth.get(serviceName) || {
+          name: serviceName,
+          healthy: false,
+          lastCheckTime: new Date().toISOString(),
+          consecutiveFailures: 0,
+          metadata: {},
+        }
+      );
     }
     return new Map(this.serviceHealth);
   }
@@ -305,8 +302,8 @@ export class GracefulDegradationManager {
    */
   canContinueOperation(): boolean {
     const activeServices = Array.from(this.serviceHealth.values())
-      .filter(service => service.healthy)
-      .map(service => service.name);
+      .filter((service) => service.healthy)
+      .map((service) => service.name);
 
     // Check if minimum required services are available
     for (const requiredService of this.minimumRequiredServices) {
@@ -331,14 +328,16 @@ export class GracefulDegradationManager {
     recommendations: string[];
   } {
     const services = Array.from(this.serviceHealth.values());
-    const healthyServices = services.filter(s => s.healthy);
-    const failedServices = services.filter(s => !s.healthy);
+    const healthyServices = services.filter((s) => s.healthy);
+    const failedServices = services.filter((s) => !s.healthy);
     const canContinue = this.canContinueOperation();
 
     const recommendations: string[] = [];
 
     if (failedServices.length > 0) {
-      recommendations.push(`${failedServices.length} service(s) need attention`);
+      recommendations.push(
+        `${failedServices.length} service(s) need attention`
+      );
     }
 
     if (this.degradationContext.level !== DegradationLevel.NONE) {
@@ -346,7 +345,9 @@ export class GracefulDegradationManager {
     }
 
     if (!canContinue) {
-      recommendations.push('System cannot continue operation - critical services failed');
+      recommendations.push(
+        'System cannot continue operation - critical services failed'
+      );
     }
 
     return {
@@ -356,7 +357,7 @@ export class GracefulDegradationManager {
       healthyServices: healthyServices.length,
       failedServices: failedServices.length,
       canContinue,
-      recommendations
+      recommendations,
     };
   }
 
@@ -386,11 +387,11 @@ export class GracefulDegradationManager {
         const result = await fallbackFn();
         fallbacksUsed.push(`${serviceName}_fallback`);
         warnings.push(`Using fallback strategy for ${serviceName}`);
-        
-        logger.info(
-          `🔄 Fallback successful for ${serviceName}`,
-          { service: serviceName, operation: operationName }
-        );
+
+        logger.info(`🔄 Fallback successful for ${serviceName}`, {
+          service: serviceName,
+          operation: operationName,
+        });
 
         return {
           success: true,
@@ -398,17 +399,22 @@ export class GracefulDegradationManager {
           strategy: DegradationStrategy.FALLBACK,
           warnings,
           errors,
-          fallbacksUsed
+          fallbacksUsed,
         };
       } catch (fallbackError) {
-        const enhancedError = ErrorClassifier.classify(fallbackError, `${serviceName}_fallback`);
-        errors.push(enhancedError);
-        warnings.push(`Fallback failed for ${serviceName}: ${enhancedError.message}`);
-        
-        logger.warn(
-          `⚠️ Fallback failed for ${serviceName}`,
-          { service: serviceName, error: enhancedError.toLogFormat() }
+        const enhancedError = ErrorClassifier.classify(
+          fallbackError,
+          `${serviceName}_fallback`
         );
+        errors.push(enhancedError);
+        warnings.push(
+          `Fallback failed for ${serviceName}: ${enhancedError.message}`
+        );
+
+        logger.warn(`⚠️ Fallback failed for ${serviceName}`, {
+          service: serviceName,
+          error: enhancedError.toLogFormat(),
+        });
       }
     }
 
@@ -416,11 +422,11 @@ export class GracefulDegradationManager {
     if (fallbackData !== undefined) {
       fallbacksUsed.push(`${serviceName}_fallback_data`);
       warnings.push(`Using fallback data for ${serviceName}`);
-      
-      logger.info(
-        `📄 Using fallback data for ${serviceName}`,
-        { service: serviceName, operation: operationName }
-      );
+
+      logger.info(`📄 Using fallback data for ${serviceName}`, {
+        service: serviceName,
+        operation: operationName,
+      });
 
       return {
         success: true,
@@ -428,18 +434,18 @@ export class GracefulDegradationManager {
         strategy: DegradationStrategy.FALLBACK,
         warnings,
         errors,
-        fallbacksUsed
+        fallbacksUsed,
       };
     }
 
     // Try skipping if allowed
     if (skipOnFailure) {
       warnings.push(`Skipping operation for ${serviceName}`);
-      
-      logger.info(
-        `⏭️ Skipping operation for ${serviceName}`,
-        { service: serviceName, operation: operationName }
-      );
+
+      logger.info(`⏭️ Skipping operation for ${serviceName}`, {
+        service: serviceName,
+        operation: operationName,
+      });
 
       return {
         success: true,
@@ -447,7 +453,7 @@ export class GracefulDegradationManager {
         strategy: DegradationStrategy.SKIP,
         warnings,
         errors,
-        fallbacksUsed
+        fallbacksUsed,
       };
     }
 
@@ -457,28 +463,29 @@ export class GracefulDegradationManager {
       strategy: DegradationStrategy.ABORT,
       warnings,
       errors,
-      fallbacksUsed
+      fallbacksUsed,
     };
   }
 
   private updateDegradationContext(): void {
     const services = Array.from(this.serviceHealth.values());
-    const healthyServices = services.filter(s => s.healthy);
-    const failedServices = services.filter(s => !s.healthy);
+    const healthyServices = services.filter((s) => s.healthy);
+    const failedServices = services.filter((s) => !s.healthy);
 
-    this.degradationContext.activeServices = healthyServices.map(s => s.name);
-    this.degradationContext.failedServices = failedServices.map(s => s.name);
+    this.degradationContext.activeServices = healthyServices.map((s) => s.name);
+    this.degradationContext.failedServices = failedServices.map((s) => s.name);
     this.degradationContext.lastUpdate = new Date().toISOString();
 
     // Update failures list
-    this.degradationContext.failures = failedServices.map(s => 
-      `${s.name}: ${s.lastError?.message || 'Unknown error'}`
+    this.degradationContext.failures = failedServices.map(
+      (s) => `${s.name}: ${s.lastError?.message || 'Unknown error'}`
     );
 
     // Calculate degradation level
     const totalServices = services.length;
     const healthyCount = healthyServices.length;
-    const failureRate = totalServices > 0 ? (totalServices - healthyCount) / totalServices : 0;
+    const failureRate =
+      totalServices > 0 ? (totalServices - healthyCount) / totalServices : 0;
 
     let newLevel: DegradationLevel;
     let newStrategy: DegradationStrategy;
@@ -501,8 +508,10 @@ export class GracefulDegradationManager {
     }
 
     // Check if critical services failed
-    const criticalServicesFailed = Array.from(this.minimumRequiredServices).some(
-      service => !this.degradationContext.activeServices.includes(service)
+    const criticalServicesFailed = Array.from(
+      this.minimumRequiredServices
+    ).some(
+      (service) => !this.degradationContext.activeServices.includes(service)
     );
 
     if (criticalServicesFailed) {
@@ -511,7 +520,10 @@ export class GracefulDegradationManager {
     }
 
     // Update context if changed
-    if (newLevel !== this.degradationContext.level || newStrategy !== this.degradationContext.strategy) {
+    if (
+      newLevel !== this.degradationContext.level ||
+      newStrategy !== this.degradationContext.strategy
+    ) {
       const previousLevel = this.degradationContext.level;
       this.degradationContext.level = newLevel;
       this.degradationContext.strategy = newStrategy;
@@ -525,7 +537,7 @@ export class GracefulDegradationManager {
           totalServices,
           failureRate: Math.round(failureRate * 100),
           activeServices: this.degradationContext.activeServices,
-          failedServices: this.degradationContext.failedServices
+          failedServices: this.degradationContext.failedServices,
         }
       );
     }
@@ -537,7 +549,7 @@ export class GracefulDegradationManager {
  */
 export const globalDegradationManager = new GracefulDegradationManager([
   'github',
-  'ai_processing'
+  'ai_processing',
 ]);
 
 /**

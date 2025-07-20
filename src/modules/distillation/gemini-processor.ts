@@ -9,9 +9,9 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from '../../utils/logger';
 import { createEnhancedFileAIProcessor } from '../../utils/ai-processing';
 import { executeWithDegradation } from '../../utils/graceful-degradation';
+import { logger } from '../../utils/logger';
 import { PromptBuilder } from './prompt-builder';
 import { ResponseParser } from './response-parser';
 
@@ -53,7 +53,7 @@ export class GeminiProcessor {
       {
         command: this.options.geminiCommand,
         model: this.options.geminiModel,
-        timeout: this.options.timeout
+        timeout: this.options.timeout,
       }
     );
   }
@@ -76,11 +76,13 @@ export class GeminiProcessor {
       'verify_gemini_cli',
       {
         allowDegradation: false,
-        required: true
+        required: true,
       }
-    ).then(result => {
+    ).then((result) => {
       if (!result.success) {
-        throw new Error(result.errors[0]?.message || 'Gemini CLI verification failed');
+        throw new Error(
+          result.errors[0]?.message || 'Gemini CLI verification failed'
+        );
       }
       return result.data;
     });
@@ -173,7 +175,7 @@ export class GeminiProcessor {
         // Parse and validate the file content (includes JSON healing)
         distilledContent =
           await this.responseParser.parseFileContent(fileContent);
-          
+
         // Check if the file content was different from what we got back
         // (i.e., JSON healing was applied)
         try {
@@ -182,13 +184,11 @@ export class GeminiProcessor {
           jsonWasHealed = true;
           // Overwrite the file with the healed JSON
           await fs.writeFile(
-            absoluteOutputPath, 
-            JSON.stringify(distilledContent, null, 2), 
+            absoluteOutputPath,
+            JSON.stringify(distilledContent, null, 2),
             'utf-8'
           );
-          logger.info(
-            `💊 Healed JSON written back to: ${absoluteOutputPath}`
-          );
+          logger.info(`💊 Healed JSON written back to: ${absoluteOutputPath}`);
         }
       } catch (error: any) {
         parseError = new Error(

@@ -5,10 +5,10 @@
  * and cached data to reduce disk usage by up to 40%.
  */
 
-import { gzip, gunzip, deflate, inflate } from 'node:zlib';
-import { promisify } from 'node:util';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { promisify } from 'node:util';
+import { deflate, gunzip, gzip, inflate } from 'node:zlib';
 import pako from 'pako';
 import { logger } from '../logger';
 import { performanceMonitor } from './performance-monitor';
@@ -67,7 +67,7 @@ export class CompressionManager {
       threshold: config.threshold || 1024, // 1KB minimum
       memoryLevel: config.memoryLevel || 8,
       windowBits: config.windowBits || 15,
-      chunkSize: config.chunkSize || 16384,
+      chunkSize: config.chunkSize || 16_384,
       enableAutoDetection: config.enableAutoDetection !== false,
       fileTypeRules: config.fileTypeRules || this.getDefaultFileTypeRules(),
     };
@@ -142,7 +142,9 @@ export class CompressionManager {
           break;
         case 'brotli':
           // Use pako for Brotli compression
-          compressed = Buffer.from(pako.deflate(buffer, { level, windowBits: this.config.windowBits }));
+          compressed = Buffer.from(
+            pako.deflate(buffer, { level, windowBits: this.config.windowBits })
+          );
           actualAlgorithm = 'brotli';
           break;
         default:
@@ -155,14 +157,15 @@ export class CompressionManager {
         level,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       compressed = buffer;
       actualAlgorithm = 'none';
     }
 
     const processingTime = Date.now() - startTime;
     const compressedSize = compressed.length;
-    const compressionRatio = originalSize > 0 ? compressedSize / originalSize : 1;
+    const compressionRatio =
+      originalSize > 0 ? compressedSize / originalSize : 1;
     const spaceSaved = originalSize - compressedSize;
 
     // Only use compression if it actually saves space
@@ -238,7 +241,7 @@ export class CompressionManager {
         algorithm,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -257,7 +260,7 @@ export class CompressionManager {
   ): Promise<CompressionResult> {
     const startTime = Date.now();
     const operationName = `compress-${path.basename(inputPath)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       input: inputPath,
       output: outputPath,
@@ -307,14 +310,16 @@ export class CompressionManager {
 
       return result;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'compression', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'compression', {
+        error: true,
+      });
+
       logger.error('🗜️ File compression failed', {
         input: inputPath,
         output: outputPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -329,7 +334,7 @@ export class CompressionManager {
   ): Promise<void> {
     const startTime = Date.now();
     const operationName = `decompress-${path.basename(inputPath)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       input: inputPath,
       output: outputPath,
@@ -365,14 +370,16 @@ export class CompressionManager {
         processingTime,
       });
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'decompression', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'decompression', {
+        error: true,
+      });
+
       logger.error('🗜️ File decompression failed', {
         input: inputPath,
         output: outputPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -392,7 +399,7 @@ export class CompressionManager {
   ): Promise<CompressionStats> {
     const startTime = Date.now();
     const operationName = `compress-directory-${path.basename(inputDir)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       inputDir,
       outputDir,
@@ -430,7 +437,8 @@ export class CompressionManager {
           dirStats.totalOriginalSize += result.originalSize;
           dirStats.totalCompressedSize += result.compressedSize;
           dirStats.totalSpaceSaved += result.spaceSaved;
-          dirStats.algorithmUsage[result.algorithm] = (dirStats.algorithmUsage[result.algorithm] || 0) + 1;
+          dirStats.algorithmUsage[result.algorithm] =
+            (dirStats.algorithmUsage[result.algorithm] || 0) + 1;
         } catch (error) {
           logger.warn('Failed to compress file in directory', {
             file,
@@ -440,14 +448,17 @@ export class CompressionManager {
       }
 
       dirStats.processingTime = Date.now() - startTime;
-      dirStats.averageCompressionRatio = dirStats.totalOriginalSize > 0 
-        ? dirStats.totalCompressedSize / dirStats.totalOriginalSize 
-        : 1;
+      dirStats.averageCompressionRatio =
+        dirStats.totalOriginalSize > 0
+          ? dirStats.totalCompressedSize / dirStats.totalOriginalSize
+          : 1;
 
       performanceMonitor.endMonitoring(operationName, 'compression', {
         filesCompressed: dirStats.totalFilesCompressed,
         originalSizeMB: Math.round(dirStats.totalOriginalSize / 1024 / 1024),
-        compressedSizeMB: Math.round(dirStats.totalCompressedSize / 1024 / 1024),
+        compressedSizeMB: Math.round(
+          dirStats.totalCompressedSize / 1024 / 1024
+        ),
         spaceSavedMB: Math.round(dirStats.totalSpaceSaved / 1024 / 1024),
         averageCompressionRatio: dirStats.averageCompressionRatio,
       });
@@ -457,7 +468,9 @@ export class CompressionManager {
         outputDir,
         filesCompressed: dirStats.totalFilesCompressed,
         originalSizeMB: Math.round(dirStats.totalOriginalSize / 1024 / 1024),
-        compressedSizeMB: Math.round(dirStats.totalCompressedSize / 1024 / 1024),
+        compressedSizeMB: Math.round(
+          dirStats.totalCompressedSize / 1024 / 1024
+        ),
         spaceSavedMB: Math.round(dirStats.totalSpaceSaved / 1024 / 1024),
         averageCompressionRatio: dirStats.averageCompressionRatio.toFixed(3),
         processingTime: dirStats.processingTime,
@@ -465,14 +478,16 @@ export class CompressionManager {
 
       return dirStats;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'compression', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'compression', {
+        error: true,
+      });
+
       logger.error('🗜️ Directory compression failed', {
         inputDir,
         outputDir,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -504,13 +519,16 @@ export class CompressionManager {
    */
   updateConfig(newConfig: Partial<CompressionConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     logger.info('🗜️ Compression configuration updated', this.config);
   }
 
   // Private methods
 
-  private selectAlgorithm(filename?: string, override?: string): 'gzip' | 'deflate' | 'brotli' {
+  private selectAlgorithm(
+    filename?: string,
+    override?: string
+  ): 'gzip' | 'deflate' | 'brotli' {
     if (override) {
       return override;
     }
@@ -518,7 +536,7 @@ export class CompressionManager {
     if (filename && this.config.enableAutoDetection) {
       const ext = path.extname(filename).toLowerCase();
       const rule = this.config.fileTypeRules.get(ext);
-      
+
       if (rule && rule.enabled && rule.algorithm !== 'none') {
         return rule.algorithm as 'gzip' | 'deflate' | 'brotli';
       }
@@ -529,7 +547,7 @@ export class CompressionManager {
 
   private getDefaultFileTypeRules(): Map<string, CompressionRule> {
     const rules = new Map<string, CompressionRule>();
-    
+
     // JSON files - high compression
     rules.set('.json', {
       algorithm: 'gzip',
@@ -537,7 +555,7 @@ export class CompressionManager {
       threshold: 512,
       enabled: true,
     });
-    
+
     // JavaScript/TypeScript files - medium compression
     rules.set('.js', {
       algorithm: 'gzip',
@@ -545,14 +563,14 @@ export class CompressionManager {
       threshold: 1024,
       enabled: true,
     });
-    
+
     rules.set('.ts', {
       algorithm: 'gzip',
       level: 6,
       threshold: 1024,
       enabled: true,
     });
-    
+
     // Text files - high compression
     rules.set('.txt', {
       algorithm: 'gzip',
@@ -560,24 +578,39 @@ export class CompressionManager {
       threshold: 512,
       enabled: true,
     });
-    
+
     // Already compressed files - skip
-    rules.set('.gz', { algorithm: 'none', level: 0, threshold: 0, enabled: false });
-    rules.set('.zip', { algorithm: 'none', level: 0, threshold: 0, enabled: false });
-    rules.set('.7z', { algorithm: 'none', level: 0, threshold: 0, enabled: false });
-    
+    rules.set('.gz', {
+      algorithm: 'none',
+      level: 0,
+      threshold: 0,
+      enabled: false,
+    });
+    rules.set('.zip', {
+      algorithm: 'none',
+      level: 0,
+      threshold: 0,
+      enabled: false,
+    });
+    rules.set('.7z', {
+      algorithm: 'none',
+      level: 0,
+      threshold: 0,
+      enabled: false,
+    });
+
     return rules;
   }
 
   private async getAllFiles(dir: string): Promise<string[]> {
     const files: string[] = [];
-    
+
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
-        
+
         if (entry.isDirectory()) {
           const subFiles = await this.getAllFiles(fullPath);
           files.push(...subFiles);
@@ -590,7 +623,7 @@ export class CompressionManager {
         error: error instanceof Error ? error.message : String(error),
       });
     }
-    
+
     return files;
   }
 
@@ -600,12 +633,14 @@ export class CompressionManager {
     this.stats.totalCompressedSize += result.compressedSize;
     this.stats.totalSpaceSaved += result.spaceSaved;
     this.stats.processingTime += result.processingTime;
-    
-    this.stats.algorithmUsage[result.algorithm] = (this.stats.algorithmUsage[result.algorithm] || 0) + 1;
-    
-    this.stats.averageCompressionRatio = this.stats.totalOriginalSize > 0 
-      ? this.stats.totalCompressedSize / this.stats.totalOriginalSize 
-      : 1;
+
+    this.stats.algorithmUsage[result.algorithm] =
+      (this.stats.algorithmUsage[result.algorithm] || 0) + 1;
+
+    this.stats.averageCompressionRatio =
+      this.stats.totalOriginalSize > 0
+        ? this.stats.totalCompressedSize / this.stats.totalOriginalSize
+        : 1;
   }
 }
 

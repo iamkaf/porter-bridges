@@ -6,12 +6,12 @@
  */
 
 import { REST } from '@discordjs/rest';
+import type { APIChannel, APIMessage } from 'discord-api-types/v10';
 import { Routes } from 'discord-api-types/v10';
-import type { APIMessage, APIChannel } from 'discord-api-types/v10';
 import { logger } from '../../utils/logger';
-import { SourceItemFactory, type ISourceItem } from './source-item-factory';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
+import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
 export interface IDiscordDiscoveryOptions {
   userAgent?: string;
@@ -59,7 +59,7 @@ export class DiscordDiscovery {
   constructor(options: IDiscordDiscoveryOptions = {}) {
     this.options = {
       userAgent: options.userAgent || 'porter-bridges/1.0.0',
-      timeout: options.timeout || 30000,
+      timeout: options.timeout || 30_000,
       retryAttempts: options.retryAttempts || 3,
       maxMessages: options.maxMessages || 100,
     };
@@ -95,27 +95,32 @@ export class DiscordDiscovery {
       logger.info(`🔍 Discovering from Discord channel: ${config.channel_id}`);
 
       // Get channel info
-      const channel = await this.rest!.get(
+      const channel = (await this.rest!.get(
         Routes.channel(config.channel_id)
-      ) as APIChannel;
+      )) as APIChannel;
 
       logger.info(`📢 Found channel: ${channel.name || 'Unknown'}`);
 
       // Get recent messages
-      const messages = await this.rest!.get(
+      const messages = (await this.rest!.get(
         Routes.channelMessages(config.channel_id),
         {
           query: new URLSearchParams({
             limit: this.options.maxMessages!.toString(),
           }),
         }
-      ) as APIMessage[];
+      )) as APIMessage[];
 
       logger.info(`📨 Found ${messages.length} messages`);
 
       // Filter and process messages
-      const relevantMessages = this.filterMessages(messages, config.message_filters);
-      logger.info(`📊 Filtered to ${relevantMessages.length} relevant messages`);
+      const relevantMessages = this.filterMessages(
+        messages,
+        config.message_filters
+      );
+      logger.info(
+        `📊 Filtered to ${relevantMessages.length} relevant messages`
+      );
 
       // Convert messages to source items
       for (const message of relevantMessages) {
@@ -131,9 +136,14 @@ export class DiscordDiscovery {
         }
       }
 
-      logger.info(`✅ Successfully discovered ${relevantMessages.length} sources from Discord channel`);
+      logger.info(
+        `✅ Successfully discovered ${relevantMessages.length} sources from Discord channel`
+      );
     } catch (error) {
-      logger.error(`❌ Failed to discover from Discord channel ${config.channel_id}:`, error);
+      logger.error(
+        `❌ Failed to discover from Discord channel ${config.channel_id}:`,
+        error
+      );
       throw error;
     }
   }
@@ -151,7 +161,7 @@ export class DiscordDiscovery {
 
       // Parse webhook URL to extract info
       const webhookInfo = this.parseWebhookUrl(config.webhook_url);
-      
+
       if (!webhookInfo) {
         throw new Error('Invalid webhook URL format');
       }
@@ -171,12 +181,17 @@ export class DiscordDiscovery {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const messages = await response.json() as APIMessage[];
+      const messages = (await response.json()) as APIMessage[];
       logger.info(`📨 Found ${messages.length} webhook messages`);
 
       // Filter messages based on webhook filters
-      const relevantMessages = this.filterWebhookMessages(messages, config.webhook_filters);
-      logger.info(`📊 Filtered to ${relevantMessages.length} relevant webhook messages`);
+      const relevantMessages = this.filterWebhookMessages(
+        messages,
+        config.webhook_filters
+      );
+      logger.info(
+        `📊 Filtered to ${relevantMessages.length} relevant webhook messages`
+      );
 
       // Convert messages to source items
       for (const message of relevantMessages) {
@@ -192,9 +207,14 @@ export class DiscordDiscovery {
         }
       }
 
-      logger.info(`✅ Successfully discovered ${relevantMessages.length} sources from Discord webhook`);
+      logger.info(
+        `✅ Successfully discovered ${relevantMessages.length} sources from Discord webhook`
+      );
     } catch (error) {
-      logger.error(`❌ Failed to discover from Discord webhook ${config.webhook_url}:`, error);
+      logger.error(
+        `❌ Failed to discover from Discord webhook ${config.webhook_url}:`,
+        error
+      );
       throw error;
     }
   }
@@ -208,7 +228,7 @@ export class DiscordDiscovery {
   ): APIMessage[] {
     if (!filters) return messages;
 
-    return messages.filter(message => {
+    return messages.filter((message) => {
       // Check message length
       if (filters.min_length && message.content.length < filters.min_length) {
         return false;
@@ -216,7 +236,7 @@ export class DiscordDiscovery {
 
       // Check keywords
       if (filters.keywords && filters.keywords.length > 0) {
-        const hasKeyword = filters.keywords.some(keyword =>
+        const hasKeyword = filters.keywords.some((keyword) =>
           message.content.toLowerCase().includes(keyword.toLowerCase())
         );
         if (!hasKeyword) return false;
@@ -224,17 +244,19 @@ export class DiscordDiscovery {
 
       // Check exclude keywords
       if (filters.exclude_keywords && filters.exclude_keywords.length > 0) {
-        const hasExcludeKeyword = filters.exclude_keywords.some(keyword =>
+        const hasExcludeKeyword = filters.exclude_keywords.some((keyword) =>
           message.content.toLowerCase().includes(keyword.toLowerCase())
         );
         if (hasExcludeKeyword) return false;
       }
 
       // Check user IDs
-      if (filters.user_ids && filters.user_ids.length > 0) {
-        if (!filters.user_ids.includes(message.author.id)) {
-          return false;
-        }
+      if (
+        filters.user_ids &&
+        filters.user_ids.length > 0 &&
+        !filters.user_ids.includes(message.author.id)
+      ) {
+        return false;
       }
 
       // Check age
@@ -259,11 +281,11 @@ export class DiscordDiscovery {
   ): APIMessage[] {
     if (!filters) return messages;
 
-    return messages.filter(message => {
+    return messages.filter((message) => {
       // Check username patterns
       if (filters.username_patterns && filters.username_patterns.length > 0) {
         const username = message.author.username || '';
-        const hasPattern = filters.username_patterns.some(pattern =>
+        const hasPattern = filters.username_patterns.some((pattern) =>
           new RegExp(pattern, 'i').test(username)
         );
         if (!hasPattern) return false;
@@ -271,14 +293,17 @@ export class DiscordDiscovery {
 
       // Check content patterns
       if (filters.content_patterns && filters.content_patterns.length > 0) {
-        const hasPattern = filters.content_patterns.some(pattern =>
+        const hasPattern = filters.content_patterns.some((pattern) =>
           new RegExp(pattern, 'i').test(message.content)
         );
         if (!hasPattern) return false;
       }
 
       // Check embed requirement
-      if (filters.embed_required && (!message.embeds || message.embeds.length === 0)) {
+      if (
+        filters.embed_required &&
+        (!message.embeds || message.embeds.length === 0)
+      ) {
         return false;
       }
 
@@ -318,12 +343,18 @@ export class DiscordDiscovery {
       }
 
       // Extract version from content
-      const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(fullContent, '');
-      const relevanceScore = this.contentAnalyzer.calculateBlogRelevance(fullContent, '');
+      const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(
+        fullContent,
+        ''
+      );
+      const relevanceScore = this.contentAnalyzer.calculateBlogRelevance(
+        fullContent,
+        ''
+      );
       const tags = this.contentAnalyzer.extractTags(fullContent, '');
       const priority = this.contentAnalyzer.determineBlogPriority({
         title: `Discord: ${message.author.username}`,
-        description: fullContent
+        description: fullContent,
       });
 
       const sourceItem: ISourceItem = {
@@ -334,7 +365,7 @@ export class DiscordDiscovery {
         minecraft_version: minecraftVersion || undefined,
         loader_type: config.loader_type as any,
         priority: priority as any,
-        tags: tags,
+        tags,
         relevance_score: relevanceScore,
         content_type: 'application/json',
         metadata: {
@@ -346,13 +377,16 @@ export class DiscordDiscovery {
           discord_channel_name: channel.name || 'Unknown',
           message_type: 'channel_message',
           has_embeds: message.embeds ? message.embeds.length > 0 : false,
-          embed_count: message.embeds ? message.embeds.length : 0
-        }
+          embed_count: message.embeds ? message.embeds.length : 0,
+        },
       };
 
       return this.sourceItemFactory.createSourceItem(sourceItem);
     } catch (error) {
-      logger.error(`Failed to create source item from Discord message ${message.id}:`, error);
+      logger.error(
+        `Failed to create source item from Discord message ${message.id}:`,
+        error
+      );
       return null;
     }
   }
@@ -376,12 +410,18 @@ export class DiscordDiscovery {
         }
       }
 
-      const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(fullContent, '');
-      const relevanceScore = this.contentAnalyzer.calculateBlogRelevance(fullContent, '');
+      const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(
+        fullContent,
+        ''
+      );
+      const relevanceScore = this.contentAnalyzer.calculateBlogRelevance(
+        fullContent,
+        ''
+      );
       const tags = this.contentAnalyzer.extractTags(fullContent, '');
       const priority = this.contentAnalyzer.determineBlogPriority({
         title: `Webhook: ${message.author.username}`,
-        description: fullContent
+        description: fullContent,
       });
 
       const sourceItem: ISourceItem = {
@@ -392,7 +432,7 @@ export class DiscordDiscovery {
         minecraft_version: minecraftVersion || undefined,
         loader_type: config.loader_type as any,
         priority: priority as any,
-        tags: tags,
+        tags,
         relevance_score: relevanceScore,
         content_type: 'application/json',
         metadata: {
@@ -402,13 +442,16 @@ export class DiscordDiscovery {
           discord_timestamp: message.timestamp,
           message_type: 'webhook_message',
           has_embeds: message.embeds ? message.embeds.length > 0 : false,
-          embed_count: message.embeds ? message.embeds.length : 0
-        }
+          embed_count: message.embeds ? message.embeds.length : 0,
+        },
       };
 
       return this.sourceItemFactory.createSourceItem(sourceItem);
     } catch (error) {
-      logger.error(`Failed to create source item from webhook message ${message.id}:`, error);
+      logger.error(
+        `Failed to create source item from webhook message ${message.id}:`,
+        error
+      );
       return null;
     }
   }
@@ -417,22 +460,25 @@ export class DiscordDiscovery {
    * Parse webhook URL to extract ID and token
    */
   private parseWebhookUrl(url: string): { id: string; token: string } | null {
-    const match = url.match(/\/api\/webhooks\/(\d+)\/([^\/]+)/);
+    const match = url.match(/\/api\/webhooks\/(\d+)\/([^/]+)/);
     if (!match) return null;
 
     return {
       id: match[1],
-      token: match[2]
+      token: match[2],
     };
   }
 
   /**
    * Get Discord channel info
    */
-  async getChannelInfo(channelId: string, botToken: string): Promise<APIChannel | null> {
+  async getChannelInfo(
+    channelId: string,
+    botToken: string
+  ): Promise<APIChannel | null> {
     try {
       this.initializeRestClient(botToken);
-      return await this.rest!.get(Routes.channel(channelId)) as APIChannel;
+      return (await this.rest!.get(Routes.channel(channelId))) as APIChannel;
     } catch (error) {
       logger.error(`Failed to get channel info for ${channelId}:`, error);
       return null;

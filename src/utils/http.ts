@@ -7,17 +7,17 @@
 
 import ky, { type KyInstance, type Options } from 'ky';
 import {
+  type CircuitBreaker,
+  type CircuitBreakerConfig,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+  globalCircuitBreakerRegistry,
+} from './circuit-breaker';
+import {
+  type BackoffConfig,
+  DEFAULT_BACKOFF_CONFIG,
   EnhancedError,
   RetryManager,
-  DEFAULT_BACKOFF_CONFIG,
-  type BackoffConfig
 } from './error-handling';
-import {
-  CircuitBreaker,
-  globalCircuitBreakerRegistry,
-  DEFAULT_CIRCUIT_BREAKER_CONFIG,
-  type CircuitBreakerConfig
-} from './circuit-breaker';
 
 // Enhanced HTTP client configuration with circuit breaker support
 const DEFAULT_OPTIONS: Options = {
@@ -57,12 +57,12 @@ export class EnhancedHttpClient {
         ...options.headers,
       },
     });
-    
+
     this.circuitBreaker = globalCircuitBreakerRegistry.getOrCreate(
       `http_${name}`,
       { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...circuitBreakerConfig }
     );
-    
+
     this.retryManager = new RetryManager(
       { ...DEFAULT_BACKOFF_CONFIG, ...retryConfig },
       `http_${name}`
@@ -168,21 +168,17 @@ export class EnhancedHttpClient {
   ): Promise<any> {
     const operationName = `${method} ${url}`;
 
-    return this.retryManager.executeWithRetry(
-      async () => {
-        const result = await this.circuitBreaker.execute(
-          operation,
-          operationName
-        );
+    return this.retryManager.executeWithRetry(async () => {
+      const result = await this.circuitBreaker.execute(
+        operation,
+        operationName
+      );
 
-        if (result.success) {
-          return result.data;
-        } else {
-          throw result.error;
-        }
-      },
-      operationName
-    );
+      if (result.success) {
+        return result.data;
+      }
+      throw result.error;
+    }, operationName);
   }
 }
 
@@ -195,7 +191,12 @@ export function createEnhancedHttpClient(
   circuitBreakerConfig: Partial<CircuitBreakerConfig> = {},
   retryConfig: Partial<BackoffConfig> = {}
 ): EnhancedHttpClient {
-  return new EnhancedHttpClient(name, options, circuitBreakerConfig, retryConfig);
+  return new EnhancedHttpClient(
+    name,
+    options,
+    circuitBreakerConfig,
+    retryConfig
+  );
 }
 
 /**
@@ -230,8 +231,8 @@ export const githubClient = createEnhancedHttpClient(
   },
   {
     failureThreshold: 5,
-    resetTimeout: 120000, // 2 minutes
-    expectedResponseTime: 10000, // 10 seconds
+    resetTimeout: 120_000, // 2 minutes
+    expectedResponseTime: 10_000, // 10 seconds
   }
 );
 
@@ -247,8 +248,8 @@ export const mavenClient = createEnhancedHttpClient(
   },
   {
     failureThreshold: 3,
-    resetTimeout: 60000, // 1 minute
-    expectedResponseTime: 15000, // 15 seconds
+    resetTimeout: 60_000, // 1 minute
+    expectedResponseTime: 15_000, // 15 seconds
   }
 );
 
@@ -264,7 +265,7 @@ export const rssClient = createEnhancedHttpClient(
   },
   {
     failureThreshold: 3,
-    resetTimeout: 60000, // 1 minute
+    resetTimeout: 60_000, // 1 minute
     expectedResponseTime: 8000, // 8 seconds
   }
 );
@@ -323,7 +324,7 @@ export function createHttpError(error: any, url: string): HttpError {
 export function createEnhancedHttpError(
   error: any,
   url: string,
-  source: string = 'http'
+  source = 'http'
 ): EnhancedError {
   const status = error.response?.status || 0;
   const message = error.message || String(error);
@@ -335,43 +336,47 @@ export function createEnhancedHttpError(
       { url, status, originalError: error },
       source
     );
-  } else if (status === 429) {
+  }
+  if (status === 429) {
     return EnhancedError.rateLimit(
       `Rate limit exceeded: ${message}`,
       { url, status, originalError: error },
       source
     );
-  } else if (status === 401 || status === 403) {
+  }
+  if (status === 401 || status === 403) {
     return EnhancedError.authentication(
       `Authentication failed (${status}): ${message}`,
       { url, status, originalError: error },
       source
     );
-  } else if (status >= 400 && status < 500) {
+  }
+  if (status >= 400 && status < 500) {
     return EnhancedError.validation(
       `Client error (${status}): ${message}`,
       { url, status, originalError: error },
       source
     );
-  } else if (message.toLowerCase().includes('timeout')) {
+  }
+  if (message.toLowerCase().includes('timeout')) {
     return EnhancedError.timeout(
       `Request timeout: ${message}`,
       { url, status, originalError: error },
       source
     );
-  } else if (message.toLowerCase().includes('network')) {
+  }
+  if (message.toLowerCase().includes('network')) {
     return EnhancedError.network(
       `Network error: ${message}`,
       { url, status, originalError: error },
       source
     );
-  } else {
-    return EnhancedError.externalApi(
-      `HTTP error: ${message}`,
-      { url, status, originalError: error },
-      source
-    );
   }
+  return EnhancedError.externalApi(
+    `HTTP error: ${message}`,
+    { url, status, originalError: error },
+    source
+  );
 }
 
 /**
@@ -404,14 +409,15 @@ export async function createHttpHealthCheck(
       responseTime,
       details: {
         url,
-        circuitBreakerStatus: client.getCircuitBreakerStatus()
-      }
+        circuitBreakerStatus: client.getCircuitBreakerStatus(),
+      },
     };
   } catch (error) {
     const responseTime = Date.now() - startTime;
-    const enhancedError = error instanceof EnhancedError 
-      ? error 
-      : createEnhancedHttpError(error, url, component);
+    const enhancedError =
+      error instanceof EnhancedError
+        ? error
+        : createEnhancedHttpError(error, url, component);
 
     return {
       healthy: false,
@@ -422,8 +428,8 @@ export async function createHttpHealthCheck(
       details: {
         url,
         error: enhancedError.toLogFormat(),
-        circuitBreakerStatus: client.getCircuitBreakerStatus()
-      }
+        circuitBreakerStatus: client.getCircuitBreakerStatus(),
+      },
     };
   }
 }

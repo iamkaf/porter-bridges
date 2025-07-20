@@ -1,21 +1,21 @@
 /**
  * @file Enhanced CLI Command
- * 
+ *
  * Integrates all CLI enhancements including interactive wizard, progress bars,
  * colorized output, and improved user experience.
  */
 
-import { Command } from 'commander';
+import { promises as fs } from 'node:fs';
+import boxen from 'boxen';
 import chalk from 'chalk';
+import { Command } from 'commander';
 import figlet from 'figlet';
 import gradient from 'gradient-string';
-import boxen from 'boxen';
-import { ConfigWizard } from './config-wizard';
-import { createPipelineProgressManager } from './progress-manager';
-import { CompletionInstaller } from './completions';
 import { logger } from '../utils/logger';
+import { CompletionInstaller } from './completions';
+import { ConfigWizard } from './config-wizard';
 import { OrchestrationCommand } from './orchestration-command';
-import { promises as fs } from 'node:fs';
+import { createPipelineProgressManager } from './progress-manager';
 
 /**
  * Enhanced CLI with modern features
@@ -29,7 +29,7 @@ export class EnhancedCLI {
     this.program = new Command();
     this.configWizard = new ConfigWizard();
     this.completionInstaller = new CompletionInstaller();
-    
+
     this.setupProgram();
   }
 
@@ -71,7 +71,7 @@ export class EnhancedCLI {
    * Get enhanced description with ASCII art
    */
   private getDescription(): string {
-    const title = figlet.textSync('Porter Bridges', { 
+    const title = figlet.textSync('Porter Bridges', {
       font: 'Small',
       horizontalLayout: 'default',
       verticalLayout: 'default',
@@ -79,7 +79,9 @@ export class EnhancedCLI {
 
     const gradientTitle = gradient('cyan', 'magenta')(title);
     const subtitle = chalk.gray('🌉 Minecraft Mod Porting Intelligence System');
-    const description = chalk.dim('Automated discovery, processing, and packaging of mod porting data');
+    const description = chalk.dim(
+      'Automated discovery, processing, and packaging of mod porting data'
+    );
 
     return `${gradientTitle}\n${subtitle}\n${description}`;
   }
@@ -89,17 +91,17 @@ export class EnhancedCLI {
    */
   private formatHelpText(helpText: string, terminalWidth: number): string {
     const lines = helpText.split('\n');
-    const formatted = lines.map(line => {
+    const formatted = lines.map((line) => {
       // Highlight command names
       if (line.includes('Usage:')) {
         return chalk.yellow.bold(line);
       }
-      
+
       // Highlight section headers
       if (line.match(/^[A-Z][a-z]+:$/)) {
         return chalk.cyan.bold(line);
       }
-      
+
       // Highlight options
       if (line.match(/^\s*-/)) {
         const parts = line.split(/\s{2,}/);
@@ -107,7 +109,7 @@ export class EnhancedCLI {
           return `  ${chalk.green(parts[0].trim())}  ${chalk.gray(parts[1])}`;
         }
       }
-      
+
       return line;
     });
 
@@ -127,15 +129,26 @@ export class EnhancedCLI {
       .option('--skip-collection', 'Skip collection phase')
       .option('--skip-distillation', 'Skip distillation phase')
       .option('--skip-packaging', 'Skip packaging phase')
-      .option('--gemini-model <model>', 'Gemini model to use', 'gemini-2.5-flash')
+      .option(
+        '--gemini-model <model>',
+        'Gemini model to use',
+        'gemini-2.5-flash'
+      )
       .option('--max-concurrent <number>', 'Maximum concurrent operations', '8')
       .option('--timeout <ms>', 'Request timeout in milliseconds', '60000')
-      .option('--distill-timeout <ms>', 'Distillation timeout in milliseconds', '600000')
+      .option(
+        '--distill-timeout <ms>',
+        'Distillation timeout in milliseconds',
+        '600000'
+      )
       .option('--bundle-name <name>', 'Bundle name', 'porter-bridges')
       .option('--version <version>', 'Package version')
       .option('--interactive', 'Interactive mode with prompts', true)
       .option('--log-mode', 'Log mode instead of spinners')
-      .option('--force-proceed', 'Continue pipeline despite failed sources (not recommended)')
+      .option(
+        '--force-proceed',
+        'Continue pipeline despite failed sources (not recommended)'
+      )
       .action(async (options) => {
         await this.runOrchestration(options);
       });
@@ -145,7 +158,11 @@ export class EnhancedCLI {
       .command('config-wizard')
       .alias('config')
       .description('🔧 Interactive configuration wizard')
-      .option('--config-path <path>', 'Configuration file path', './porter-bridges.config.json')
+      .option(
+        '--config-path <path>',
+        'Configuration file path',
+        './porter-bridges.config.json'
+      )
       .option('--preset <preset>', 'Configuration preset', 'development')
       .option('--non-interactive', 'Non-interactive mode')
       .option('--validate', 'Validate existing configuration')
@@ -223,14 +240,14 @@ export class EnhancedCLI {
   private async runOrchestration(options: any): Promise<void> {
     try {
       this.showBanner();
-      
+
       const progressManager = createPipelineProgressManager({
         interactive: options.interactive && !options.logMode,
         logMode: options.logMode,
       });
 
       const orchestrationCommand = new OrchestrationCommand();
-      
+
       // Set up progress event handlers
       progressManager.on('phaseStart', (event) => {
         logger.info(`Starting ${event.phase}: ${event.message}`);
@@ -246,9 +263,8 @@ export class EnhancedCLI {
 
       // Run the orchestration
       await orchestrationCommand.execute(options);
-      
+
       progressManager.showSummary();
-      
     } catch (error) {
       console.error(chalk.red('❌ Orchestration failed:'), error);
       process.exit(1);
@@ -267,7 +283,6 @@ export class EnhancedCLI {
 
       this.configWizard = new ConfigWizard(options.configPath);
       await this.configWizard.run();
-      
     } catch (error) {
       console.error(chalk.red('❌ Configuration wizard failed:'), error);
       process.exit(1);
@@ -304,9 +319,13 @@ export class EnhancedCLI {
    */
   private async runInteractiveMode(): Promise<void> {
     this.showBanner();
-    
+
     console.log(chalk.cyan('🎮 Interactive Mode - Coming Soon!'));
-    console.log(chalk.gray('This will provide guided workflows and step-by-step assistance.'));
+    console.log(
+      chalk.gray(
+        'This will provide guided workflows and step-by-step assistance.'
+      )
+    );
   }
 
   /**
@@ -314,9 +333,9 @@ export class EnhancedCLI {
    */
   private async runQuickstart(): Promise<void> {
     this.showBanner();
-    
+
     console.log(chalk.cyan.bold('🚀 Porter Bridges Quickstart Guide\n'));
-    
+
     const steps = [
       '1. Run configuration wizard: porter-bridges config-wizard',
       '2. Install shell completions: porter-bridges install-completions',
@@ -325,7 +344,7 @@ export class EnhancedCLI {
       '5. View results in generated/bundles/',
     ];
 
-    steps.forEach(step => {
+    steps.forEach((step) => {
       console.log(chalk.green(`  ${step}`));
     });
 
@@ -346,11 +365,11 @@ export class EnhancedCLI {
   private showVersion(): void {
     const versionInfo = boxen(
       `${chalk.cyan.bold('Porter Bridges')} ${chalk.green('v1.0.0')}\n\n` +
-      `${chalk.gray('🌉 Minecraft Mod Porting Intelligence System')}\n` +
-      `${chalk.gray('Built with ❤️ for the modding community')}\n\n` +
-      `${chalk.dim('Node.js:')} ${process.version}\n` +
-      `${chalk.dim('Platform:')} ${process.platform}\n` +
-      `${chalk.dim('Architecture:')} ${process.arch}`,
+        `${chalk.gray('🌉 Minecraft Mod Porting Intelligence System')}\n` +
+        `${chalk.gray('Built with ❤️ for the modding community')}\n\n` +
+        `${chalk.dim('Node.js:')} ${process.version}\n` +
+        `${chalk.dim('Platform:')} ${process.platform}\n` +
+        `${chalk.dim('Architecture:')} ${process.arch}`,
       {
         padding: 1,
         margin: 1,
@@ -368,8 +387,9 @@ export class EnhancedCLI {
    */
   private showBanner(): void {
     const banner = boxen(
-      gradient('cyan', 'magenta')('🌉 Porter Bridges') + '\n' +
-      chalk.gray('Minecraft Mod Porting Intelligence System'),
+      gradient('cyan', 'magenta')('🌉 Porter Bridges') +
+        '\n' +
+        chalk.gray('Minecraft Mod Porting Intelligence System'),
       {
         padding: 1,
         margin: 1,
@@ -389,11 +409,10 @@ export class EnhancedCLI {
     try {
       const configData = await fs.readFile(configPath, 'utf-8');
       const config = JSON.parse(configData);
-      
+
       console.log(chalk.green('✅ Configuration is valid'));
       console.log(chalk.gray(`   File: ${configPath}`));
       console.log(chalk.gray(`   Size: ${configData.length} bytes`));
-      
     } catch (error) {
       console.error(chalk.red('❌ Configuration validation failed:'), error);
       process.exit(1);

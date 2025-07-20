@@ -10,10 +10,10 @@
  */
 
 import { logger } from '../../utils/logger';
-import { SourceItemFactory, type ISourceItem } from './source-item-factory';
-import { ContentAnalyzer } from './content-analyzer';
 import { MLContentAnalyzer } from '../../utils/ml-content-analyzer';
+import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
+import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
 export interface IVideoDiscoveryOptions {
   userAgent?: string;
@@ -103,7 +103,7 @@ export class VideoDiscovery {
   constructor(options: IVideoDiscoveryOptions = {}) {
     this.options = {
       userAgent: options.userAgent || 'porter-bridges/1.0.0',
-      timeout: options.timeout || 60000, // Videos take longer to process
+      timeout: options.timeout || 60_000, // Videos take longer to process
       retryAttempts: options.retryAttempts || 3,
       maxVideoResults: options.maxVideoResults || 20,
       transcriptionService: options.transcriptionService || 'youtube',
@@ -111,7 +111,7 @@ export class VideoDiscovery {
       enableThumbnailAnalysis: options.enableThumbnailAnalysis !== false,
       minVideoDuration: options.minVideoDuration || 60, // 1 minute minimum
       maxVideoDuration: options.maxVideoDuration || 3600, // 1 hour maximum
-      ...options
+      ...options,
     };
 
     this.sourceItemFactory = new SourceItemFactory();
@@ -132,15 +132,17 @@ export class VideoDiscovery {
     try {
       // Search for relevant videos
       const videoMetadata = await this.searchRelevantVideos(config);
-      logger.info(`📹 Found ${videoMetadata.length} potentially relevant videos`);
+      logger.info(
+        `📹 Found ${videoMetadata.length} potentially relevant videos`
+      );
 
       // Analyze each video
       const videoAnalyses: IVideoAnalysis[] = [];
-      
+
       for (const metadata of videoMetadata) {
         try {
           const analysis = await this.analyzeVideo(metadata);
-          
+
           if (analysis.relevance_score > 0.5) {
             videoAnalyses.push(analysis);
           }
@@ -149,20 +151,31 @@ export class VideoDiscovery {
         }
       }
 
-      logger.info(`📊 ${videoAnalyses.length} videos passed relevance threshold`);
+      logger.info(
+        `📊 ${videoAnalyses.length} videos passed relevance threshold`
+      );
 
       // Convert to source items
       for (const analysis of videoAnalyses) {
-        const sourceItem = this.createSourceItemFromVideoAnalysis(analysis, config, sourceId);
-        
+        const sourceItem = this.createSourceItemFromVideoAnalysis(
+          analysis,
+          config,
+          sourceId
+        );
+
         if (sourceItem) {
           discoveredSources.set(sourceItem.url, sourceItem);
         }
       }
 
-      logger.info(`✅ Successfully discovered ${videoAnalyses.length} video sources`);
+      logger.info(
+        `✅ Successfully discovered ${videoAnalyses.length} video sources`
+      );
     } catch (error) {
-      logger.error(`❌ Failed to discover from video sources ${sourceId}:`, error);
+      logger.error(
+        `❌ Failed to discover from video sources ${sourceId}:`,
+        error
+      );
       throw error;
     }
   }
@@ -170,7 +183,9 @@ export class VideoDiscovery {
   /**
    * Search for relevant videos using YouTube API
    */
-  private async searchRelevantVideos(config: ISourceConfig): Promise<IVideoMetadata[]> {
+  private async searchRelevantVideos(
+    config: ISourceConfig
+  ): Promise<IVideoMetadata[]> {
     if (!this.options.youtubeApiKey) {
       logger.warn('YouTube API key not provided, skipping video discovery');
       return [];
@@ -184,15 +199,19 @@ export class VideoDiscovery {
         const videos = await this.searchYouTubeVideos(query);
         allVideos.push(...videos);
       } catch (error) {
-        logger.error(`Failed to search for videos with query "${query}":`, error);
+        logger.error(
+          `Failed to search for videos with query "${query}":`,
+          error
+        );
       }
     }
 
     // Remove duplicates and filter by duration
     const uniqueVideos = this.removeDuplicateVideos(allVideos);
-    const filteredVideos = uniqueVideos.filter(video => 
-      video.duration >= this.options.minVideoDuration! &&
-      video.duration <= this.options.maxVideoDuration!
+    const filteredVideos = uniqueVideos.filter(
+      (video) =>
+        video.duration >= this.options.minVideoDuration! &&
+        video.duration <= this.options.maxVideoDuration!
     );
 
     return filteredVideos.slice(0, this.options.maxVideoResults);
@@ -207,13 +226,13 @@ export class VideoDiscovery {
       'minecraft modding guide',
       'minecraft forge tutorial',
       'minecraft fabric tutorial',
-      'minecraft neoforge tutorial'
+      'minecraft neoforge tutorial',
     ];
 
     const versionQueries = [
       'minecraft 1.21 modding',
       'minecraft 1.20 modding',
-      'minecraft modding 2024'
+      'minecraft modding 2024',
     ];
 
     const loaderSpecificQueries = [];
@@ -238,7 +257,7 @@ export class VideoDiscovery {
       type: 'video',
       order: 'relevance',
       maxResults: '10',
-      key: this.options.youtubeApiKey!
+      key: this.options.youtubeApiKey!,
     });
 
     const searchResponse = await fetch(
@@ -260,7 +279,7 @@ export class VideoDiscovery {
     const videoParams = new URLSearchParams({
       part: 'snippet,contentDetails,statistics',
       id: videoIds.join(','),
-      key: this.options.youtubeApiKey!
+      key: this.options.youtubeApiKey!,
     });
 
     const videoResponse = await fetch(
@@ -272,7 +291,7 @@ export class VideoDiscovery {
     }
 
     const videoData = await videoResponse.json();
-    
+
     return videoData.items.map((item: any) => this.parseVideoMetadata(item));
   }
 
@@ -281,7 +300,7 @@ export class VideoDiscovery {
    */
   private parseVideoMetadata(apiResponse: any): IVideoMetadata {
     const duration = this.parseDuration(apiResponse.contentDetails.duration);
-    
+
     return {
       id: apiResponse.id,
       title: apiResponse.snippet.title,
@@ -290,17 +309,19 @@ export class VideoDiscovery {
       published_at: apiResponse.snippet.publishedAt,
       channel: {
         id: apiResponse.snippet.channelId,
-        name: apiResponse.snippet.channelTitle
+        name: apiResponse.snippet.channelTitle,
       },
-      view_count: parseInt(apiResponse.statistics.viewCount || '0'),
-      like_count: parseInt(apiResponse.statistics.likeCount || '0'),
-      comment_count: parseInt(apiResponse.statistics.commentCount || '0'),
+      view_count: Number.parseInt(apiResponse.statistics.viewCount || '0'),
+      like_count: Number.parseInt(apiResponse.statistics.likeCount || '0'),
+      comment_count: Number.parseInt(
+        apiResponse.statistics.commentCount || '0'
+      ),
       tags: apiResponse.snippet.tags || [],
       category: apiResponse.snippet.categoryId,
       language: apiResponse.snippet.defaultLanguage || 'en',
       captions_available: apiResponse.contentDetails.caption === 'true',
       thumbnail_url: apiResponse.snippet.thumbnails.high?.url || '',
-      url: `https://www.youtube.com/watch?v=${apiResponse.id}`
+      url: `https://www.youtube.com/watch?v=${apiResponse.id}`,
     };
   }
 
@@ -311,9 +332,9 @@ export class VideoDiscovery {
     const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
     if (!match) return 0;
 
-    const hours = parseInt(match[1] || '0');
-    const minutes = parseInt(match[2] || '0');
-    const seconds = parseInt(match[3] || '0');
+    const hours = Number.parseInt(match[1] || '0');
+    const minutes = Number.parseInt(match[2] || '0');
+    const seconds = Number.parseInt(match[3] || '0');
 
     return hours * 3600 + minutes * 60 + seconds;
   }
@@ -321,7 +342,9 @@ export class VideoDiscovery {
   /**
    * Analyze video content for relevance and quality
    */
-  private async analyzeVideo(metadata: IVideoMetadata): Promise<IVideoAnalysis> {
+  private async analyzeVideo(
+    metadata: IVideoMetadata
+  ): Promise<IVideoAnalysis> {
     logger.info(`🔍 Analyzing video: ${metadata.title}`);
 
     // Get transcription if available
@@ -329,13 +352,20 @@ export class VideoDiscovery {
 
     // Analyze content
     const contentText = `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`;
-    const relevanceScore = this.contentAnalyzer.calculatePortingRelevance(contentText);
+    const relevanceScore =
+      this.contentAnalyzer.calculatePortingRelevance(contentText);
 
     // Classify content type
-    const contentClassification = this.classifyVideoContent(metadata, transcription);
+    const contentClassification = this.classifyVideoContent(
+      metadata,
+      transcription
+    );
 
     // Analyze modding relevance
-    const moddingRelevance = this.analyzeModdingRelevance(metadata, transcription);
+    const moddingRelevance = this.analyzeModdingRelevance(
+      metadata,
+      transcription
+    );
 
     // Assess quality indicators
     const qualityIndicators = this.assessVideoQuality(metadata, transcription);
@@ -346,42 +376,49 @@ export class VideoDiscovery {
       relevance_score: relevanceScore,
       content_classification: contentClassification,
       modding_relevance: moddingRelevance,
-      quality_indicators: qualityIndicators
+      quality_indicators: qualityIndicators,
     };
   }
 
   /**
    * Get video transcription/captions
    */
-  private async getVideoTranscription(metadata: IVideoMetadata): Promise<IVideoTranscription | undefined> {
-    if (!this.options.enableSubtitleDownload || !metadata.captions_available) {
-      return undefined;
+  private async getVideoTranscription(
+    metadata: IVideoMetadata
+  ): Promise<IVideoTranscription | undefined> {
+    if (!(this.options.enableSubtitleDownload && metadata.captions_available)) {
+      return;
     }
 
     try {
       // This is a simplified implementation - in reality you'd use youtube-dl,
       // yt-dlp, or similar tools to extract captions
       const captions = await this.extractYouTubeCaptions(metadata.id);
-      
+
       if (captions) {
         return this.processTranscription(metadata.id, captions);
       }
     } catch (error) {
-      logger.error(`Failed to get transcription for video ${metadata.id}:`, error);
+      logger.error(
+        `Failed to get transcription for video ${metadata.id}:`,
+        error
+      );
     }
 
-    return undefined;
+    return;
   }
 
   /**
    * Extract YouTube captions (simplified implementation)
    */
-  private async extractYouTubeCaptions(videoId: string): Promise<string | null> {
+  private async extractYouTubeCaptions(
+    videoId: string
+  ): Promise<string | null> {
     // This is a placeholder - in a real implementation you would:
     // 1. Use youtube-dl or yt-dlp to extract captions
     // 2. Use YouTube's caption API if available
     // 3. Use a third-party transcription service
-    
+
     // For now, return null to indicate no captions available
     return null;
   }
@@ -389,16 +426,22 @@ export class VideoDiscovery {
   /**
    * Process raw transcription into structured format
    */
-  private processTranscription(videoId: string, rawCaptions: string): IVideoTranscription {
+  private processTranscription(
+    videoId: string,
+    rawCaptions: string
+  ): IVideoTranscription {
     const doc = this.mlAnalyzer ? undefined : undefined; // Use NLP if available
-    
+
     // Extract keywords and topics
     const keywords = this.contentAnalyzer.extractTags(rawCaptions, '');
     const topics = []; // Would extract using NLP
-    
+
     // Extract version mentions
-    const versionMentions = this.contentAnalyzer.extractMinecraftVersion(rawCaptions, '');
-    
+    const versionMentions = this.contentAnalyzer.extractMinecraftVersion(
+      rawCaptions,
+      ''
+    );
+
     // Extract loader type mentions
     const loaderMentions = this.extractLoaderTypeMentions(rawCaptions);
 
@@ -411,7 +454,7 @@ export class VideoDiscovery {
       keywords,
       topics,
       minecraft_version_mentions: versionMentions ? [versionMentions] : [],
-      loader_type_mentions: loaderMentions
+      loader_type_mentions: loaderMentions,
     };
   }
 
@@ -422,14 +465,15 @@ export class VideoDiscovery {
     metadata: IVideoMetadata,
     transcription?: IVideoTranscription
   ): IVideoAnalysis['content_classification'] {
-    const text = `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
-    
+    const text =
+      `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
+
     const patterns = {
       tutorial: ['tutorial', 'how to', 'guide', 'learn', 'step by step'],
       showcase: ['showcase', 'demo', 'showing', 'preview', 'look at'],
       review: ['review', 'thoughts', 'opinion', 'rating', 'pros and cons'],
       news: ['news', 'update', 'announcement', 'released', 'coming'],
-      technical: ['technical', 'deep dive', 'advanced', 'programming', 'code']
+      technical: ['technical', 'deep dive', 'advanced', 'programming', 'code'],
     };
 
     let bestMatch: keyof typeof patterns = 'other';
@@ -448,7 +492,7 @@ export class VideoDiscovery {
 
     return {
       type: bestMatch as any,
-      confidence: Math.min(bestScore / 3, 1.0)
+      confidence: Math.min(bestScore / 3, 1.0),
     };
   }
 
@@ -459,9 +503,17 @@ export class VideoDiscovery {
     metadata: IVideoMetadata,
     transcription?: IVideoTranscription
   ): IVideoAnalysis['modding_relevance'] {
-    const text = `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
-    
-    const moddingKeywords = ['mod', 'modding', 'forge', 'fabric', 'neoforge', 'minecraft'];
+    const text =
+      `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
+
+    const moddingKeywords = [
+      'mod',
+      'modding',
+      'forge',
+      'fabric',
+      'neoforge',
+      'minecraft',
+    ];
     const moddingScore = moddingKeywords.reduce((score, keyword) => {
       return score + (text.includes(keyword) ? 1 : 0);
     }, 0);
@@ -476,7 +528,10 @@ export class VideoDiscovery {
     if (text.includes('development')) detectedTopics.push('development');
 
     // Extract versions and loaders
-    const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(text, '');
+    const minecraftVersion = this.contentAnalyzer.extractMinecraftVersion(
+      text,
+      ''
+    );
     const loaderType = this.extractLoaderType(text);
 
     return {
@@ -484,7 +539,7 @@ export class VideoDiscovery {
       confidence,
       detected_topics: detectedTopics,
       minecraft_version: minecraftVersion,
-      loader_type: loaderType
+      loader_type: loaderType,
     };
   }
 
@@ -497,22 +552,34 @@ export class VideoDiscovery {
   ): IVideoAnalysis['quality_indicators'] {
     // Quality assessment based on various factors
     const viewRatio = metadata.view_count / (metadata.duration / 60); // Views per minute
-    const engagementRatio = metadata.like_count / Math.max(metadata.view_count, 1);
-    
-    const audioQuality = transcription?.confidence > 0.8 ? 'high' : 
-                        transcription?.confidence > 0.6 ? 'medium' : 'low';
-    
-    const videoQuality = metadata.view_count > 1000 ? 'high' :
-                        metadata.view_count > 100 ? 'medium' : 'low';
+    const engagementRatio =
+      metadata.like_count / Math.max(metadata.view_count, 1);
 
-    const educationalValue = this.assessEducationalValue(metadata, transcription);
+    const audioQuality =
+      transcription?.confidence > 0.8
+        ? 'high'
+        : transcription?.confidence > 0.6
+          ? 'medium'
+          : 'low';
+
+    const videoQuality =
+      metadata.view_count > 1000
+        ? 'high'
+        : metadata.view_count > 100
+          ? 'medium'
+          : 'low';
+
+    const educationalValue = this.assessEducationalValue(
+      metadata,
+      transcription
+    );
     const technicalDepth = this.assessTechnicalDepth(metadata, transcription);
 
     return {
       audio_quality: audioQuality as any,
       video_quality: videoQuality as any,
       educational_value: educationalValue,
-      technical_depth: technicalDepth
+      technical_depth: technicalDepth,
     };
   }
 
@@ -525,18 +592,28 @@ export class VideoDiscovery {
     sourceId: string
   ): ISourceItem | null {
     try {
-      const { metadata, transcription, relevance_score, content_classification, modding_relevance } = analysis;
+      const {
+        metadata,
+        transcription,
+        relevance_score,
+        content_classification,
+        modding_relevance,
+      } = analysis;
 
       // Determine priority based on relevance and quality
-      const priority = relevance_score > 0.8 ? 'high' : 
-                      relevance_score > 0.6 ? 'medium' : 'low';
+      const priority =
+        relevance_score > 0.8
+          ? 'high'
+          : relevance_score > 0.6
+            ? 'medium'
+            : 'low';
 
       // Generate tags
       const tags = [
         'video',
         content_classification.type,
         ...metadata.tags.slice(0, 5),
-        ...(transcription?.keywords || []).slice(0, 5)
+        ...(transcription?.keywords || []).slice(0, 5),
       ];
 
       const sourceItem: ISourceItem = {
@@ -545,7 +622,8 @@ export class VideoDiscovery {
         source_type: 'guide',
         title: metadata.title,
         minecraft_version: modding_relevance.minecraft_version || undefined,
-        loader_type: (modding_relevance.loader_type as any) || config.loader_type,
+        loader_type:
+          (modding_relevance.loader_type as any) || config.loader_type,
         priority: priority as any,
         tags,
         relevance_score,
@@ -560,13 +638,13 @@ export class VideoDiscovery {
           content_classification: content_classification.type,
           modding_relevance: modding_relevance.is_modding_related,
           has_transcription: !!transcription,
-          quality_score: analysis.quality_indicators.educational_value
-        }
+          quality_score: analysis.quality_indicators.educational_value,
+        },
       };
 
       return this.sourceItemFactory.createSourceItem(sourceItem);
     } catch (error) {
-      logger.error(`Failed to create source item from video analysis:`, error);
+      logger.error('Failed to create source item from video analysis:', error);
       return null;
     }
   }
@@ -576,7 +654,7 @@ export class VideoDiscovery {
    */
   private removeDuplicateVideos(videos: IVideoMetadata[]): IVideoMetadata[] {
     const seen = new Set<string>();
-    return videos.filter(video => {
+    return videos.filter((video) => {
       if (seen.has(video.id)) {
         return false;
       }
@@ -588,71 +666,94 @@ export class VideoDiscovery {
   private extractLoaderTypeMentions(text: string): string[] {
     const loaderTypes = ['forge', 'fabric', 'neoforge', 'quilt'];
     const mentions = [];
-    
+
     for (const loader of loaderTypes) {
       if (text.toLowerCase().includes(loader)) {
         mentions.push(loader);
       }
     }
-    
+
     return mentions;
   }
 
   private extractLoaderType(text: string): string | null {
     const loaderTypes = ['forge', 'fabric', 'neoforge', 'quilt'];
-    
+
     for (const loader of loaderTypes) {
       if (text.includes(loader)) {
         return loader;
       }
     }
-    
+
     return null;
   }
 
-  private assessEducationalValue(metadata: IVideoMetadata, transcription?: IVideoTranscription): number {
+  private assessEducationalValue(
+    metadata: IVideoMetadata,
+    transcription?: IVideoTranscription
+  ): number {
     let score = 0;
-    
+
     // Based on title and description
     const text = `${metadata.title} ${metadata.description}`.toLowerCase();
-    const educationalKeywords = ['tutorial', 'guide', 'learn', 'how to', 'step by step'];
-    
+    const educationalKeywords = [
+      'tutorial',
+      'guide',
+      'learn',
+      'how to',
+      'step by step',
+    ];
+
     for (const keyword of educationalKeywords) {
       if (text.includes(keyword)) {
         score += 0.2;
       }
     }
-    
+
     // Based on duration (longer videos might be more educational)
     if (metadata.duration > 600) score += 0.1; // 10+ minutes
     if (metadata.duration > 1200) score += 0.1; // 20+ minutes
-    
+
     // Based on engagement
-    const engagementRatio = metadata.like_count / Math.max(metadata.view_count, 1);
+    const engagementRatio =
+      metadata.like_count / Math.max(metadata.view_count, 1);
     score += Math.min(engagementRatio * 10, 0.2);
-    
+
     return Math.min(score, 1.0);
   }
 
-  private assessTechnicalDepth(metadata: IVideoMetadata, transcription?: IVideoTranscription): number {
+  private assessTechnicalDepth(
+    metadata: IVideoMetadata,
+    transcription?: IVideoTranscription
+  ): number {
     let score = 0;
-    
-    const text = `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
-    const technicalKeywords = ['code', 'programming', 'advanced', 'technical', 'api', 'development'];
-    
+
+    const text =
+      `${metadata.title} ${metadata.description} ${transcription?.full_text || ''}`.toLowerCase();
+    const technicalKeywords = [
+      'code',
+      'programming',
+      'advanced',
+      'technical',
+      'api',
+      'development',
+    ];
+
     for (const keyword of technicalKeywords) {
       if (text.includes(keyword)) {
         score += 0.15;
       }
     }
-    
+
     // Check for code-related tags
-    const codeRelatedTags = metadata.tags.filter(tag => 
-      ['programming', 'coding', 'development', 'tutorial'].includes(tag.toLowerCase())
+    const codeRelatedTags = metadata.tags.filter((tag) =>
+      ['programming', 'coding', 'development', 'tutorial'].includes(
+        tag.toLowerCase()
+      )
     );
-    
+
     score += codeRelatedTags.length * 0.1;
-    
+
     return Math.min(score, 1.0);
   }
 }

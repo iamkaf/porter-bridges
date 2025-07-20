@@ -6,18 +6,18 @@
  */
 
 import { promises as fs } from 'node:fs';
+import { globalCache } from '../utils/cache/cache-manager';
 import { logger } from '../utils/logger';
-import type { PipelineState } from '../utils/pipeline-state-manager';
-import { GeminiProcessor } from './distillation/gemini-processor';
-import { 
-  ParallelProcessor, 
+import { compressionManager } from '../utils/performance/compression-manager';
+import {
   createParallelProcessor,
-  type ParallelProcessingConfig 
+  type ParallelProcessingConfig,
+  type ParallelProcessor,
 } from '../utils/performance/parallel-processor';
 import { performanceMonitor } from '../utils/performance/performance-monitor';
-import { globalCache } from '../utils/cache/cache-manager';
-import { compressionManager } from '../utils/performance/compression-manager';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 import { streamingProcessor } from '../utils/streaming/streaming-file-processor';
+import { GeminiProcessor } from './distillation/gemini-processor';
 
 /**
  * Enhanced filters for distillation sources with caching
@@ -34,42 +34,49 @@ class OptimizedDistillationFilters {
     try {
       const cacheKey = `distilled-files-${outputDirectory}`;
       const cachedFiles = globalCache.get(cacheKey);
-      
+
       if (cachedFiles) {
         existingFiles = cachedFiles;
       } else {
         const files = await fs.readdir(outputDirectory);
-        existingFiles = new Set(files.filter(f => f.endsWith('.json')));
-        
+        existingFiles = new Set(files.filter((f) => f.endsWith('.json')));
+
         // Cache the file list for 5 minutes
         globalCache.set(cacheKey, existingFiles, 5 * 60 * 1000);
       }
-      
+
       if (existingFiles.size > 0) {
-        logger.info(`🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`);
+        logger.info(
+          `🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`
+        );
       }
     } catch (error) {
       // Directory might not exist yet, that's okay
     }
 
     // Process sources with enhanced filtering
-    for (const [sourceKey, source] of Object.entries(sourcesData.sources || {})) {
+    for (const [sourceKey, source] of Object.entries(
+      sourcesData.sources || {}
+    )) {
       const sourceWithKey = { ...(source as any), _sourceKey: sourceKey };
 
       // Check if this source already has a distilled file
       const outputFilename = `${(source as any).url.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-      
+
       if (existingFiles.has(outputFilename) && !filters.forceReprocess) {
         // Update the source status to distilled if file exists
         (source as any).status = 'distilled';
-        (source as any).distilled_at = (source as any).distilled_at || new Date().toISOString();
-        
+        (source as any).distilled_at =
+          (source as any).distilled_at || new Date().toISOString();
+
         // Apply this update back to the sourcesData immediately
         if (sourcesData.sources && sourcesData.sources[sourceKey]) {
           sourcesData.sources[sourceKey].status = 'distilled';
-          sourcesData.sources[sourceKey].distilled_at = (source as any).distilled_at;
+          sourcesData.sources[sourceKey].distilled_at = (
+            source as any
+          ).distilled_at;
         }
-        
+
         logger.debug(`⏭️  Skipping already distilled: ${(source as any).url}`);
         skippedCount++;
         continue;
@@ -82,16 +89,20 @@ class OptimizedDistillationFilters {
         (source as any).distillation_metadata = {
           skipped: true,
           reason: 'skip_distillation hint',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
-        
+
         // Apply this update back to the sourcesData immediately
         if (sourcesData.sources && sourcesData.sources[sourceKey]) {
           sourcesData.sources[sourceKey].status = 'packaged';
-          sourcesData.sources[sourceKey].distillation_metadata = (source as any).distillation_metadata;
+          sourcesData.sources[sourceKey].distillation_metadata = (
+            source as any
+          ).distillation_metadata;
         }
-        
-        logger.debug(`⏭️  Skipping distillation (marked to skip): ${(source as any).url}`);
+
+        logger.debug(
+          `⏭️  Skipping distillation (marked to skip): ${(source as any).url}`
+        );
         skippedCount++;
         continue;
       }
@@ -186,13 +197,14 @@ class OptimizedDistillationStats {
     this.stats.total_sources = count;
   }
 
-  incrementDistilled(processingTime: number = 0) {
+  incrementDistilled(processingTime = 0) {
     this.stats.distilled_sources++;
     this.stats.total_processing_time += processingTime;
-    this.stats.average_processing_time = this.stats.distilled_sources > 0 
-      ? this.stats.total_processing_time / this.stats.distilled_sources 
-      : 0;
-    
+    this.stats.average_processing_time =
+      this.stats.distilled_sources > 0
+        ? this.stats.total_processing_time / this.stats.distilled_sources
+        : 0;
+
     // Update memory usage peak
     const currentMemory = process.memoryUsage().heapUsed;
     if (currentMemory > this.stats.memory_usage_peak) {
@@ -243,26 +255,36 @@ class OptimizedDistillationStats {
           new Date(this.stats.distillation_start_time).getTime()
         : 0;
 
-    const cacheHitRate = (this.stats.cache_hits + this.stats.cache_misses) > 0
-      ? (this.stats.cache_hits / (this.stats.cache_hits + this.stats.cache_misses)) * 100
-      : 0;
+    const cacheHitRate =
+      this.stats.cache_hits + this.stats.cache_misses > 0
+        ? (this.stats.cache_hits /
+            (this.stats.cache_hits + this.stats.cache_misses)) *
+          100
+        : 0;
 
     return {
       total_sources: this.stats.total_sources,
       distilled_sources: this.stats.distilled_sources,
       failed_sources: this.stats.failed_sources,
       skipped_sources: this.stats.skipped_sources,
-      success_rate: this.stats.total_sources > 0
-        ? Math.round((this.stats.distilled_sources / this.stats.total_sources) * 100)
-        : 0,
-      total_tokens: this.stats.total_input_tokens + this.stats.total_output_tokens,
+      success_rate:
+        this.stats.total_sources > 0
+          ? Math.round(
+              (this.stats.distilled_sources / this.stats.total_sources) * 100
+            )
+          : 0,
+      total_tokens:
+        this.stats.total_input_tokens + this.stats.total_output_tokens,
       duration_seconds: Math.round(durationMs / 1000),
       average_processing_time: this.stats.average_processing_time,
-      memory_usage_peak_mb: Math.round(this.stats.memory_usage_peak / 1024 / 1024),
+      memory_usage_peak_mb: Math.round(
+        this.stats.memory_usage_peak / 1024 / 1024
+      ),
       cache_hit_rate: cacheHitRate,
       compression_savings_kb: Math.round(this.stats.compression_savings / 1024),
       batch_count: this.stats.batch_count,
-      throughput: durationMs > 0 ? (this.stats.distilled_sources / durationMs) * 1000 : 0,
+      throughput:
+        durationMs > 0 ? (this.stats.distilled_sources / durationMs) * 1000 : 0,
     };
   }
 }
@@ -279,7 +301,9 @@ export class OptimizedDistillationModule {
     enableCache: boolean;
     enableStreaming: boolean;
     memoryThresholdMB: number;
-    progressCallback: ((current: number, total: number, currentFile: string) => void) | null;
+    progressCallback:
+      | ((current: number, total: number, currentFile: string) => void)
+      | null;
   };
   private filters: OptimizedDistillationFilters;
   private stats: OptimizedDistillationStats;
@@ -289,7 +313,8 @@ export class OptimizedDistillationModule {
 
   constructor(options: any = {}) {
     this.options = {
-      outputDirectory: options.outputDirectory || './generated/distilled-content',
+      outputDirectory:
+        options.outputDirectory || './generated/distilled-content',
       maxConcurrentDistillations: options.maxConcurrentDistillations || 3, // Conservative for AI processing
       batchSize: options.batchSize || 5, // Smaller batches for AI processing
       enableCompression: options.enableCompression !== false,
@@ -338,16 +363,25 @@ export class OptimizedDistillationModule {
   async updateExistingDistilledStatus(sourcesData: any) {
     try {
       await fs.mkdir(this.options.outputDirectory, { recursive: true });
-      const filterResult = await this.filters.filterSources(sourcesData, {}, this.options.outputDirectory);
-      
-      logger.info(`✅ Skipped ${filterResult.skippedCount} already distilled sources`);
-      
+      const filterResult = await this.filters.filterSources(
+        sourcesData,
+        {},
+        this.options.outputDirectory
+      );
+
+      logger.info(
+        `✅ Skipped ${filterResult.skippedCount} already distilled sources`
+      );
+
       return {
         skippedCount: filterResult.skippedCount,
-        sources: filterResult.sources
+        sources: filterResult.sources,
       };
     } catch (error: unknown) {
-      logger.error('Failed to update existing distilled status:', error instanceof Error ? error.message : String(error));
+      logger.error(
+        'Failed to update existing distilled status:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
@@ -357,10 +391,10 @@ export class OptimizedDistillationModule {
    */
   async distill(sourcesData: any, filters: Record<string, any> = {}) {
     const operationName = 'optimized-distillation';
-    
+
     logger.info('🧪 Starting optimized AI distillation process');
     this.stats.startDistillation();
-    
+
     performanceMonitor.startMonitoring(operationName, {
       enableCompression: this.options.enableCompression,
       enableCache: this.options.enableCache,
@@ -377,10 +411,14 @@ export class OptimizedDistillationModule {
       await this.geminiProcessor.verifyGeminiCLI();
 
       // Filter sources based on criteria
-      const filterResult = await this.filters.filterSources(sourcesData, filters, this.options.outputDirectory);
+      const filterResult = await this.filters.filterSources(
+        sourcesData,
+        filters,
+        this.options.outputDirectory
+      );
       const sources = filterResult.sources;
       this.stats.setTotalSources(sources.length);
-      
+
       if (filterResult.skippedCount > 0) {
         this.stats.addSkipped(filterResult.skippedCount);
       }
@@ -389,19 +427,21 @@ export class OptimizedDistillationModule {
         const distilledCount = Object.values(sourcesData.sources || {}).filter(
           (s: any) => s.status === 'distilled'
         ).length;
-        
+
         if (distilledCount > 0) {
           logger.info(`✅ All ${distilledCount} sources are already distilled`);
         } else {
           logger.warn('⚠️  No sources match the distillation criteria');
         }
-        
+
         this.stats.endDistillation();
-        performanceMonitor.endMonitoring(operationName, 'distillation', { totalSources: 0 });
+        performanceMonitor.endMonitoring(operationName, 'distillation', {
+          totalSources: 0,
+        });
         return this._buildResults(sourcesData, filters);
       }
 
-      logger.info('🎯 Found sources to distill', { 
+      logger.info('🎯 Found sources to distill', {
         count: sources.length,
         maxConcurrency: this.options.maxConcurrentDistillations,
         batchSize: this.options.batchSize,
@@ -409,10 +449,10 @@ export class OptimizedDistillationModule {
 
       // Group sources by type for better processing
       const sourcesByType = this._groupSourcesByType(sources);
-      const alreadyDistilledCount = Object.values(sourcesData.sources || {}).filter(
-        (s: any) => s.status === 'distilled'
-      ).length;
-      
+      const alreadyDistilledCount = Object.values(
+        sourcesData.sources || {}
+      ).filter((s: any) => s.status === 'distilled').length;
+
       logger.info('📋 Distillation plan', {
         breakdown: this._getBreakdownCounts(sourcesByType),
         alreadyDistilled: alreadyDistilledCount,
@@ -430,7 +470,10 @@ export class OptimizedDistillationModule {
       const batchResult = await this.parallelProcessor.processItems(
         sources,
         async (source) => {
-          const result = await this.distillSingleSourceOptimized(source, sourcesData);
+          const result = await this.distillSingleSourceOptimized(
+            source,
+            sourcesData
+          );
           return result;
         },
         'distillation-processing'
@@ -441,7 +484,7 @@ export class OptimizedDistillationModule {
       this.stats.setFailedSources(batchResult.failed);
 
       this.stats.endDistillation();
-      
+
       performanceMonitor.endMonitoring(operationName, 'distillation', {
         totalSources: sources.length,
         processed: batchResult.totalItems,
@@ -457,9 +500,13 @@ export class OptimizedDistillationModule {
       return this._buildResults(sourcesData, filters);
     } catch (error: any) {
       this.stats.endDistillation();
-      performanceMonitor.endMonitoring(operationName, 'distillation', { error: true });
-      
-      logger.error('💥 Optimized distillation failed', { error: error.message });
+      performanceMonitor.endMonitoring(operationName, 'distillation', {
+        error: true,
+      });
+
+      logger.error('💥 Optimized distillation failed', {
+        error: error.message,
+      });
       throw error;
     }
   }
@@ -488,7 +535,11 @@ export class OptimizedDistillationModule {
   /**
    * Update processing settings dynamically
    */
-  updateProcessingSettings(newConcurrency: number, newBatchSize?: number, newMemoryThreshold?: number): void {
+  updateProcessingSettings(
+    newConcurrency: number,
+    newBatchSize?: number,
+    newMemoryThreshold?: number
+  ): void {
     this.options.maxConcurrentDistillations = newConcurrency;
     if (newBatchSize) {
       this.options.batchSize = newBatchSize;
@@ -496,9 +547,9 @@ export class OptimizedDistillationModule {
     if (newMemoryThreshold) {
       this.options.memoryThresholdMB = newMemoryThreshold;
     }
-    
+
     this.parallelProcessor.updateConcurrency(newConcurrency);
-    
+
     logger.info('🔄 Distillation settings updated', {
       maxConcurrency: newConcurrency,
       batchSize: newBatchSize || this.options.batchSize,
@@ -521,25 +572,25 @@ export class OptimizedDistillationModule {
   async manageMemory(): Promise<void> {
     const memoryUsage = process.memoryUsage();
     const memoryUsageMB = memoryUsage.heapUsed / 1024 / 1024;
-    
+
     if (memoryUsageMB > this.options.memoryThresholdMB) {
       logger.warn('🧠 High memory usage detected, performing cleanup', {
         memoryUsageMB: Math.round(memoryUsageMB),
         threshold: this.options.memoryThresholdMB,
       });
-      
+
       // Clear caches
       this.contentCache.clear();
       globalCache.optimize();
-      
+
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
       }
-      
+
       const newMemoryUsage = process.memoryUsage();
       const newMemoryUsageMB = newMemoryUsage.heapUsed / 1024 / 1024;
-      
+
       logger.info('🧠 Memory cleanup completed', {
         beforeMB: Math.round(memoryUsageMB),
         afterMB: Math.round(newMemoryUsageMB),
@@ -555,24 +606,24 @@ export class OptimizedDistillationModule {
     sourcesData: any
   ): Promise<any> {
     const startTime = Date.now();
-    
+
     try {
       // Check cache first
       const cacheKey = `distilled-${source.url}`;
       if (this.options.enableCache && this.contentCache.has(cacheKey)) {
         this.stats.incrementCacheHit();
         const cachedResult = this.contentCache.get(cacheKey);
-        
+
         logger.debug('🧪 Cache hit for distillation', {
           url: source.url,
           cacheKey,
         });
-        
+
         return cachedResult;
       }
 
       this.stats.incrementCacheMiss();
-      
+
       // Perform memory management before processing
       await this.manageMemory();
 
@@ -628,12 +679,12 @@ export class OptimizedDistillationModule {
   private estimateProcessingTime(sources: any[]): number {
     // More sophisticated estimation based on content size and type
     let totalEstimatedMinutes = 0;
-    
+
     for (const source of sources) {
       const contentSize = source.size_kb || 50; // Default 50KB
       const baseTime = 0.5; // Base 30 seconds per source
       const sizeMultiplier = Math.min(contentSize / 100, 3); // Max 3x multiplier for large content
-      
+
       // Different processing times by source type
       let typeMultiplier = 1;
       switch (source.source_type) {
@@ -649,12 +700,15 @@ export class OptimizedDistillationModule {
         default:
           typeMultiplier = 1;
       }
-      
+
       totalEstimatedMinutes += baseTime * sizeMultiplier * typeMultiplier;
     }
-    
+
     // Account for parallelization
-    const parallelismFactor = Math.min(this.options.maxConcurrentDistillations, sources.length);
+    const parallelismFactor = Math.min(
+      this.options.maxConcurrentDistillations,
+      sources.length
+    );
     return Math.ceil(totalEstimatedMinutes / parallelismFactor);
   }
 
@@ -665,7 +719,8 @@ export class OptimizedDistillationModule {
       heapTotal: Math.round(usage.heapTotal / 1024 / 1024),
       external: Math.round(usage.external / 1024 / 1024),
       rss: Math.round(usage.rss / 1024 / 1024),
-      percentOfThreshold: (usage.heapUsed / (this.options.memoryThresholdMB * 1024 * 1024)) * 100,
+      percentOfThreshold:
+        (usage.heapUsed / (this.options.memoryThresholdMB * 1024 * 1024)) * 100,
     };
   }
 
@@ -704,28 +759,31 @@ export class OptimizedDistillationModule {
       durationSeconds: summary.duration_seconds,
       throughput: `${summary.throughput.toFixed(2)} sources/sec`,
       averageProcessingTime: `${summary.average_processing_time.toFixed(2)}ms`,
-      
+
       // Memory performance
       memoryUsagePeakMB: summary.memory_usage_peak_mb,
       currentMemoryUsageMB: memoryUsage.heapUsed,
       memoryThresholdMB: this.options.memoryThresholdMB,
-      
+
       // Cache performance
       cacheHitRate: `${summary.cache_hit_rate.toFixed(2)}%`,
       compressionSavingsKB: summary.compression_savings_kb,
-      
+
       // Batch processing performance
       batchCount: summary.batch_count,
       averageBatchTime: batchResult.averageTime,
       batchThroughput: `${batchResult.throughput.toFixed(2)} items/sec`,
-      
+
       // Parallel processing performance
       parallelProcessorStats: processorStats,
     });
 
     if (summary.distilled_sources > 0) {
-      const performanceImprovement = this.calculatePerformanceImprovement(summary.average_processing_time, batchResult.throughput);
-      
+      const performanceImprovement = this.calculatePerformanceImprovement(
+        summary.average_processing_time,
+        batchResult.throughput
+      );
+
       logger.info('⚡ Performance Metrics', {
         avgProcessingTimeMs: Math.round(summary.average_processing_time),
         batchThroughput: `${batchResult.throughput.toFixed(2)} items/sec`,
@@ -737,9 +795,13 @@ export class OptimizedDistillationModule {
     }
   }
 
-  private calculatePerformanceImprovement(avgProcessingTime: number, throughput: number): number {
+  private calculatePerformanceImprovement(
+    avgProcessingTime: number,
+    throughput: number
+  ): number {
     // Estimate improvement vs sequential processing
-    const sequentialTime = avgProcessingTime * this.options.maxConcurrentDistillations;
+    const sequentialTime =
+      avgProcessingTime * this.options.maxConcurrentDistillations;
     const parallelTime = 1000 / throughput; // Convert to ms
     return sequentialTime / parallelTime;
   }

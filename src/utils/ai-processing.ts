@@ -9,19 +9,19 @@
 import { spawn } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from './logger';
 import {
+  type CircuitBreaker,
+  type CircuitBreakerConfig,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+  globalCircuitBreakerRegistry,
+} from './circuit-breaker';
+import {
+  type BackoffConfig,
+  DEFAULT_BACKOFF_CONFIG,
   EnhancedError,
   RetryManager,
-  DEFAULT_BACKOFF_CONFIG,
-  type BackoffConfig
 } from './error-handling';
-import {
-  CircuitBreaker,
-  globalCircuitBreakerRegistry,
-  DEFAULT_CIRCUIT_BREAKER_CONFIG,
-  type CircuitBreakerConfig
-} from './circuit-breaker';
+import { logger } from './logger';
 
 /**
  * AI processing configuration
@@ -46,18 +46,18 @@ export const DEFAULT_AI_PROCESSING_CONFIG: AIProcessingConfig = {
   retryConfig: {
     ...DEFAULT_BACKOFF_CONFIG,
     initialDelay: 5000, // 5 seconds
-    maxDelay: 60000, // 1 minute
+    maxDelay: 60_000, // 1 minute
     multiplier: 2,
-    maxRetries: 3
+    maxRetries: 3,
   },
   circuitBreakerConfig: {
     ...DEFAULT_CIRCUIT_BREAKER_CONFIG,
     failureThreshold: 3,
-    resetTimeout: 300000, // 5 minutes
-    expectedResponseTime: 120000, // 2 minutes
+    resetTimeout: 300_000, // 5 minutes
+    expectedResponseTime: 120_000, // 2 minutes
     slowCallThreshold: 2,
-    slowCallDurationThreshold: 300000 // 5 minutes
-  }
+    slowCallDurationThreshold: 300_000, // 5 minutes
+  },
 };
 
 /**
@@ -92,22 +92,16 @@ export class EnhancedAIProcessor {
   private readonly retryManager: RetryManager;
   protected readonly name: string;
 
-  constructor(
-    name: string,
-    config: Partial<AIProcessingConfig> = {}
-  ) {
+  constructor(name: string, config: Partial<AIProcessingConfig> = {}) {
     this.name = name;
     this.config = { ...DEFAULT_AI_PROCESSING_CONFIG, ...config };
-    
+
     this.circuitBreaker = globalCircuitBreakerRegistry.getOrCreate(
       `ai_${name}`,
       this.config.circuitBreakerConfig
     );
-    
-    this.retryManager = new RetryManager(
-      this.config.retryConfig,
-      `ai_${name}`
-    );
+
+    this.retryManager = new RetryManager(this.config.retryConfig, `ai_${name}`);
   }
 
   /**
@@ -115,7 +109,7 @@ export class EnhancedAIProcessor {
    */
   async process(
     prompt: string,
-    operationName: string = 'ai_processing'
+    operationName = 'ai_processing'
   ): Promise<AIProcessingResult> {
     return this.retryManager.executeWithRetry(
       async () => {
@@ -126,9 +120,8 @@ export class EnhancedAIProcessor {
 
         if (result.success) {
           return result.data;
-        } else {
-          throw result.error;
         }
+        throw result.error;
       },
       operationName,
       { maxRetries: this.config.maxRetries }
@@ -145,14 +138,16 @@ export class EnhancedAIProcessor {
           return new Promise<void>((resolve, reject) => {
             const testProcess = spawn(this.config.command, ['--version'], {
               stdio: ['ignore', 'pipe', 'pipe'],
-              timeout: 10000 // 10 seconds
+              timeout: 10_000, // 10 seconds
             });
 
             testProcess.on('close', (code) => {
               if (code === 0) {
                 resolve();
               } else {
-                reject(new Error(`AI CLI verification failed with exit code ${code}`));
+                reject(
+                  new Error(`AI CLI verification failed with exit code ${code}`)
+                );
               }
             });
 
@@ -168,18 +163,18 @@ export class EnhancedAIProcessor {
       logger.info(`✅ AI CLI (${this.config.command}) verified successfully`);
       return true;
     } catch (error) {
-      const enhancedError = error instanceof EnhancedError 
-        ? error 
-        : EnhancedError.aiProcessing(
-            `AI CLI (${this.config.command}) verification failed: ${error instanceof Error ? error.message : String(error)}`,
-            { command: this.config.command, originalError: error },
-            this.name
-          );
+      const enhancedError =
+        error instanceof EnhancedError
+          ? error
+          : EnhancedError.aiProcessing(
+              `AI CLI (${this.config.command}) verification failed: ${error instanceof Error ? error.message : String(error)}`,
+              { command: this.config.command, originalError: error },
+              this.name
+            );
 
-      logger.error(
-        `❌ AI CLI verification failed`,
-        { error: enhancedError.toLogFormat() }
-      );
+      logger.error('❌ AI CLI verification failed', {
+        error: enhancedError.toLogFormat(),
+      });
       return false;
     }
   }
@@ -227,18 +222,19 @@ export class EnhancedAIProcessor {
         details: {
           command: this.config.command,
           model: this.config.model,
-          circuitBreakerStatus: this.getCircuitBreakerStatus()
-        }
+          circuitBreakerStatus: this.getCircuitBreakerStatus(),
+        },
       };
     } catch (error) {
       const responseTime = Date.now() - startTime;
-      const enhancedError = error instanceof EnhancedError 
-        ? error 
-        : EnhancedError.aiProcessing(
-            `Health check failed: ${error instanceof Error ? error.message : String(error)}`,
-            { originalError: error },
-            component
-          );
+      const enhancedError =
+        error instanceof EnhancedError
+          ? error
+          : EnhancedError.aiProcessing(
+              `Health check failed: ${error instanceof Error ? error.message : String(error)}`,
+              { originalError: error },
+              component
+            );
 
       return {
         healthy: false,
@@ -250,8 +246,8 @@ export class EnhancedAIProcessor {
           command: this.config.command,
           model: this.config.model,
           error: enhancedError.toLogFormat(),
-          circuitBreakerStatus: this.getCircuitBreakerStatus()
-        }
+          circuitBreakerStatus: this.getCircuitBreakerStatus(),
+        },
       };
     }
   }
@@ -263,7 +259,7 @@ export class EnhancedAIProcessor {
     operationName: string
   ): Promise<AIProcessingResult> {
     const startTime = Date.now();
-    
+
     return new Promise((resolve, reject) => {
       const aiProcess = spawn(
         this.config.command,
@@ -299,41 +295,35 @@ export class EnhancedAIProcessor {
             exitCode: code,
             stdout,
             stderr,
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         };
 
         if (code === 0) {
-          logger.info(
-            `✅ AI processing completed successfully`,
-            {
-              operationName,
-              duration,
-              tokenUsage,
-              command: this.config.command,
-              model: this.config.model
-            }
-          );
+          logger.info('✅ AI processing completed successfully', {
+            operationName,
+            duration,
+            tokenUsage,
+            command: this.config.command,
+            model: this.config.model,
+          });
           resolve(result);
         } else {
           const error = this.createAIProcessingError(
             `AI processing failed with exit code ${code}`,
             { code, stdout, stderr, duration, operationName }
           );
-          
+
           result.error = error;
-          
-          logger.error(
-            `❌ AI processing failed`,
-            {
-              operationName,
-              error: error.toLogFormat(),
-              duration,
-              command: this.config.command,
-              model: this.config.model
-            }
-          );
-          
+
+          logger.error('❌ AI processing failed', {
+            operationName,
+            error: error.toLogFormat(),
+            duration,
+            command: this.config.command,
+            model: this.config.model,
+          });
+
           reject(error);
         }
       });
@@ -347,49 +337,49 @@ export class EnhancedAIProcessor {
 
         // result not used, just reject with the error
 
-        logger.error(
-          `❌ AI process failed to start`,
-          {
-            operationName,
-            error: enhancedError.toLogFormat(),
-            duration,
-            command: this.config.command,
-            model: this.config.model
-          }
-        );
+        logger.error('❌ AI process failed to start', {
+          operationName,
+          error: enhancedError.toLogFormat(),
+          duration,
+          command: this.config.command,
+          model: this.config.model,
+        });
 
         reject(enhancedError);
       });
     });
   }
 
-  private parseTokenUsage(stderr: string): {
-    input_tokens: number;
-    output_tokens: number;
-    total_tokens: number;
-  } | undefined {
+  private parseTokenUsage(stderr: string):
+    | {
+        input_tokens: number;
+        output_tokens: number;
+        total_tokens: number;
+      }
+    | undefined {
     try {
       const inputMatch = stderr.match(/Input tokens:\s*(\d+)/);
       const outputMatch = stderr.match(/Output tokens:\s*(\d+)/);
 
       if (inputMatch || outputMatch) {
-        const inputTokens = inputMatch ? parseInt(inputMatch[1], 10) : 0;
-        const outputTokens = outputMatch ? parseInt(outputMatch[1], 10) : 0;
+        const inputTokens = inputMatch ? Number.parseInt(inputMatch[1], 10) : 0;
+        const outputTokens = outputMatch
+          ? Number.parseInt(outputMatch[1], 10)
+          : 0;
 
         return {
           input_tokens: inputTokens,
           output_tokens: outputTokens,
-          total_tokens: inputTokens + outputTokens
+          total_tokens: inputTokens + outputTokens,
         };
       }
     } catch (error) {
-      logger.warn(
-        `⚠️ Failed to parse token usage from stderr`,
-        { error: error instanceof Error ? error.message : String(error) }
-      );
+      logger.warn('⚠️ Failed to parse token usage from stderr', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
 
-    return undefined;
+    return;
   }
 
   private createAIProcessingError(
@@ -398,7 +388,7 @@ export class EnhancedAIProcessor {
   ): EnhancedError {
     // Categorize AI errors based on common patterns
     const messageLC = message.toLowerCase();
-    
+
     if (messageLC.includes('timeout') || messageLC.includes('timed out')) {
       return EnhancedError.timeout(
         message,
@@ -406,7 +396,7 @@ export class EnhancedAIProcessor {
         this.name
       );
     }
-    
+
     if (messageLC.includes('rate limit') || messageLC.includes('quota')) {
       return EnhancedError.rateLimit(
         message,
@@ -414,15 +404,18 @@ export class EnhancedAIProcessor {
         this.name
       );
     }
-    
-    if (messageLC.includes('authentication') || messageLC.includes('unauthorized')) {
+
+    if (
+      messageLC.includes('authentication') ||
+      messageLC.includes('unauthorized')
+    ) {
       return EnhancedError.authentication(
         message,
         { ...context, command: this.config.command, model: this.config.model },
         this.name
       );
     }
-    
+
     if (messageLC.includes('validation') || messageLC.includes('invalid')) {
       return EnhancedError.validation(
         message,
@@ -430,7 +423,7 @@ export class EnhancedAIProcessor {
         this.name
       );
     }
-    
+
     if (messageLC.includes('network') || messageLC.includes('connection')) {
       return EnhancedError.network(
         message,
@@ -438,7 +431,7 @@ export class EnhancedAIProcessor {
         this.name
       );
     }
-    
+
     // Default to AI processing error
     return EnhancedError.aiProcessing(
       message,
@@ -473,33 +466,34 @@ export class EnhancedFileAIProcessor extends EnhancedAIProcessor {
     inputPath: string,
     outputPath: string,
     prompt: string,
-    operationName: string = 'ai_file_processing'
+    operationName = 'ai_file_processing'
   ): Promise<AIProcessingResult> {
     try {
       // Verify input file exists
       await fs.access(inputPath);
-      
+
       // Ensure output directory exists
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
-      
+
       // Build prompt with file paths
-      const enhancedPrompt = this.buildFilePrompt(prompt, inputPath, outputPath);
-      
+      const enhancedPrompt = this.buildFilePrompt(
+        prompt,
+        inputPath,
+        outputPath
+      );
+
       // Process with AI
       const result = await this.process(enhancedPrompt, operationName);
-      
+
       // Verify output file was created
       try {
         await fs.access(outputPath);
-        logger.info(
-          `✅ AI file processing completed`,
-          {
-            operationName,
-            inputPath,
-            outputPath,
-            duration: result.duration
-          }
-        );
+        logger.info('✅ AI file processing completed', {
+          operationName,
+          inputPath,
+          outputPath,
+          duration: result.duration,
+        });
       } catch (error) {
         throw EnhancedError.aiProcessing(
           `AI processing completed but output file was not created: ${outputPath}`,
@@ -507,13 +501,13 @@ export class EnhancedFileAIProcessor extends EnhancedAIProcessor {
           this.name
         );
       }
-      
+
       return result;
     } catch (error) {
       if (error instanceof EnhancedError) {
         throw error;
       }
-      
+
       throw EnhancedError.aiProcessing(
         `File processing failed: ${error instanceof Error ? error.message : String(error)}`,
         { inputPath, outputPath, originalError: error },
@@ -529,7 +523,7 @@ export class EnhancedFileAIProcessor extends EnhancedAIProcessor {
   ): string {
     const absoluteInputPath = path.resolve(inputPath);
     const absoluteOutputPath = path.resolve(outputPath);
-    
+
     return `${prompt}
 
 Input file: ${absoluteInputPath}
@@ -558,5 +552,10 @@ export function createEnhancedFileAIProcessor(
   outputDirectory: string,
   config: Partial<AIProcessingConfig> = {}
 ): EnhancedFileAIProcessor {
-  return new EnhancedFileAIProcessor(name, contentDirectory, outputDirectory, config);
+  return new EnhancedFileAIProcessor(
+    name,
+    contentDirectory,
+    outputDirectory,
+    config
+  );
 }

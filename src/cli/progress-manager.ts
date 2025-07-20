@@ -1,13 +1,13 @@
 /**
  * @file Progress Manager
- * 
+ *
  * Provides enhanced progress bars, real-time status updates, and visual feedback
  * for Porter Bridges CLI operations using modern CLI libraries.
  */
 
-import ora, { Ora } from 'ora';
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
+import ora, { type Ora } from 'ora';
 
 /**
  * Progress event types
@@ -52,15 +52,18 @@ export class ProgressManager extends EventEmitter {
   private phases: Map<string, PhaseConfig> = new Map();
   private stats: ProgressStats;
   private startTime: number = Date.now();
-  private isInteractive: boolean = true;
-  private logMode: boolean = false;
+  private isInteractive = true;
+  private logMode = false;
 
-  constructor(phases: PhaseConfig[] = [], options: { interactive?: boolean; logMode?: boolean } = {}) {
+  constructor(
+    phases: PhaseConfig[] = [],
+    options: { interactive?: boolean; logMode?: boolean } = {}
+  ) {
     super();
-    
+
     this.isInteractive = options.interactive ?? process.stdout.isTTY;
     this.logMode = options.logMode ?? false;
-    
+
     this.stats = {
       totalPhases: phases.length,
       completedPhases: 0,
@@ -71,7 +74,7 @@ export class ProgressManager extends EventEmitter {
     };
 
     // Register phases
-    phases.forEach(phase => {
+    phases.forEach((phase) => {
       this.phases.set(phase.name, phase);
     });
 
@@ -107,14 +110,16 @@ export class ProgressManager extends EventEmitter {
     const displayMessage = message || `${phase.emoji} ${phase.name}`;
 
     if (this.logMode) {
-      console.log(chalk[phase.color](`[${this.formatTime()}] Starting: ${displayMessage}`));
+      console.log(
+        chalk[phase.color](`[${this.formatTime()}] Starting: ${displayMessage}`)
+      );
     } else if (this.isInteractive) {
       const spinner = ora({
         text: displayMessage,
         color: phase.color,
         spinner: 'dots',
       }).start();
-      
+
       this.spinners.set(phaseName, spinner);
     } else {
       console.log(chalk[phase.color](`⏳ ${displayMessage}`));
@@ -130,15 +135,21 @@ export class ProgressManager extends EventEmitter {
   /**
    * Update phase progress
    */
-  updatePhase(phaseName: string, message: string, current?: number, total?: number): void {
+  updatePhase(
+    phaseName: string,
+    message: string,
+    current?: number,
+    total?: number
+  ): void {
     const phase = this.phases.get(phaseName);
     if (!phase) {
       throw new Error(`Unknown phase: ${phaseName}`);
     }
 
-    const progressText = current !== undefined && total !== undefined 
-      ? `${message} (${current}/${total})`
-      : message;
+    const progressText =
+      current !== undefined && total !== undefined
+        ? `${message} (${current}/${total})`
+        : message;
 
     if (this.logMode) {
       console.log(chalk[phase.color](`[${this.formatTime()}] ${progressText}`));
@@ -304,20 +315,26 @@ export class ProgressManager extends EventEmitter {
 
     console.log('\n' + chalk.bold('📊 Progress Summary:'));
     console.log(`   Duration: ${formattedDuration}`);
-    console.log(`   Completed: ${this.stats.completedPhases}/${this.stats.totalPhases} phases`);
-    
+    console.log(
+      `   Completed: ${this.stats.completedPhases}/${this.stats.totalPhases} phases`
+    );
+
     if (this.stats.errors > 0) {
       console.log(chalk.red(`   Errors: ${this.stats.errors}`));
     }
-    
+
     if (this.stats.warnings > 0) {
       console.log(chalk.yellow(`   Warnings: ${this.stats.warnings}`));
     }
 
-    const successRate = (this.stats.completedPhases / this.stats.totalPhases) * 100;
-    const statusColor = successRate === 100 ? 'green' : successRate > 50 ? 'yellow' : 'red';
-    console.log(chalk[statusColor](`   Success Rate: ${successRate.toFixed(1)}%`));
-    
+    const successRate =
+      (this.stats.completedPhases / this.stats.totalPhases) * 100;
+    const statusColor =
+      successRate === 100 ? 'green' : successRate > 50 ? 'yellow' : 'red';
+    console.log(
+      chalk[statusColor](`   Success Rate: ${successRate.toFixed(1)}%`)
+    );
+
     if (this.stats.errors === 0) {
       console.log(chalk.green('   Status: ✓ Success'));
     } else {
@@ -336,7 +353,7 @@ export class ProgressManager extends EventEmitter {
    * Clean up spinners
    */
   cleanup(): void {
-    this.spinners.forEach(spinner => {
+    this.spinners.forEach((spinner) => {
       if (spinner.isSpinning) {
         spinner.stop();
       }
@@ -361,48 +378,50 @@ export class ProgressManager extends EventEmitter {
 
     if (hours > 0) {
       return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
     }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    }
+    return `${seconds}s`;
   }
 }
 
 /**
  * Create a progress manager for Porter Bridges pipeline
  */
-export function createPipelineProgressManager(options: { interactive?: boolean; logMode?: boolean } = {}): ProgressManager {
+export function createPipelineProgressManager(
+  options: { interactive?: boolean; logMode?: boolean } = {}
+): ProgressManager {
   const phases: PhaseConfig[] = [
     {
       name: 'Discovery',
       emoji: '🔍',
       color: 'cyan',
-      estimatedDuration: 30000,
+      estimatedDuration: 30_000,
     },
     {
       name: 'Collection',
       emoji: '📥',
       color: 'blue',
-      estimatedDuration: 60000,
+      estimatedDuration: 60_000,
     },
     {
       name: 'Distillation',
       emoji: '🧪',
       color: 'magenta',
-      estimatedDuration: 120000,
+      estimatedDuration: 120_000,
     },
     {
       name: 'Packaging',
       emoji: '📦',
       color: 'yellow',
-      estimatedDuration: 30000,
+      estimatedDuration: 30_000,
     },
     {
       name: 'Bundling',
       emoji: '🗜️',
       color: 'green',
-      estimatedDuration: 20000,
+      estimatedDuration: 20_000,
     },
   ];
 
@@ -414,12 +433,16 @@ export function createPipelineProgressManager(options: { interactive?: boolean; 
  */
 export class BatchProgressBar {
   private total: number;
-  private current: number = 0;
+  private current = 0;
   private label: string;
-  private width: number = 40;
+  private width = 40;
   private isInteractive: boolean;
 
-  constructor(total: number, label: string, options: { width?: number; interactive?: boolean } = {}) {
+  constructor(
+    total: number,
+    label: string,
+    options: { width?: number; interactive?: boolean } = {}
+  ) {
     this.total = total;
     this.label = label;
     this.width = options.width ?? 40;
@@ -431,7 +454,7 @@ export class BatchProgressBar {
    */
   update(current: number, message?: string): void {
     this.current = current;
-    
+
     if (!this.isInteractive) {
       if (message) {
         console.log(`[${current}/${this.total}] ${message}`);
@@ -442,10 +465,10 @@ export class BatchProgressBar {
     const percent = Math.round((current / this.total) * 100);
     const filled = Math.round((current / this.total) * this.width);
     const empty = this.width - filled;
-    
+
     const bar = '█'.repeat(filled) + '░'.repeat(empty);
     const line = `\r${this.label} [${bar}] ${percent}% (${current}/${this.total})`;
-    
+
     if (message) {
       process.stdout.write(line + ` - ${message}`);
     } else {
@@ -469,7 +492,10 @@ export class BatchProgressBar {
  * Multi-line progress display for concurrent operations
  */
 export class MultiProgressDisplay {
-  private operations: Map<string, { current: number; total: number; message: string }> = new Map();
+  private operations: Map<
+    string,
+    { current: number; total: number; message: string }
+  > = new Map();
   private isInteractive: boolean;
 
   constructor(options: { interactive?: boolean } = {}) {
@@ -479,9 +505,14 @@ export class MultiProgressDisplay {
   /**
    * Add or update an operation
    */
-  updateOperation(id: string, current: number, total: number, message: string): void {
+  updateOperation(
+    id: string,
+    current: number,
+    total: number,
+    message: string
+  ): void {
     this.operations.set(id, { current, total, message });
-    
+
     if (!this.isInteractive) {
       console.log(`[${id}] ${current}/${total} - ${message}`);
       return;
@@ -518,16 +549,17 @@ export class MultiProgressDisplay {
 
     // Clear previous output
     process.stdout.write('\x1B[2J\x1B[0f');
-    
+
     console.log(chalk.bold('🔄 Operations in Progress:\n'));
-    
+
     this.operations.forEach((op, id) => {
       const percent = Math.round((op.current / op.total) * 100);
       const filled = Math.round((op.current / op.total) * 20);
       const empty = 20 - filled;
       const bar = '█'.repeat(filled) + '░'.repeat(empty);
-      
-      const color = percent === 100 ? 'green' : percent > 50 ? 'yellow' : 'cyan';
+
+      const color =
+        percent === 100 ? 'green' : percent > 50 ? 'yellow' : 'cyan';
       console.log(chalk[color](`${id}: [${bar}] ${percent}% - ${op.message}`));
     });
   }
@@ -546,4 +578,4 @@ export class MultiProgressDisplay {
 /**
  * Export types and utilities
  */
-export { PhaseConfig, ProgressEvent, ProgressStats };
+export type { PhaseConfig, ProgressEvent, ProgressStats };

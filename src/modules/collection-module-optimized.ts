@@ -9,18 +9,18 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { PipelineSourceType } from '../types/pipeline';
 import { generateCollectedContentFilename } from '../utils/filename-utils';
-import { logger } from '../utils/logger';
-import type { PipelineState } from '../utils/pipeline-state-manager';
-import { CollectionStats } from './collection/collection-stats';
 import { cachedHttpClient } from '../utils/http-cached';
-import { 
-  ParallelProcessor, 
+import { logger } from '../utils/logger';
+import { compressionManager } from '../utils/performance/compression-manager';
+import {
   createParallelProcessor,
-  type ParallelProcessingConfig 
+  type ParallelProcessingConfig,
+  type ParallelProcessor,
 } from '../utils/performance/parallel-processor';
 import { performanceMonitor } from '../utils/performance/performance-monitor';
-import { compressionManager } from '../utils/performance/compression-manager';
+import type { PipelineState } from '../utils/pipeline-state-manager';
 import { streamingProcessor } from '../utils/streaming/streaming-file-processor';
+import { CollectionStats } from './collection/collection-stats';
 
 /**
  * Enhanced filters for collection sources with performance optimizations
@@ -38,8 +38,10 @@ class OptimizedCollectionFilters {
 
     return sources.filter((source) => {
       // Skip sources that are already collected from GitHub API
-      if (source.status === 'collected' && 
-          source.collection_metadata?.source === 'github_api') {
+      if (
+        source.status === 'collected' &&
+        source.collection_metadata?.source === 'github_api'
+      ) {
         return false;
       }
 
@@ -106,17 +108,18 @@ class OptimizedContentDownloader {
 
   async downloadContent(url: string) {
     const startTime = Date.now();
-    
+
     try {
       // Use cached HTTP client for automatic caching and compression
       const response = await cachedHttpClient.request(url, {
         method: 'GET',
         headers: {
           'User-Agent': this.config.userAgent,
-          'Accept': 'text/html,text/plain,application/xhtml+xml,text/markdown,application/json',
+          Accept:
+            'text/html,text/plain,application/xhtml+xml,text/markdown,application/json',
           'Accept-Language': 'en-US,en;q=0.5',
           'Accept-Charset': 'utf-8',
-          'Connection': 'keep-alive',
+          Connection: 'keep-alive',
           'Upgrade-Insecure-Requests': '1',
         },
         timeout: this.config.timeout,
@@ -160,13 +163,13 @@ class OptimizedContentDownloader {
       };
     } catch (error: unknown) {
       const responseTime = Date.now() - startTime;
-      
+
       logger.error('📥 Content download failed', {
         url,
         responseTime,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -273,7 +276,8 @@ export class OptimizedCollectionModule {
 
   constructor(options: any = {}) {
     this.options = {
-      contentDirectory: options.contentDirectory || './generated/collected-content',
+      contentDirectory:
+        options.contentDirectory || './generated/collected-content',
       maxConcurrency: options.maxConcurrency || 10, // Increased concurrency
       batchSize: options.batchSize || 20, // Larger batch size
       enableCompression: options.enableCompression !== false,
@@ -325,10 +329,10 @@ export class OptimizedCollectionModule {
     filters: Record<string, unknown> = {}
   ) {
     const operationName = 'optimized-collection';
-    
+
     logger.info('📥 Starting optimized content collection process');
     this.stats.startCollection();
-    
+
     performanceMonitor.startMonitoring(operationName, {
       enableCompression: this.options.enableCompression,
       enableCache: this.options.enableCache,
@@ -343,42 +347,53 @@ export class OptimizedCollectionModule {
 
       // Filter sources - this will exclude already collected GitHub API sources
       const sources = this.filters.filterSources(sourcesData, filters);
-      
+
       // Also count already collected GitHub API sources for stats
       const alreadyCollectedSources = Object.values(sourcesData.sources).filter(
-        source => source.status === 'collected' && 
-                  source.collection_metadata?.source === 'github_api'
+        (source) =>
+          source.status === 'collected' &&
+          source.collection_metadata?.source === 'github_api'
       );
 
       // Set total including both sources needing collection and already collected
-      this.stats.setTotalSources(sources.length + alreadyCollectedSources.length);
+      this.stats.setTotalSources(
+        sources.length + alreadyCollectedSources.length
+      );
 
       // Count already collected sources and their bytes
       if (alreadyCollectedSources.length > 0) {
-        logger.info(`📋 Found ${alreadyCollectedSources.length} sources already collected from GitHub API`);
+        logger.info(
+          `📋 Found ${alreadyCollectedSources.length} sources already collected from GitHub API`
+        );
         for (const source of alreadyCollectedSources) {
-          this.stats.incrementCollected(source.collection_metadata?.size_bytes || 0);
+          this.stats.incrementCollected(
+            source.collection_metadata?.size_bytes || 0
+          );
         }
       }
 
       if (sources.length === 0 && alreadyCollectedSources.length === 0) {
         logger.warn('⚠️  No sources match the collection criteria');
         this.stats.endCollection();
-        performanceMonitor.endMonitoring(operationName, 'collection', { totalSources: 0 });
-        return this._buildResults(sourcesData, filters);
-      }
-
-      if (sources.length === 0) {
-        logger.info(`✅ All ${alreadyCollectedSources.length} sources already collected from GitHub API`);
-        this.stats.endCollection();
-        performanceMonitor.endMonitoring(operationName, 'collection', { 
-          totalSources: alreadyCollectedSources.length,
-          allFromCache: true 
+        performanceMonitor.endMonitoring(operationName, 'collection', {
+          totalSources: 0,
         });
         return this._buildResults(sourcesData, filters);
       }
 
-      logger.info('🎯 Found sources to collect', { 
+      if (sources.length === 0) {
+        logger.info(
+          `✅ All ${alreadyCollectedSources.length} sources already collected from GitHub API`
+        );
+        this.stats.endCollection();
+        performanceMonitor.endMonitoring(operationName, 'collection', {
+          totalSources: alreadyCollectedSources.length,
+          allFromCache: true,
+        });
+        return this._buildResults(sourcesData, filters);
+      }
+
+      logger.info('🎯 Found sources to collect', {
         count: sources.length,
         alreadyCollected: alreadyCollectedSources.length,
         maxConcurrency: this.options.maxConcurrency,
@@ -398,14 +413,14 @@ export class OptimizedCollectionModule {
       // Update stats from batch result
       this.stats.incrementCollected(
         batchResult.results
-          .filter(r => r.success)
+          .filter((r) => r.success)
           .reduce((sum, r) => sum + (r.result?.bytes || 0), 0)
       );
 
       this.stats.setFailedSources(batchResult.failed);
 
       this.stats.endCollection();
-      
+
       performanceMonitor.endMonitoring(operationName, 'collection', {
         totalSources: sources.length + alreadyCollectedSources.length,
         processed: batchResult.totalItems,
@@ -421,12 +436,19 @@ export class OptimizedCollectionModule {
       return this._buildResults(sourcesData, filters);
     } catch (error: unknown) {
       this.stats.endCollection();
-      performanceMonitor.endMonitoring(operationName, 'collection', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'collection', {
+        error: true,
+      });
+
       if (error instanceof Error) {
-        logger.error('💥 Optimized collection failed', { error: error.message });
+        logger.error('💥 Optimized collection failed', {
+          error: error.message,
+        });
       } else {
-        logger.error({ error }, '💥 Optimized collection failed with unknown error');
+        logger.error(
+          { error },
+          '💥 Optimized collection failed with unknown error'
+        );
       }
       throw error;
     }
@@ -460,9 +482,9 @@ export class OptimizedCollectionModule {
     if (newBatchSize) {
       this.options.batchSize = newBatchSize;
     }
-    
+
     this.parallelProcessor.updateConcurrency(newConcurrency);
-    
+
     logger.info('🔄 Collection concurrency updated', {
       maxConcurrency: newConcurrency,
       batchSize: newBatchSize || this.options.batchSize,
@@ -489,9 +511,12 @@ export class OptimizedCollectionModule {
       const result = await this.downloader.collectSourceWithRetry(source);
 
       // Save content to file (with optional compression and streaming)
-      const fileName = generateCollectedContentFilename(source.url, source.source_type);
+      const fileName = generateCollectedContentFilename(
+        source.url,
+        source.source_type
+      );
       const filePath = path.join(this.options.contentDirectory, fileName);
-      
+
       await this.saveContentToFile(result.content, filePath);
 
       // Update source in sourcesData
@@ -510,20 +535,23 @@ export class OptimizedCollectionModule {
     }
   }
 
-  private async saveContentToFile(content: string, filePath: string): Promise<void> {
+  private async saveContentToFile(
+    content: string,
+    filePath: string
+  ): Promise<void> {
     if (this.options.enableStreaming && content.length > 100 * 1024) {
       // Use streaming for large files
       const tempFilePath = `${filePath}.tmp`;
-      
+
       await streamingProcessor.processFile(
         tempFilePath,
         filePath,
         async (chunk) => chunk, // No transformation
-        { 
+        {
           compress: this.options.enableCompression,
         }
       );
-      
+
       // Clean up temp file
       try {
         await fs.unlink(tempFilePath);
@@ -536,7 +564,7 @@ export class OptimizedCollectionModule {
       const { compressed } = await compressionManager.compressBuffer(buffer, {
         filename: filePath,
       });
-      
+
       await fs.writeFile(filePath, compressed);
     } else {
       // Regular file write for small files
@@ -558,12 +586,12 @@ export class OptimizedCollectionModule {
       durationSeconds: summary.duration_seconds,
       throughput: batchResult.throughput,
       averageTime: batchResult.averageTime,
-      
+
       // HTTP cache performance
       httpCacheHitRate: `${httpStats.cacheHitRate.toFixed(2)}%`,
       httpCompressionSavings: Math.round(httpStats.compressionSavings / 1024),
       httpAverageResponseTime: Math.round(httpStats.averageResponseTime),
-      
+
       // Parallel processing performance
       parallelProcessorStats: processorStats,
     });
@@ -571,8 +599,11 @@ export class OptimizedCollectionModule {
     if (summary.collected_sources > 0) {
       const avgTime = summary.duration_seconds / summary.collected_sources;
       const avgSize = summary.total_kb / summary.collected_sources;
-      const performanceImprovement = this.calculatePerformanceImprovement(avgTime, batchResult.throughput);
-      
+      const performanceImprovement = this.calculatePerformanceImprovement(
+        avgTime,
+        batchResult.throughput
+      );
+
       logger.info('⚡ Performance Metrics', {
         avgTimePerSourceSeconds: Math.round(avgTime * 10) / 10,
         avgSizePerSourceKB: Math.round(avgSize * 10) / 10,
@@ -584,7 +615,10 @@ export class OptimizedCollectionModule {
     }
   }
 
-  private calculatePerformanceImprovement(avgTime: number, throughput: number): number {
+  private calculatePerformanceImprovement(
+    avgTime: number,
+    throughput: number
+  ): number {
     // Estimate improvement vs sequential processing
     const sequentialTime = avgTime * this.options.maxConcurrency;
     const parallelTime = 1 / throughput;

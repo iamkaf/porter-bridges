@@ -331,31 +331,38 @@ export class OrchestrationCommand {
                 {
                   title: 'Scan for existing distilled files',
                   task: async (_subCtx, subTask) => {
-                    subTask.output = 'Checking for existing distilled content...';
-                    
+                    subTask.output =
+                      'Checking for existing distilled content...';
+
                     // Initialize distillation module to scan for existing files
                     const distillation = new DistillationModule({
                       contentDirectory: './generated/collected-content',
                       outputDirectory: './generated/distilled-content',
                       geminiModel: options.geminiModel || 'gemini-2.5-flash',
                       maxConcurrentDistillations: 1,
-                      timeout: Number.parseInt(options.distillTimeout || '600000', 10),
+                      timeout: Number.parseInt(
+                        options.distillTimeout || '600000',
+                        10
+                      ),
                     });
-                    
+
                     const state = this.pipelineState.getState();
-                    
+
                     // Use the distillation module to scan for existing files and update statuses
                     await distillation.updateExistingDistilledStatus(state);
-                    
+
                     // Update the pipeline state manager with the updated sources
-                    for (const [sourceKey, source] of Object.entries(state.sources || {})) {
+                    for (const [sourceKey, source] of Object.entries(
+                      state.sources || {}
+                    )) {
                       this.pipelineState.updateSource(sourceKey, source);
                     }
                     await this.pipelineState.saveState();
-                    
+
                     const updatedState = this.pipelineState.getState();
-                    const distilledCount = updatedState.metadata.phase_counts.distilled || 0;
-                    
+                    const distilledCount =
+                      updatedState.metadata.phase_counts.distilled || 0;
+
                     subTask.title = `Found ${distilledCount} existing distilled files`;
                     return { distilledCount };
                   },
@@ -364,22 +371,23 @@ export class OrchestrationCommand {
                   title: 'Check if distillation can be skipped',
                   task: async (ctx, subTask) => {
                     const { distilledCount } = ctx;
-                    
+
                     if (options.skipDistillation) {
                       if (distilledCount === 0) {
                         throw new Error(
                           'No distilled sources found. Run without --skip-distillation first.'
                         );
                       }
-                      
+
                       subTask.title = `Skipping distillation - Using ${distilledCount} existing sources`;
                       task.title = `🧪 Distillation Skipped - Using ${distilledCount} existing sources`;
-                      
+
                       // Skip the actual processing step
                       return { skipProcessing: true, distilledCount };
                     }
-                    
-                    subTask.title = `Proceeding with distillation for remaining sources`;
+
+                    subTask.title =
+                      'Proceeding with distillation for remaining sources';
                     return { skipProcessing: false, distilledCount };
                   },
                 },
@@ -387,7 +395,7 @@ export class OrchestrationCommand {
                   title: 'Process all sources with AI',
                   task: async (ctx, subTask) => {
                     const { skipProcessing, distilledCount } = ctx;
-                    
+
                     // If we're skipping processing, just return the current state
                     if (skipProcessing) {
                       const state = this.pipelineState.getState();
@@ -630,53 +638,84 @@ export class OrchestrationCommand {
   /**
    * Check if there are any failed sources that should block pipeline progression
    */
-  _checkForBlockingFailures(state: PipelineState, phase: string, forceProceed: boolean = false): void {
+  _checkForBlockingFailures(
+    state: PipelineState,
+    phase: string,
+    forceProceed = false
+  ): void {
     const sources = Object.values(state.sources || {});
-    const failedSources = sources.filter(source => source.status === 'failed');
-    
+    const failedSources = sources.filter(
+      (source) => source.status === 'failed'
+    );
+
     if (failedSources.length > 0) {
-      const failedUrls = failedSources.map(s => s.url).slice(0, 5);
-      const additionalCount = failedSources.length > 5 ? ` (and ${failedSources.length - 5} more)` : '';
-      
+      const failedUrls = failedSources.map((s) => s.url).slice(0, 5);
+      const additionalCount =
+        failedSources.length > 5
+          ? ` (and ${failedSources.length - 5} more)`
+          : '';
+
       if (forceProceed) {
         // Log warning and proceed
-        logger.warn(`⚠️  WARNING: Proceeding to ${phase} phase with ${failedSources.length} failed sources (--force-proceed enabled)`, {
-          failedCount: failedSources.length,
-          failedUrls: failedUrls.join(', ') + additionalCount,
-          impact: `Failed sources will be excluded from the ${phase} phase`,
-          note: 'This bypasses normal safety checks. Failed sources should be investigated and fixed.'
-        });
-        
-        console.warn('\n⚠️  Warning: Proceeding despite failed sources due to --force-proceed flag');
+        logger.warn(
+          `⚠️  WARNING: Proceeding to ${phase} phase with ${failedSources.length} failed sources (--force-proceed enabled)`,
+          {
+            failedCount: failedSources.length,
+            failedUrls: failedUrls.join(', ') + additionalCount,
+            impact: `Failed sources will be excluded from the ${phase} phase`,
+            note: 'This bypasses normal safety checks. Failed sources should be investigated and fixed.',
+          }
+        );
+
+        console.warn(
+          '\n⚠️  Warning: Proceeding despite failed sources due to --force-proceed flag'
+        );
         console.warn('   Failed sources will be excluded from processing');
-        console.warn('   This may result in incomplete data in the final bundle\n');
-        
+        console.warn(
+          '   This may result in incomplete data in the final bundle\n'
+        );
+
         return; // Allow progression despite failures
       }
-      
+
       // Log detailed information about the failed sources
-      logger.error(`❌ Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`, {
-        failedCount: failedSources.length,
-        failedUrls: failedUrls.join(', ') + additionalCount,
-        impact: `Failed sources must be resolved before continuing the pipeline`,
-        resolution: 'Fix the failed sources or remove them from the pipeline state'
-      });
-      
+      logger.error(
+        `❌ Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`,
+        {
+          failedCount: failedSources.length,
+          failedUrls: failedUrls.join(', ') + additionalCount,
+          impact:
+            'Failed sources must be resolved before continuing the pipeline',
+          resolution:
+            'Fix the failed sources or remove them from the pipeline state',
+        }
+      );
+
       // Show specific resolution steps
       console.error('\n📋 Resolution steps:');
-      console.error('1. Check logs for specific error details for each failed source');
-      console.error('2. Fix network issues, authentication problems, or URL changes');
-      console.error('3. Remove permanently broken sources from the pipeline state');
-      console.error('4. Or use --force-proceed flag to continue despite failures (not recommended)');
-      
+      console.error(
+        '1. Check logs for specific error details for each failed source'
+      );
+      console.error(
+        '2. Fix network issues, authentication problems, or URL changes'
+      );
+      console.error(
+        '3. Remove permanently broken sources from the pipeline state'
+      );
+      console.error(
+        '4. Or use --force-proceed flag to continue despite failures (not recommended)'
+      );
+
       throw new CriticalError(
         `Cannot proceed to ${phase} phase: ${failedSources.length} sources have failed status`,
         phase,
         {
           failedCount: failedSources.length,
           failedUrls: failedUrls.join(', ') + additionalCount,
-          impact: `Failed sources must be resolved before continuing the pipeline`,
-          resolution: 'Fix the failed sources or remove them from the pipeline state'
+          impact:
+            'Failed sources must be resolved before continuing the pipeline',
+          resolution:
+            'Fix the failed sources or remove them from the pipeline state',
         }
       );
     }
@@ -714,8 +753,12 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<CollectionResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'collection', options.forceProceed);
-    
+    this._checkForBlockingFailures(
+      sourcesData,
+      'collection',
+      options.forceProceed
+    );
+
     const collection = new CollectionModule({
       contentDirectory: './generated/collected-content',
       maxConcurrent: Number.parseInt(options.maxConcurrent || '3', 10),
@@ -744,8 +787,12 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<DistillationResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'distillation', options.forceProceed);
-    
+    this._checkForBlockingFailures(
+      sourcesData,
+      'distillation',
+      options.forceProceed
+    );
+
     const distillation = new DistillationModule({
       contentDirectory: './generated/collected-content',
       outputDirectory: './generated/distilled-content',
@@ -793,11 +840,7 @@ export class OrchestrationCommand {
           currentFile.length > 50
             ? `${currentFile.substring(0, 47)}...`
             : currentFile;
-        progressCallback(
-          current + 1,
-          total,
-          shortFileName
-        );
+        progressCallback(current + 1, total, shortFileName);
       },
     });
 
@@ -839,14 +882,19 @@ export class OrchestrationCommand {
           const typedSource = source as any;
           // Generate the expected filename for this source
           const expectedFilename = `${typedSource.url.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
-          
-          if (filename === expectedFilename && typedSource.status !== 'distilled') {
+
+          if (
+            filename === expectedFilename &&
+            typedSource.status !== 'distilled'
+          ) {
             typedSource.status = 'distilled';
             typedSource.distilled_at =
               typedSource.distilled_at || new Date().toISOString();
             updatedCount++;
             this.pipelineState.updateSource(sourceKey, typedSource);
-            logger.info(`✅ Updated existing distilled file status: ${sourceKey}`);
+            logger.info(
+              `✅ Updated existing distilled file status: ${sourceKey}`
+            );
             break;
           }
         }
@@ -895,11 +943,7 @@ export class OrchestrationCommand {
           currentFile.length > 50
             ? `${currentFile.substring(0, 47)}...`
             : currentFile;
-        progressCallback(
-          current + 1,
-          total,
-          shortFileName
-        );
+        progressCallback(current + 1, total, shortFileName);
       },
     });
 
@@ -928,8 +972,12 @@ export class OrchestrationCommand {
     options: Partial<OrchestrationCLIOptions>
   ): Promise<PipelineStateWithPackageResult> {
     // Check for failed sources before proceeding
-    this._checkForBlockingFailures(sourcesData, 'packaging', options.forceProceed);
-    
+    this._checkForBlockingFailures(
+      sourcesData,
+      'packaging',
+      options.forceProceed
+    );
+
     const packaging = new PackageModule({
       packageDirectory: './generated/packages',
       distilledDirectory: './generated/distilled-content',
@@ -967,7 +1015,7 @@ export class OrchestrationCommand {
     // Check for failed sources before proceeding
     const state = this.pipelineState.getState();
     this._checkForBlockingFailures(state, 'bundling', options.forceProceed);
-    
+
     const bundling = new BundleModule({
       bundleDirectory: './generated/bundles',
       packageDirectory: './generated/packages',

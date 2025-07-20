@@ -9,17 +9,17 @@ import crypto from 'node:crypto';
 import { createWriteStream, promises as fs } from 'node:fs';
 import path from 'node:path';
 import archiver from 'archiver';
-import { logger } from '../utils/logger';
-import { BundleStats } from './bundling/bundle-stats';
-import { streamingProcessor } from '../utils/streaming/streaming-file-processor';
-import { compressionManager } from '../utils/performance/compression-manager';
-import { performanceMonitor } from '../utils/performance/performance-monitor';
-import { 
-  ParallelProcessor, 
-  createParallelProcessor,
-  type ParallelProcessingConfig 
-} from '../utils/performance/parallel-processor';
 import { globalCache } from '../utils/cache/cache-manager';
+import { logger } from '../utils/logger';
+import { compressionManager } from '../utils/performance/compression-manager';
+import {
+  createParallelProcessor,
+  type ParallelProcessingConfig,
+  type ParallelProcessor,
+} from '../utils/performance/parallel-processor';
+import { performanceMonitor } from '../utils/performance/performance-monitor';
+import { streamingProcessor } from '../utils/streaming/streaming-file-processor';
+import { BundleStats } from './bundling/bundle-stats';
 
 export interface IOptimizedBundleModule {
   bundleDirectory: string;
@@ -99,10 +99,10 @@ export class OptimizedBundleModule {
    */
   async bundle(options: Record<string, any> = {}) {
     const operationName = 'optimized-bundling';
-    
+
     logger.info('📦 Starting optimized Bridge Bundle creation process');
     this.stats.startBundling();
-    
+
     performanceMonitor.startMonitoring(operationName, {
       enableCompression: this.options.enableCompression,
       enableStreaming: this.options.enableStreaming,
@@ -122,7 +122,9 @@ export class OptimizedBundleModule {
       if (availablePackages.length === 0) {
         logger.warn('⚠️  No packages found for Bridge Bundle creation');
         this.stats.endBundling();
-        performanceMonitor.endMonitoring(operationName, 'bundling', { totalPackages: 0 });
+        performanceMonitor.endMonitoring(operationName, 'bundling', {
+          totalPackages: 0,
+        });
         return this._buildResults(options);
       }
 
@@ -139,13 +141,16 @@ export class OptimizedBundleModule {
 
       // Bundle packages with parallel processing
       const bundledData: Record<string, any> = {};
-      
+
       if (this.options.enableParallelProcessing) {
         // Process packages in parallel
         const batchResult = await this.parallelProcessor.processItems(
           availablePackages,
           async (packageInfo) => {
-            const packageData = await this._bundleSinglePackageOptimized(packageInfo, bundlePath);
+            const packageData = await this._bundleSinglePackageOptimized(
+              packageInfo,
+              bundlePath
+            );
             return { packageInfo, packageData };
           },
           'package-bundling'
@@ -156,7 +161,10 @@ export class OptimizedBundleModule {
           if (result.success && result.result) {
             const { packageInfo, packageData } = result.result;
             bundledData[packageInfo.version] = packageData;
-            this.stats.incrementBundled(packageData.file_count, packageData.total_size);
+            this.stats.incrementBundled(
+              packageData.file_count,
+              packageData.total_size
+            );
           } else {
             this.stats.incrementFailed();
             logger.error('❌ Failed to bundle package', {
@@ -176,51 +184,77 @@ export class OptimizedBundleModule {
         // Sequential processing (fallback)
         for (const packageInfo of availablePackages) {
           try {
-            logger.info(`📦 Adding package to Bridge Bundle: ${packageInfo.version}`);
-            const packageData = await this._bundleSinglePackageOptimized(packageInfo, bundlePath);
+            logger.info(
+              `📦 Adding package to Bridge Bundle: ${packageInfo.version}`
+            );
+            const packageData = await this._bundleSinglePackageOptimized(
+              packageInfo,
+              bundlePath
+            );
             bundledData[packageInfo.version] = packageData;
-            this.stats.incrementBundled(packageData.file_count, packageData.total_size);
+            this.stats.incrementBundled(
+              packageData.file_count,
+              packageData.total_size
+            );
           } catch (error: any) {
             this.stats.incrementFailed();
-            logger.error(`❌ Failed to bundle package: ${packageInfo.version}`, {
-              error: error.message,
-            });
+            logger.error(
+              `❌ Failed to bundle package: ${packageInfo.version}`,
+              {
+                error: error.message,
+              }
+            );
           }
         }
       }
 
       // Generate manifest with compression
       if (this.options.includeMetadata) {
-        const manifest = await this._generateBundleManifest(bundledData, bundleName);
+        const manifest = await this._generateBundleManifest(
+          bundledData,
+          bundleName
+        );
         await this._writeManifestOptimized(manifest, bundlePath);
       }
 
       // Generate checksums with parallel processing
       if (this.options.validateIntegrity) {
-        const checksums = await this._generateBundleChecksumsOptimized(bundlePath);
+        const checksums =
+          await this._generateBundleChecksumsOptimized(bundlePath);
         await this._writeChecksumsOptimized(checksums, bundlePath);
       }
 
       // Validate bundle quality
-      const validationResult = await this._validateBundleQuality(bundlePath, bundledData);
+      const validationResult = await this._validateBundleQuality(
+        bundlePath,
+        bundledData
+      );
       this._logValidationResults(validationResult, bundlePath);
 
       // Validate bundle integrity
-      const integrityResult = await this._validateBundleIntegrity(bundlePath, bundledData);
+      const integrityResult = await this._validateBundleIntegrity(
+        bundlePath,
+        bundledData
+      );
       this._logIntegrityResults(integrityResult, bundlePath);
 
       // Create distribution archive with streaming
       let archivePath = null;
       if (this.options.createArchive) {
-        archivePath = await this._createDistributionArchiveOptimized(bundlePath, bundleName);
+        archivePath = await this._createDistributionArchiveOptimized(
+          bundlePath,
+          bundleName
+        );
       }
 
       this.stats.endBundling();
-      
+
       performanceMonitor.endMonitoring(operationName, 'bundling', {
         totalPackages: availablePackages.length,
         bundledPackages: Object.keys(bundledData).length,
-        bundleSizeMB: Math.round(this.stats.getStats().bundle_size / 1024 / 1024),
+        bundleSizeMB: Math.round(
+          this.stats.getStats().bundle_size / 1024 / 1024
+        ),
         compressionEnabled: this.options.enableCompression,
         streamingEnabled: this.options.enableStreaming,
         parallelProcessingEnabled: this.options.enableParallelProcessing,
@@ -232,9 +266,13 @@ export class OptimizedBundleModule {
       return this._buildResults(options, bundlePath, archivePath);
     } catch (error: any) {
       this.stats.endBundling();
-      performanceMonitor.endMonitoring(operationName, 'bundling', { error: true });
-      
-      logger.error('💥 Optimized Bridge Bundle creation failed', { error: error.message });
+      performanceMonitor.endMonitoring(operationName, 'bundling', {
+        error: true,
+      });
+
+      logger.error('💥 Optimized Bridge Bundle creation failed', {
+        error: error.message,
+      });
       throw error;
     }
   }
@@ -255,7 +293,11 @@ export class OptimizedBundleModule {
   /**
    * Update bundle settings dynamically
    */
-  updateBundleSettings(newConcurrency: number, newCompressionLevel?: number, newMemoryThreshold?: number): void {
+  updateBundleSettings(
+    newConcurrency: number,
+    newCompressionLevel?: number,
+    newMemoryThreshold?: number
+  ): void {
     this.options.maxConcurrency = newConcurrency;
     if (newCompressionLevel !== undefined) {
       this.options.compressionLevel = newCompressionLevel;
@@ -263,9 +305,9 @@ export class OptimizedBundleModule {
     if (newMemoryThreshold !== undefined) {
       this.options.memoryThresholdMB = newMemoryThreshold;
     }
-    
+
     this.parallelProcessor.updateConcurrency(newConcurrency);
-    
+
     logger.info('🔄 Bundle settings updated', {
       maxConcurrency: newConcurrency,
       compressionLevel: newCompressionLevel || this.options.compressionLevel,
@@ -292,22 +334,31 @@ export class OptimizedBundleModule {
       heapTotal: Math.round(usage.heapTotal / 1024 / 1024),
       external: Math.round(usage.external / 1024 / 1024),
       rss: Math.round(usage.rss / 1024 / 1024),
-      percentOfThreshold: (usage.heapUsed / (this.options.memoryThresholdMB * 1024 * 1024)) * 100,
+      percentOfThreshold:
+        (usage.heapUsed / (this.options.memoryThresholdMB * 1024 * 1024)) * 100,
     };
   }
 
   // Private methods
 
-  private async _findAvailablePackagesOptimized(): Promise<Array<{ version: string; path: string; manifestPath: string }>> {
+  private async _findAvailablePackagesOptimized(): Promise<
+    Array<{ version: string; path: string; manifestPath: string }>
+  > {
     const cacheKey = `available-packages-${this.options.packageDirectory}`;
     const cachedPackages = globalCache.get(cacheKey);
-    
+
     if (cachedPackages) {
-      logger.debug('📦 Using cached package list', { count: cachedPackages.length });
+      logger.debug('📦 Using cached package list', {
+        count: cachedPackages.length,
+      });
       return cachedPackages;
     }
 
-    const packages: Array<{ version: string; path: string; manifestPath: string }> = [];
+    const packages: Array<{
+      version: string;
+      path: string;
+      manifestPath: string;
+    }> = [];
 
     try {
       let packageDirExists;
@@ -322,14 +373,23 @@ export class OptimizedBundleModule {
         return packages;
       }
 
-      const entries = await fs.readdir(this.options.packageDirectory, { withFileTypes: true });
+      const entries = await fs.readdir(this.options.packageDirectory, {
+        withFileTypes: true,
+      });
 
       // Process package discovery in parallel
       const packagePromises = entries
-        .filter(entry => entry.isDirectory() && 
-                (entry.name.startsWith('v') || entry.name.startsWith('linkie-porting-data-v')))
+        .filter(
+          (entry) =>
+            entry.isDirectory() &&
+            (entry.name.startsWith('v') ||
+              entry.name.startsWith('linkie-porting-data-v'))
+        )
         .map(async (entry) => {
-          const packagePath = path.join(this.options.packageDirectory, entry.name);
+          const packagePath = path.join(
+            this.options.packageDirectory,
+            entry.name
+          );
           const packageJsonPath = path.join(packagePath, 'package.json');
 
           try {
@@ -346,7 +406,7 @@ export class OptimizedBundleModule {
         });
 
       const packageResults = await Promise.all(packagePromises);
-      packages.push(...packageResults.filter(p => p !== null) as any[]);
+      packages.push(...(packageResults.filter((p) => p !== null) as any[]));
 
       // Sort packages by version (newest first)
       packages.sort((a, b) => b.version.localeCompare(a.version));
@@ -354,7 +414,7 @@ export class OptimizedBundleModule {
       // Cache the results for 5 minutes
       globalCache.set(cacheKey, packages, 5 * 60 * 1000);
 
-      logger.info('📦 Package discovery completed', { 
+      logger.info('📦 Package discovery completed', {
         count: packages.length,
         cached: false,
       });
@@ -370,14 +430,21 @@ export class OptimizedBundleModule {
     bundlePath: string
   ) {
     const startTime = Date.now();
-    
+
     try {
       // Read package manifest
-      const manifestContent = await fs.readFile(packageInfo.manifestPath, 'utf-8');
+      const manifestContent = await fs.readFile(
+        packageInfo.manifestPath,
+        'utf-8'
+      );
       const manifest = JSON.parse(manifestContent);
 
       // Create package directory in bundle
-      const packageBundlePath = path.join(bundlePath, 'packages', packageInfo.version);
+      const packageBundlePath = path.join(
+        bundlePath,
+        'packages',
+        packageInfo.version
+      );
       await fs.mkdir(packageBundlePath, { recursive: true });
 
       // Copy with streaming for large directories
@@ -425,92 +492,110 @@ export class OptimizedBundleModule {
       const batchSize = 10;
       for (let i = 0; i < entries.length; i += batchSize) {
         const batch = entries.slice(i, i + batchSize);
-        
+
         const batchPromises = batch.map(async (entry) => {
           const srcPath = path.join(sourcePath, entry.name);
           const dstPath = path.join(destPath, entry.name);
 
           if (entry.isDirectory()) {
             await fs.mkdir(dstPath, { recursive: true });
-            const subResult = await this._copyDirectoryOptimized(srcPath, dstPath);
+            const subResult = await this._copyDirectoryOptimized(
+              srcPath,
+              dstPath
+            );
             return subResult;
-          } else if (entry.isFile()) {
+          }
+          if (entry.isFile()) {
             const stats = await fs.stat(srcPath);
-            
-            if (this.options.enableStreaming && stats.size > this.options.streamingThreshold) {
+
+            if (
+              this.options.enableStreaming &&
+              stats.size > this.options.streamingThreshold
+            ) {
               // Use streaming for large files
-              const streamResult = await streamingProcessor.copyFile(srcPath, dstPath, {
-                compress: this.options.enableCompression,
-              });
-              
+              const streamResult = await streamingProcessor.copyFile(
+                srcPath,
+                dstPath,
+                {
+                  compress: this.options.enableCompression,
+                }
+              );
+
               return {
                 fileCount: 1,
                 totalSize: streamResult.outputSize,
               };
-            } else {
-              // Regular copy for small files
-              await fs.copyFile(srcPath, dstPath);
-              return {
-                fileCount: 1,
-                totalSize: stats.size,
-              };
             }
+            // Regular copy for small files
+            await fs.copyFile(srcPath, dstPath);
+            return {
+              fileCount: 1,
+              totalSize: stats.size,
+            };
           }
-          
+
           return { fileCount: 0, totalSize: 0 };
         });
 
         const batchResults = await Promise.all(batchPromises);
-        
+
         for (const result of batchResults) {
           fileCount += result.fileCount;
           totalSize += result.totalSize;
         }
       }
     } catch (error: any) {
-      logger.warn(`Failed to copy directory: ${sourcePath}`, { error: error.message });
+      logger.warn(`Failed to copy directory: ${sourcePath}`, {
+        error: error.message,
+      });
     }
 
     return { fileCount, totalSize };
   }
 
-  private async _writeManifestOptimized(manifest: any, bundlePath: string): Promise<void> {
+  private async _writeManifestOptimized(
+    manifest: any,
+    bundlePath: string
+  ): Promise<void> {
     const manifestPath = path.join(bundlePath, 'manifest.json');
     const manifestContent = JSON.stringify(manifest, null, 2);
-    
+
     if (this.options.enableCompression && manifestContent.length > 10 * 1024) {
       const buffer = Buffer.from(manifestContent, 'utf8');
       const { compressed } = await compressionManager.compressBuffer(buffer, {
         filename: manifestPath,
       });
-      
+
       await fs.writeFile(manifestPath, compressed);
     } else {
       await fs.writeFile(manifestPath, manifestContent);
     }
 
-    logger.info('📋 Bridge Bundle manifest generated', { 
+    logger.info('📋 Bridge Bundle manifest generated', {
       path: manifestPath,
       compressed: this.options.enableCompression,
     });
   }
 
-  private async _writeChecksumsOptimized(checksums: any, bundlePath: string): Promise<void> {
+  private async _writeChecksumsOptimized(
+    checksums: any,
+    bundlePath: string
+  ): Promise<void> {
     const checksumPath = path.join(bundlePath, 'checksums.json');
     const checksumContent = JSON.stringify(checksums, null, 2);
-    
+
     if (this.options.enableCompression && checksumContent.length > 10 * 1024) {
       const buffer = Buffer.from(checksumContent, 'utf8');
       const { compressed } = await compressionManager.compressBuffer(buffer, {
         filename: checksumPath,
       });
-      
+
       await fs.writeFile(checksumPath, compressed);
     } else {
       await fs.writeFile(checksumPath, checksumContent);
     }
 
-    logger.info('🔐 Bridge Bundle checksums generated', { 
+    logger.info('🔐 Bridge Bundle checksums generated', {
       path: checksumPath,
       compressed: this.options.enableCompression,
     });
@@ -521,7 +606,7 @@ export class OptimizedBundleModule {
 
     try {
       const files = await this._getAllFiles(bundlePath);
-      
+
       // Process checksums in parallel
       const checksumPromises = files.map(async (file) => {
         const relativePath = path.relative(bundlePath, file);
@@ -539,7 +624,7 @@ export class OptimizedBundleModule {
       });
 
       const checksumResults = await Promise.all(checksumPromises);
-      
+
       for (const result of checksumResults) {
         checksums[result.relativePath] = result.checksum;
       }
@@ -559,8 +644,11 @@ export class OptimizedBundleModule {
     bundlePath: string,
     bundleName: string
   ): Promise<string> {
-    const archivePath = path.join(this.options.bundleDirectory, `${bundleName}.zip`);
-    
+    const archivePath = path.join(
+      this.options.bundleDirectory,
+      `${bundleName}.zip`
+    );
+
     return new Promise((resolve, reject) => {
       try {
         // Create write stream
@@ -578,9 +666,10 @@ export class OptimizedBundleModule {
           try {
             const archiveStats = await fs.stat(archivePath);
             const originalSize = this.stats.getStats().bundle_size;
-            const compressionRatio = originalSize > 0
-              ? Math.round((1 - archiveStats.size / originalSize) * 100)
-              : 0;
+            const compressionRatio =
+              originalSize > 0
+                ? Math.round((1 - archiveStats.size / originalSize) * 100)
+                : 0;
 
             logger.info('📦 ZIP archive created successfully', {
               path: archivePath,
@@ -594,11 +683,16 @@ export class OptimizedBundleModule {
             if (this.options.enableStreaming) {
               try {
                 await fs.rm(bundlePath, { recursive: true, force: true });
-                logger.info('🧹 Cleaned up temporary bundle directory', { bundlePath });
+                logger.info('🧹 Cleaned up temporary bundle directory', {
+                  bundlePath,
+                });
               } catch (cleanupError: unknown) {
                 logger.warn('Failed to clean up temporary bundle directory', {
                   bundlePath,
-                  error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError),
+                  error:
+                    cleanupError instanceof Error
+                      ? cleanupError.message
+                      : String(cleanupError),
                 });
               }
             }
@@ -641,7 +735,9 @@ export class OptimizedBundleModule {
         archive.pipe(output);
 
         // Add entire Bridge Bundle directory to archive
-        logger.info('📁 Adding Bridge Bundle directory to ZIP archive', { bundlePath });
+        logger.info('📁 Adding Bridge Bundle directory to ZIP archive', {
+          bundlePath,
+        });
         archive.directory(bundlePath, false);
 
         // Finalize the archive
@@ -678,7 +774,10 @@ export class OptimizedBundleModule {
     return files;
   }
 
-  private _generateBundleManifest(bundledData: Record<string, any>, bundleName: string) {
+  private _generateBundleManifest(
+    bundledData: Record<string, any>,
+    bundleName: string
+  ) {
     const summary = this.stats.getSummary();
     const packageVersions = Object.keys(bundledData).sort();
     const contentSummary: Record<string, number> = {};
@@ -687,8 +786,11 @@ export class OptimizedBundleModule {
     for (const [_version, data] of Object.entries(bundledData)) {
       const typedData = data as any;
       if (typedData.manifest?.content_breakdown) {
-        for (const [type, count] of Object.entries(typedData.manifest.content_breakdown)) {
-          contentSummary[type] = (contentSummary[type] || 0) + (count as number);
+        for (const [type, count] of Object.entries(
+          typedData.manifest.content_breakdown
+        )) {
+          contentSummary[type] =
+            (contentSummary[type] || 0) + (count as number);
         }
       }
     }
@@ -728,12 +830,15 @@ export class OptimizedBundleModule {
 
   private calculateCompressionRatio(summary: any): number {
     const compressionStats = compressionManager.getStats();
-    return compressionStats.totalOriginalSize > 0 
-      ? compressionStats.averageCompressionRatio 
+    return compressionStats.totalOriginalSize > 0
+      ? compressionStats.averageCompressionRatio
       : 1;
   }
 
-  private _validateBundleQuality(bundlePath: string, bundledData: Record<string, any>) {
+  private _validateBundleQuality(
+    bundlePath: string,
+    bundledData: Record<string, any>
+  ) {
     // Implementation would be similar to the original but with performance optimizations
     // For brevity, returning a simple validation result
     return {
@@ -748,7 +853,10 @@ export class OptimizedBundleModule {
     };
   }
 
-  private _validateBundleIntegrity(bundlePath: string, bundledData: Record<string, any>) {
+  private _validateBundleIntegrity(
+    bundlePath: string,
+    bundledData: Record<string, any>
+  ) {
     // Implementation would be similar to the original but with performance optimizations
     // For brevity, returning a simple integrity result
     return {
@@ -765,29 +873,41 @@ export class OptimizedBundleModule {
     };
   }
 
-  private _logValidationResults(validationResult: any, bundlePath: string): void {
-    if (!validationResult.isValid) {
+  private _logValidationResults(
+    validationResult: any,
+    bundlePath: string
+  ): void {
+    if (validationResult.isValid) {
+      logger.info(
+        '✅ Bridge Bundle validation passed',
+        validationResult.metrics
+      );
+    } else {
       logger.warn('⚠️  Bridge Bundle validation warnings detected', {
         warnings: validationResult.warnings,
         bundlePath,
       });
-    } else {
-      logger.info('✅ Bridge Bundle validation passed', validationResult.metrics);
     }
   }
 
   private _logIntegrityResults(integrityResult: any, bundlePath: string): void {
-    if (!integrityResult.isValid) {
+    if (integrityResult.isValid) {
+      logger.info(
+        '🔒 Bridge Bundle integrity validation passed',
+        integrityResult.metrics
+      );
+    } else {
       logger.error('❌ Bridge Bundle integrity validation failed', {
         errors: integrityResult.errors,
         bundlePath,
       });
-    } else {
-      logger.info('🔒 Bridge Bundle integrity validation passed', integrityResult.metrics);
     }
   }
 
-  private _logPerformanceSummary(bundlePath: string, archivePath: string | null): void {
+  private _logPerformanceSummary(
+    bundlePath: string,
+    archivePath: string | null
+  ): void {
     const summary = this.stats.getSummary();
     const memoryUsage = this.getMemoryUsage();
     const compressionStats = compressionManager.getStats();
@@ -801,25 +921,26 @@ export class OptimizedBundleModule {
       totalFiles: summary.total_files,
       bundleSizeMB: Math.round(summary.bundle_size_kb / 1024),
       durationSeconds: summary.duration_seconds,
-      
+
       // Performance metrics
       enabledOptimizations: {
         compression: this.options.enableCompression,
         streaming: this.options.enableStreaming,
         parallelProcessing: this.options.enableParallelProcessing,
       },
-      
+
       // Memory performance
       memoryUsageMB: memoryUsage.heapUsed,
       memoryThresholdMB: this.options.memoryThresholdMB,
-      
+
       // Compression performance
       compressionSavingsKB: Math.round(compressionStats.totalSpaceSaved / 1024),
-      averageCompressionRatio: compressionStats.averageCompressionRatio.toFixed(3),
-      
+      averageCompressionRatio:
+        compressionStats.averageCompressionRatio.toFixed(3),
+
       // Parallel processing performance
       parallelProcessorStats: processorStats,
-      
+
       // Output paths
       bundlePath,
       archivePath: archivePath || 'none',
@@ -827,22 +948,30 @@ export class OptimizedBundleModule {
 
     if (summary.bundled_packages > 0) {
       const avgTime = summary.duration_seconds / summary.bundled_packages;
-      const performanceImprovement = this.calculatePerformanceImprovement(avgTime, processorStats);
-      
+      const performanceImprovement = this.calculatePerformanceImprovement(
+        avgTime,
+        processorStats
+      );
+
       logger.info('⚡ Bundle Performance Metrics', {
         avgTimePerPackageSeconds: Math.round(avgTime * 10) / 10,
         bundleThroughput: `${(summary.bundled_packages / summary.duration_seconds).toFixed(2)} packages/sec`,
         estimatedSpeedupVsSequential: `${performanceImprovement.toFixed(1)}x`,
         memoryEfficiency: `${(100 - memoryUsage.percentOfThreshold).toFixed(1)}%`,
         compressionEfficiency: `${((1 - compressionStats.averageCompressionRatio) * 100).toFixed(1)}%`,
-        totalCompressionSavingsMB: Math.round(compressionStats.totalSpaceSaved / 1024 / 1024),
+        totalCompressionSavingsMB: Math.round(
+          compressionStats.totalSpaceSaved / 1024 / 1024
+        ),
       });
     }
   }
 
-  private calculatePerformanceImprovement(avgTime: number, processorStats: any): number {
+  private calculatePerformanceImprovement(
+    avgTime: number,
+    processorStats: any
+  ): number {
     if (!this.options.enableParallelProcessing) return 1;
-    
+
     const sequentialTime = avgTime * this.options.maxConcurrency;
     const parallelTime = avgTime / Math.max(processorStats.activePromises, 1);
     return sequentialTime / parallelTime;

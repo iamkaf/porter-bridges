@@ -120,8 +120,8 @@ export class SourceConfigs {
         message_filters: {
           keywords: ['release', 'update', 'version', 'changelog'],
           min_length: 50,
-          max_age_days: 30
-        }
+          max_age_days: 30,
+        },
       },
       neoforge_discord_releases: {
         type: 'discord_channel',
@@ -134,8 +134,8 @@ export class SourceConfigs {
         message_filters: {
           keywords: ['release', 'neoforge', 'minecraft'],
           min_length: 30,
-          max_age_days: 60
-        }
+          max_age_days: 60,
+        },
       },
       // Video-based discovery
       minecraft_modding_tutorials: {
@@ -146,7 +146,7 @@ export class SourceConfigs {
         description: 'YouTube tutorials for Minecraft modding',
         maxVideoResults: 20,
         minVideoDuration: 300,
-        maxVideoDuration: 3600
+        maxVideoDuration: 3600,
       },
       // Dynamic discovery
       github_trending_modding: {
@@ -154,9 +154,10 @@ export class SourceConfigs {
         url: 'https://github.com/trending',
         source_type: 'guide',
         loader_type: 'vanilla',
-        description: 'Dynamic discovery of trending Minecraft modding repositories',
+        description:
+          'Dynamic discovery of trending Minecraft modding repositories',
         maxTrendingRepos: 50,
-        trendingAnalysisPeriod: 'weekly'
+        trendingAnalysisPeriod: 'weekly',
       },
       // Community submissions
       community_submitted_sources: {
@@ -166,8 +167,8 @@ export class SourceConfigs {
         loader_type: 'vanilla',
         description: 'Community-submitted modding sources',
         submissionsDir: './generated/community-submissions',
-        maxSubmissionsPerUser: 10
-      }
+        maxSubmissionsPerUser: 10,
+      },
     };
   }
 

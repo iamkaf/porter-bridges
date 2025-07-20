@@ -9,14 +9,14 @@
  * - Contributor recognition
  */
 
-import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
 import { logger } from '../../utils/logger';
-import { SourceItemFactory, type ISourceItem } from './source-item-factory';
-import { ContentAnalyzer } from './content-analyzer';
 import { MLContentAnalyzer } from '../../utils/ml-content-analyzer';
+import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
+import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
 export interface ICommunitySubmission {
   id: string;
@@ -32,7 +32,14 @@ export interface ICommunitySubmission {
     url: string;
     title: string;
     description: string;
-    source_type: 'primer' | 'blog_post' | 'changelog' | 'guide' | 'documentation' | 'video' | 'discord_channel';
+    source_type:
+      | 'primer'
+      | 'blog_post'
+      | 'changelog'
+      | 'guide'
+      | 'documentation'
+      | 'video'
+      | 'discord_channel';
     loader_type: 'vanilla' | 'fabric' | 'neoforge' | 'forge' | 'quilt';
     minecraft_version?: string;
     tags: string[];
@@ -112,11 +119,12 @@ export class CommunityDiscovery {
 
   constructor(options: ICommunityDiscoveryOptions = {}) {
     this.options = {
-      submissionsDir: options.submissionsDir || './generated/community-submissions',
+      submissionsDir:
+        options.submissionsDir || './generated/community-submissions',
       maxSubmissionsPerUser: options.maxSubmissionsPerUser || 10,
       autoApproveThreshold: options.autoApproveThreshold || 0.8,
-      requireManualReview: options.requireManualReview || false,
-      enableCommunityVoting: options.enableCommunityVoting || true,
+      requireManualReview: options.requireManualReview,
+      enableCommunityVoting: true,
       minVotesForApproval: options.minVotesForApproval || 3,
       trustedContributors: options.trustedContributors || [],
     };
@@ -125,9 +133,18 @@ export class CommunityDiscovery {
     this.contentAnalyzer = new ContentAnalyzer();
     this.mlAnalyzer = new MLContentAnalyzer();
 
-    this.submissionsPath = join(this.options.submissionsDir!, 'submissions.json');
-    this.approvedSourcesPath = join(this.options.submissionsDir!, 'approved-sources.json');
-    this.contributorsPath = join(this.options.submissionsDir!, 'contributors.json');
+    this.submissionsPath = join(
+      this.options.submissionsDir!,
+      'submissions.json'
+    );
+    this.approvedSourcesPath = join(
+      this.options.submissionsDir!,
+      'approved-sources.json'
+    );
+    this.contributorsPath = join(
+      this.options.submissionsDir!,
+      'contributors.json'
+    );
   }
 
   /**
@@ -141,7 +158,9 @@ export class CommunityDiscovery {
   /**
    * Submit a new source for community review
    */
-  async submitSource(request: ISubmissionRequest): Promise<{ success: boolean; submissionId?: string; message: string }> {
+  async submitSource(
+    request: ISubmissionRequest
+  ): Promise<{ success: boolean; submissionId?: string; message: string }> {
     try {
       logger.info(`📝 Processing source submission: ${request.title}`);
 
@@ -150,16 +169,18 @@ export class CommunityDiscovery {
       if (!validationResult.valid) {
         return {
           success: false,
-          message: `Submission validation failed: ${validationResult.errors.join(', ')}`
+          message: `Submission validation failed: ${validationResult.errors.join(', ')}`,
         };
       }
 
       // Check user submission limits
-      const userSubmissions = await this.getUserSubmissions(request.submitter.username);
+      const userSubmissions = await this.getUserSubmissions(
+        request.submitter.username
+      );
       if (userSubmissions.length >= this.options.maxSubmissionsPerUser!) {
         return {
           success: false,
-          message: `User has reached maximum submissions limit (${this.options.maxSubmissionsPerUser})`
+          message: `User has reached maximum submissions limit (${this.options.maxSubmissionsPerUser})`,
         };
       }
 
@@ -168,7 +189,7 @@ export class CommunityDiscovery {
       if (isDuplicate) {
         return {
           success: false,
-          message: 'This source has already been submitted'
+          message: 'This source has already been submitted',
         };
       }
 
@@ -178,7 +199,10 @@ export class CommunityDiscovery {
       // Create submission record
       const submission: ICommunitySubmission = {
         id: this.generateSubmissionId(),
-        status: this.determineInitialStatus(qualityResults, request.submitter.username),
+        status: this.determineInitialStatus(
+          qualityResults,
+          request.submitter.username
+        ),
         submitted_at: new Date().toISOString(),
         submitted_by: request.submitter,
         source_info: {
@@ -189,21 +213,21 @@ export class CommunityDiscovery {
           loader_type: request.loader_type as any,
           minecraft_version: request.minecraft_version,
           tags: request.tags,
-          category: request.category
+          category: request.category,
         },
         validation_results: qualityResults,
         community_feedback: {
           upvotes: 0,
           downvotes: 0,
-          comments: []
+          comments: [],
         },
         review_history: [],
         metadata: {
           priority: this.calculatePriority(qualityResults),
           relevance_score: qualityResults.quality_score,
           confidence: qualityResults.automated_checks_passed ? 0.8 : 0.5,
-          processing_notes: []
-        }
+          processing_notes: [],
+        },
       };
 
       // Save submission
@@ -217,13 +241,13 @@ export class CommunityDiscovery {
       return {
         success: true,
         submissionId: submission.id,
-        message: `Source submitted successfully! Status: ${submission.status}`
+        message: `Source submitted successfully! Status: ${submission.status}`,
       };
     } catch (error) {
       logger.error('Failed to submit source:', error);
       return {
         success: false,
-        message: 'Internal error processing submission'
+        message: 'Internal error processing submission',
       };
     }
   }
@@ -233,7 +257,9 @@ export class CommunityDiscovery {
    */
   async getPendingSubmissions(): Promise<ICommunitySubmission[]> {
     const submissions = await this.loadSubmissions();
-    return submissions.filter(s => s.status === 'pending' || s.status === 'under_review');
+    return submissions.filter(
+      (s) => s.status === 'pending' || s.status === 'under_review'
+    );
   }
 
   /**
@@ -247,7 +273,7 @@ export class CommunityDiscovery {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const submissions = await this.loadSubmissions();
-      const submission = submissions.find(s => s.id === submissionId);
+      const submission = submissions.find((s) => s.id === submissionId);
 
       if (!submission) {
         return { success: false, message: 'Submission not found' };
@@ -258,7 +284,7 @@ export class CommunityDiscovery {
         reviewer: reviewerId,
         action,
         timestamp: new Date().toISOString(),
-        notes
+        notes,
       });
 
       // Update status
@@ -273,17 +299,19 @@ export class CommunityDiscovery {
 
       await this.saveSubmissions(submissions);
 
-      logger.info(`📋 Submission ${submissionId} reviewed by ${reviewerId}: ${action}`);
+      logger.info(
+        `📋 Submission ${submissionId} reviewed by ${reviewerId}: ${action}`
+      );
 
       return {
         success: true,
-        message: `Submission ${action}ed successfully`
+        message: `Submission ${action}ed successfully`,
       };
     } catch (error) {
       logger.error(`Failed to review submission ${submissionId}:`, error);
       return {
         success: false,
-        message: 'Internal error processing review'
+        message: 'Internal error processing review',
       };
     }
   }
@@ -299,7 +327,7 @@ export class CommunityDiscovery {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const submissions = await this.loadSubmissions();
-      const submission = submissions.find(s => s.id === submissionId);
+      const submission = submissions.find((s) => s.id === submissionId);
 
       if (!submission) {
         return { success: false, message: 'Submission not found' };
@@ -314,16 +342,21 @@ export class CommunityDiscovery {
           username,
           comment: data,
           timestamp: new Date().toISOString(),
-          type: 'review'
+          type: 'review',
         });
       }
 
       // Check if community voting threshold is met
       if (this.options.enableCommunityVoting) {
-        const totalVotes = submission.community_feedback.upvotes + submission.community_feedback.downvotes;
+        const totalVotes =
+          submission.community_feedback.upvotes +
+          submission.community_feedback.downvotes;
         const upvoteRatio = submission.community_feedback.upvotes / totalVotes;
 
-        if (totalVotes >= this.options.minVotesForApproval! && upvoteRatio >= 0.7) {
+        if (
+          totalVotes >= this.options.minVotesForApproval! &&
+          upvoteRatio >= 0.7
+        ) {
           submission.status = 'approved';
           await this.moveToApprovedSources(submission);
         }
@@ -333,13 +366,16 @@ export class CommunityDiscovery {
 
       return {
         success: true,
-        message: 'Feedback added successfully'
+        message: 'Feedback added successfully',
       };
     } catch (error) {
-      logger.error(`Failed to add feedback to submission ${submissionId}:`, error);
+      logger.error(
+        `Failed to add feedback to submission ${submissionId}:`,
+        error
+      );
       return {
         success: false,
-        message: 'Internal error processing feedback'
+        message: 'Internal error processing feedback',
       };
     }
   }
@@ -350,7 +386,7 @@ export class CommunityDiscovery {
   async getApprovedSources(): Promise<ISourceItem[]> {
     try {
       const approvedSources = await this.loadApprovedSources();
-      return approvedSources.map(source => this.convertToSourceItem(source));
+      return approvedSources.map((source) => this.convertToSourceItem(source));
     } catch (error) {
       logger.error('Failed to load approved sources:', error);
       return [];
@@ -370,15 +406,23 @@ export class CommunityDiscovery {
   }> {
     try {
       const submissions = await this.loadSubmissions();
-      const userSubmissions = submissions.filter(s => s.submitted_by.username === username);
+      const userSubmissions = submissions.filter(
+        (s) => s.submitted_by.username === username
+      );
 
       const stats = {
         total_submissions: userSubmissions.length,
-        approved_submissions: userSubmissions.filter(s => s.status === 'approved').length,
-        rejected_submissions: userSubmissions.filter(s => s.status === 'rejected').length,
-        pending_submissions: userSubmissions.filter(s => s.status === 'pending' || s.status === 'under_review').length,
+        approved_submissions: userSubmissions.filter(
+          (s) => s.status === 'approved'
+        ).length,
+        rejected_submissions: userSubmissions.filter(
+          (s) => s.status === 'rejected'
+        ).length,
+        pending_submissions: userSubmissions.filter(
+          (s) => s.status === 'pending' || s.status === 'under_review'
+        ).length,
         reputation_score: this.calculateReputationScore(userSubmissions),
-        badges: this.calculateBadges(userSubmissions)
+        badges: this.calculateBadges(userSubmissions),
       };
 
       return stats;
@@ -390,7 +434,7 @@ export class CommunityDiscovery {
         rejected_submissions: 0,
         pending_submissions: 0,
         reputation_score: 0,
-        badges: []
+        badges: [],
       };
     }
   }
@@ -408,7 +452,7 @@ export class CommunityDiscovery {
     const files = [
       { path: this.submissionsPath, data: [] },
       { path: this.approvedSourcesPath, data: [] },
-      { path: this.contributorsPath, data: {} }
+      { path: this.contributorsPath, data: {} },
     ];
 
     for (const file of files) {
@@ -418,11 +462,13 @@ export class CommunityDiscovery {
     }
   }
 
-  private async validateSubmission(request: ISubmissionRequest): Promise<{ valid: boolean; errors: string[] }> {
+  private async validateSubmission(
+    request: ISubmissionRequest
+  ): Promise<{ valid: boolean; errors: string[] }> {
     const errors: string[] = [];
 
     // Basic validation
-    if (!request.url || !request.title || !request.description) {
+    if (!(request.url && request.title && request.description)) {
       errors.push('URL, title, and description are required');
     }
 
@@ -445,11 +491,13 @@ export class CommunityDiscovery {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
-  private async performQualityChecks(request: ISubmissionRequest): Promise<ICommunitySubmission['validation_results']> {
+  private async performQualityChecks(
+    request: ISubmissionRequest
+  ): Promise<ICommunitySubmission['validation_results']> {
     const results = {
       url_accessible: true,
       content_relevant: false,
@@ -457,7 +505,7 @@ export class CommunityDiscovery {
       duplicate_check: false,
       automated_checks_passed: false,
       manual_review_required: false,
-      issues: [] as string[]
+      issues: [] as string[],
     };
 
     try {
@@ -467,9 +515,10 @@ export class CommunityDiscovery {
 
       if (response.ok) {
         const content = await response.text();
-        
+
         // Analyze content relevance
-        const relevanceScore = this.contentAnalyzer.calculatePortingRelevance(content);
+        const relevanceScore =
+          this.contentAnalyzer.calculatePortingRelevance(content);
         results.content_relevant = relevanceScore > 0.3;
         results.quality_score = relevanceScore;
 
@@ -477,22 +526,26 @@ export class CommunityDiscovery {
         const mlResult = await this.mlAnalyzer.analyzeContent({
           id: request.url,
           title: request.title,
-          content: content,
+          content,
           source_type: request.source_type,
           minecraft_version: request.minecraft_version,
-          loader_type: request.loader_type
+          loader_type: request.loader_type,
         });
 
-        results.quality_score = Math.max(results.quality_score, mlResult.relevance_score);
-        results.content_relevant = results.content_relevant || mlResult.relevance_score > 0.5;
+        results.quality_score = Math.max(
+          results.quality_score,
+          mlResult.relevance_score
+        );
+        results.content_relevant =
+          results.content_relevant || mlResult.relevance_score > 0.5;
 
         // Check for automated approval
-        results.automated_checks_passed = 
+        results.automated_checks_passed =
           results.url_accessible &&
           results.content_relevant &&
           results.quality_score >= this.options.autoApproveThreshold!;
 
-        results.manual_review_required = 
+        results.manual_review_required =
           this.options.requireManualReview! ||
           results.quality_score < 0.6 ||
           !results.content_relevant;
@@ -505,17 +558,21 @@ export class CommunityDiscovery {
     return results;
   }
 
-  private async getUserSubmissions(username: string): Promise<ICommunitySubmission[]> {
+  private async getUserSubmissions(
+    username: string
+  ): Promise<ICommunitySubmission[]> {
     const submissions = await this.loadSubmissions();
-    return submissions.filter(s => s.submitted_by.username === username);
+    return submissions.filter((s) => s.submitted_by.username === username);
   }
 
   private async checkForDuplicates(url: string): Promise<boolean> {
     const submissions = await this.loadSubmissions();
     const approvedSources = await this.loadApprovedSources();
-    
-    return submissions.some(s => s.source_info.url === url) ||
-           approvedSources.some(s => s.source_info.url === url);
+
+    return (
+      submissions.some((s) => s.source_info.url === url) ||
+      approvedSources.some((s) => s.source_info.url === url)
+    );
   }
 
   private determineInitialStatus(
@@ -528,7 +585,10 @@ export class CommunityDiscovery {
     }
 
     // Auto-approve if quality checks pass
-    if (qualityResults.automated_checks_passed && !qualityResults.manual_review_required) {
+    if (
+      qualityResults.automated_checks_passed &&
+      !qualityResults.manual_review_required
+    ) {
       return 'approved';
     }
 
@@ -536,7 +596,9 @@ export class CommunityDiscovery {
     return 'pending';
   }
 
-  private calculatePriority(qualityResults: ICommunitySubmission['validation_results']): number {
+  private calculatePriority(
+    qualityResults: ICommunitySubmission['validation_results']
+  ): number {
     if (qualityResults.quality_score > 0.8) return 1;
     if (qualityResults.quality_score > 0.6) return 2;
     return 3;
@@ -556,11 +618,15 @@ export class CommunityDiscovery {
     }
   }
 
-  private async saveSubmissions(submissions: ICommunitySubmission[]): Promise<void> {
+  private async saveSubmissions(
+    submissions: ICommunitySubmission[]
+  ): Promise<void> {
     await writeFile(this.submissionsPath, JSON.stringify(submissions, null, 2));
   }
 
-  private async saveSubmission(submission: ICommunitySubmission): Promise<void> {
+  private async saveSubmission(
+    submission: ICommunitySubmission
+  ): Promise<void> {
     const submissions = await this.loadSubmissions();
     submissions.push(submission);
     await this.saveSubmissions(submissions);
@@ -576,10 +642,15 @@ export class CommunityDiscovery {
     }
   }
 
-  private async moveToApprovedSources(submission: ICommunitySubmission): Promise<void> {
+  private async moveToApprovedSources(
+    submission: ICommunitySubmission
+  ): Promise<void> {
     const approvedSources = await this.loadApprovedSources();
     approvedSources.push(submission);
-    await writeFile(this.approvedSourcesPath, JSON.stringify(approvedSources, null, 2));
+    await writeFile(
+      this.approvedSourcesPath,
+      JSON.stringify(approvedSources, null, 2)
+    );
   }
 
   private convertToSourceItem(submission: ICommunitySubmission): ISourceItem {
@@ -590,7 +661,12 @@ export class CommunityDiscovery {
       title: submission.source_info.title,
       minecraft_version: submission.source_info.minecraft_version,
       loader_type: submission.source_info.loader_type,
-      priority: submission.metadata.priority === 1 ? 'high' : submission.metadata.priority === 2 ? 'medium' : 'low',
+      priority:
+        submission.metadata.priority === 1
+          ? 'high'
+          : submission.metadata.priority === 2
+            ? 'medium'
+            : 'low',
       tags: submission.source_info.tags,
       relevance_score: submission.metadata.relevance_score,
       metadata: {
@@ -599,8 +675,8 @@ export class CommunityDiscovery {
         submitted_at: submission.submitted_at,
         upvotes: submission.community_feedback.upvotes,
         downvotes: submission.community_feedback.downvotes,
-        category: submission.source_info.category
-      }
+        category: submission.source_info.category,
+      },
     });
   }
 
@@ -608,38 +684,61 @@ export class CommunityDiscovery {
     try {
       const data = await readFile(this.contributorsPath, 'utf-8');
       const contributors = JSON.parse(data);
-      
+
       if (!contributors[username]) {
         contributors[username] = {
           first_submission: new Date().toISOString(),
           total_submissions: 0,
-          last_submission: new Date().toISOString()
+          last_submission: new Date().toISOString(),
         };
       }
-      
+
       contributors[username].total_submissions++;
       contributors[username].last_submission = new Date().toISOString();
-      
-      await writeFile(this.contributorsPath, JSON.stringify(contributors, null, 2));
+
+      await writeFile(
+        this.contributorsPath,
+        JSON.stringify(contributors, null, 2)
+      );
     } catch (error) {
-      logger.error(`Failed to update contributor stats for ${username}:`, error);
+      logger.error(
+        `Failed to update contributor stats for ${username}:`,
+        error
+      );
     }
   }
 
-  private calculateReputationScore(submissions: ICommunitySubmission[]): number {
+  private calculateReputationScore(
+    submissions: ICommunitySubmission[]
+  ): number {
     if (submissions.length === 0) return 0;
 
-    const approvedCount = submissions.filter(s => s.status === 'approved').length;
-    const rejectedCount = submissions.filter(s => s.status === 'rejected').length;
-    const totalFeedback = submissions.reduce((sum, s) => sum + s.community_feedback.upvotes + s.community_feedback.downvotes, 0);
+    const approvedCount = submissions.filter(
+      (s) => s.status === 'approved'
+    ).length;
+    const rejectedCount = submissions.filter(
+      (s) => s.status === 'rejected'
+    ).length;
+    const totalFeedback = submissions.reduce(
+      (sum, s) =>
+        sum + s.community_feedback.upvotes + s.community_feedback.downvotes,
+      0
+    );
 
-    return Math.round((approvedCount * 10) - (rejectedCount * 5) + (totalFeedback * 0.5));
+    return Math.round(
+      approvedCount * 10 - rejectedCount * 5 + totalFeedback * 0.5
+    );
   }
 
   private calculateBadges(submissions: ICommunitySubmission[]): string[] {
     const badges: string[] = [];
-    const approvedCount = submissions.filter(s => s.status === 'approved').length;
-    const totalUpvotes = submissions.reduce((sum, s) => sum + s.community_feedback.upvotes, 0);
+    const approvedCount = submissions.filter(
+      (s) => s.status === 'approved'
+    ).length;
+    const totalUpvotes = submissions.reduce(
+      (sum, s) => sum + s.community_feedback.upvotes,
+      0
+    );
 
     if (approvedCount >= 1) badges.push('First Contribution');
     if (approvedCount >= 5) badges.push('Active Contributor');

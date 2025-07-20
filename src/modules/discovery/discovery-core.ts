@@ -7,10 +7,22 @@
 
 import { logger } from '../../utils/logger';
 import {
+  CommunityDiscovery,
+  type ICommunityDiscoveryOptions,
+} from './community-discovery';
+import {
   DirectUrlDiscovery,
   type IDirectUrlDiscoveryOptions,
 } from './direct-url-discovery';
+import {
+  DiscordDiscovery,
+  type IDiscordDiscoveryOptions,
+} from './discord-discovery';
 import { DiscoveryStats } from './discovery-stats';
+import {
+  DynamicDiscovery,
+  type IDynamicDiscoveryOptions,
+} from './dynamic-discovery';
 import {
   GitHubDiscovery,
   type IGitHubDiscoveryOptions,
@@ -20,13 +32,9 @@ import {
   type IGitHubReleasesDiscoveryOptions,
 } from './github-releases-discovery';
 import { type IMavenDiscoveryOptions, MavenDiscovery } from './maven-discovery';
-
 import { type ISourceConfig, SourceConfigs } from './source-configs';
 import type { ISourceItem } from './source-item-factory';
-import { DiscordDiscovery, type IDiscordDiscoveryOptions } from './discord-discovery';
-import { VideoDiscovery, type IVideoDiscoveryOptions } from './video-discovery';
-import { DynamicDiscovery, type IDynamicDiscoveryOptions } from './dynamic-discovery';
-import { CommunityDiscovery, type ICommunityDiscoveryOptions } from './community-discovery';
+import { type IVideoDiscoveryOptions, VideoDiscovery } from './video-discovery';
 
 type IDiscoveryOptions = { cacheDirectory: string } & IGitHubDiscoveryOptions &
   IRSSDiscoveryOptions &
@@ -45,7 +53,7 @@ export class DiscoveryCore {
   sourceConfigs: SourceConfigs;
   stats: DiscoveryStats;
   githubDiscovery: GitHubDiscovery;
-  
+
   githubReleasesDiscovery: GitHubReleasesDiscovery;
   mavenDiscovery: MavenDiscovery;
   directUrlDiscovery: DirectUrlDiscovery;
@@ -73,7 +81,7 @@ export class DiscoveryCore {
     this.sourceConfigs = new SourceConfigs();
     this.stats = new DiscoveryStats();
     this.githubDiscovery = new GitHubDiscovery(this.options);
-    
+
     this.githubReleasesDiscovery = new GitHubReleasesDiscovery(this.options);
     this.mavenDiscovery = new MavenDiscovery(this.options);
     this.directUrlDiscovery = new DirectUrlDiscovery(this.options);
@@ -160,7 +168,7 @@ export class DiscoveryCore {
           this.discoveredSources
         );
         break;
-      
+
       case 'github_releases':
         await this._discoverFromGitHubReleases(sourceId, config);
         break;
@@ -471,10 +479,7 @@ export class DiscoveryCore {
         this.discoveredSources
       );
 
-      logger.info(
-        { sourceId },
-        `📊 ${sourceId}: discovered video sources`
-      );
+      logger.info({ sourceId }, `📊 ${sourceId}: discovered video sources`);
     } catch (error: unknown) {
       if (error instanceof Error) {
         logger.error(
@@ -521,10 +526,14 @@ export class DiscoveryCore {
   /**
    * Discover sources from community submissions
    */
-  async _discoverFromCommunitySubmissions(sourceId: string, config: ISourceConfig) {
+  async _discoverFromCommunitySubmissions(
+    sourceId: string,
+    config: ISourceConfig
+  ) {
     try {
       await this.communityDiscovery.initialize();
-      const approvedSources = await this.communityDiscovery.getApprovedSources();
+      const approvedSources =
+        await this.communityDiscovery.getApprovedSources();
 
       for (const source of approvedSources) {
         this.discoveredSources.set(source.url, source);
