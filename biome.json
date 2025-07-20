@@ -1,11 +1,59 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.1.1/schema.json",
-  "extends": ["ultracite"],
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "suspicious": {
+        "noConsole": "off",
+        "noExplicitAny": "off",
+        "noTemplateCurlyInString": "off",
+        "noAssignInExpressions": "off",
+        "noImplicitAnyLet": "off"
+      },
+      "complexity": {
+        "noExcessiveCognitiveComplexity": {
+          "level": "error",
+          "options": {
+            "maxAllowedComplexity": 40
+          }
+        }
+      },
+      "style": {
+        "useFilenamingConvention": "off"
+      }
     }
+  },
+  "overrides": [
+    {
+      "includes": ["src/test/**/*.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          },
+          "complexity": {
+            "useLiteralKeys": "off"
+          }
+        }
+      }
+    }
+  ],
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "lineEnding": "lf"
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "trailingCommas": "es5",
+      "semicolons": "always"
+    }
+  },
+  "files": {
+    "includes": ["src/**/*.ts", "src/**/*.tsx", "scripts/**/*.ts"]
   }
 }
