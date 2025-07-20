@@ -157,6 +157,88 @@ export class GitHubDiscovery {
   }
 
   /**
+   * Discover content from a GitHub repository based on glob patterns.
+   */
+  async discoverFromGitHubRepo(
+    sourceId: string,
+    config: ISourceConfig,
+    discoveredSources: Map<string, ISourceItem>
+  ): Promise<number> {
+    return executeWithDegradation(
+      async () => {
+        const { owner, repo, path, glob } = config;
+        if (!owner || !repo || !path || !glob) {
+          throw new Error('Missing owner, repo, path, or glob in GitHub repo config');
+        }
+
+        const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+        const files = await githubClient.getJson<
+          Array<{
+            name: string;
+            type: 'file' | 'dir';
+            download_url?: string;
+            url: string;
+            size: number;
+          }>
+        >(apiUrl);
+
+        let discovered = 0;
+
+        for (const item of files) {
+          if (item.type === 'file' && item.name.match(new RegExp(glob.replace('.', '\.').replace('*', '.*')))) {
+            const sourceItemId = `${sourceId}-${item.name}`;
+            const rawContentUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/${path}/${item.name}`;
+
+            const sourceItem = await this.sourceItemFactory.createSourceItem({
+              id: sourceItemId,
+              status: 'discovered',
+              url: rawContentUrl,
+              source_type: config.source_type as SourceType,
+              loader_type: config.loader_type as LoaderType,
+              title: item.name,
+              file_size_bytes: item.size,
+              checksum: await this._generateUrlChecksum(rawContentUrl),
+              tags: ['github', owner, repo, path, item.name],
+              priority: this.contentAnalyzer.determinePriority(item.name),
+              relevance_score: this.contentAnalyzer.calculateRelevance(
+                item.name,
+                config.source_type
+              ),
+            });
+
+            discoveredSources.set(sourceItemId, sourceItem);
+            discovered++;
+          }
+        }
+
+        logger.info({ sourceId, count: discovered }, 'Discovered GitHub repo files');
+        return discovered;
+      },
+      'github_discovery',
+      `discover_from_github_repo_${sourceId}`,
+      {
+        allowDegradation: true,
+        fallbackData: 0,
+        skipOnFailure: false,
+        required: false
+      }
+    ).then(result => {
+      if (result.degraded) {
+        logger.warn(
+          `🔄 GitHub repo discovery completed with degradation`,
+          {
+            sourceId,
+            degradationLevel: result.degradationLevel,
+            strategy: result.strategy,
+            warnings: result.warnings
+          }
+        );
+      }
+      return result.data || 0;
+    });
+  }
+
+  /**
    * Generate a checksum for a URL
    */
   _generateUrlChecksum(url: string): string {

@@ -20,7 +20,7 @@ import {
   type IGitHubReleasesDiscoveryOptions,
 } from './github-releases-discovery';
 import { type IMavenDiscoveryOptions, MavenDiscovery } from './maven-discovery';
-import { type IRSSDiscoveryOptions, RSSDiscovery } from './rss-discovery';
+
 import { type ISourceConfig, SourceConfigs } from './source-configs';
 import type { ISourceItem } from './source-item-factory';
 import { DiscordDiscovery, type IDiscordDiscoveryOptions } from './discord-discovery';
@@ -45,7 +45,7 @@ export class DiscoveryCore {
   sourceConfigs: SourceConfigs;
   stats: DiscoveryStats;
   githubDiscovery: GitHubDiscovery;
-  rssDiscovery: RSSDiscovery;
+  
   githubReleasesDiscovery: GitHubReleasesDiscovery;
   mavenDiscovery: MavenDiscovery;
   directUrlDiscovery: DirectUrlDiscovery;
@@ -73,7 +73,7 @@ export class DiscoveryCore {
     this.sourceConfigs = new SourceConfigs();
     this.stats = new DiscoveryStats();
     this.githubDiscovery = new GitHubDiscovery(this.options);
-    this.rssDiscovery = new RSSDiscovery(this.options);
+    
     this.githubReleasesDiscovery = new GitHubReleasesDiscovery(this.options);
     this.mavenDiscovery = new MavenDiscovery(this.options);
     this.directUrlDiscovery = new DirectUrlDiscovery(this.options);
@@ -153,13 +153,14 @@ export class DiscoveryCore {
           this.discoveredSources
         );
         break;
-      case 'rss_feed':
-        await this.rssDiscovery.discoverFromRSSFeed(
+      case 'github_repo':
+        await this.githubDiscovery.discoverFromGitHubRepo(
           sourceId,
           config,
           this.discoveredSources
         );
         break;
+      
       case 'github_releases':
         await this._discoverFromGitHubReleases(sourceId, config);
         break;
