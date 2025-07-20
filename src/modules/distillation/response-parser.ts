@@ -93,7 +93,7 @@ export class ResponseParser {
           !(
             line.includes('MCP STDERR') ||
             line.includes('Context7 Documentation') ||
-            line.includes('Linkie MCP server') ||
+            line.includes('Modding MCP server') ||
             line.includes('Connected to Linkie backend') ||
             line.includes('Available tools:') ||
             line.includes('Loaded cached credentials')

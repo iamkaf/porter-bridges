@@ -383,7 +383,7 @@ export class OptimizedBundleModule {
           (entry) =>
             entry.isDirectory() &&
             (entry.name.startsWith('v') ||
-              entry.name.startsWith('linkie-porting-data-v'))
+              entry.name.startsWith('bridge-bundle-v'))
         )
         .map(async (entry) => {
           const packagePath = path.join(

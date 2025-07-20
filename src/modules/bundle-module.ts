@@ -236,7 +236,7 @@ export class BundleModule {
         if (
           entry.isDirectory() &&
           (entry.name.startsWith('v') ||
-            entry.name.startsWith('linkie-porting-data-v'))
+            entry.name.startsWith('bridge-bundle-v'))
         ) {
           const packagePath = path.join(
             this.options.packageDirectory,

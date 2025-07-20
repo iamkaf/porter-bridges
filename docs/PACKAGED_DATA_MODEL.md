@@ -13,7 +13,7 @@ This document defines the data structures used for the packaged porting intellig
 A data package is a directory with a `package.json` file that defines its own version (e.g., `1.0.0`, `1.1.0`) and the progress of data collection. The data is organized as follows:
 
 ```
-/linkie-porting-data-v1.0.0/
+/bridge-bundle-v1.0.0/
 ├── package.json
 ├── raw/
 │   ├── neoforged-primers/
@@ -36,7 +36,7 @@ To support robust and resumable data collection and distillation, the `package.j
 
 ```json
 {
-  "name": "linkie-porting-data",
+  "name": "bridge-bundle",
   "version": "1.0.0",
   "description": "A comprehensive, versioned collection of Minecraft mod porting data.",
   "progress": {

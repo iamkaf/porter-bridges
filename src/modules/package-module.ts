@@ -76,7 +76,7 @@ export class PackageModule {
       // Create PACKAGED_DATA_MODEL compliant structure
       const packagePath = path.join(
         this.options.packageDirectory,
-        `linkie-porting-data-v${this.options.version}`
+        `bridge-bundle-v${this.options.version}`
       );
       const rawPath = path.join(packagePath, 'raw');
       const distilledPath = path.join(packagePath, 'distilled');
@@ -496,7 +496,7 @@ export class PackageModule {
    */
   _generatePackageMetadata(packageResults: any, _sourcesData: any): any {
     return {
-      name: 'linkie-porting-data',
+      name: 'bridge-bundle',
       version: this.options.version,
       description:
         'A comprehensive, versioned collection of Minecraft mod porting data.',
