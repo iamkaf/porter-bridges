@@ -7,7 +7,7 @@
 
 import { LRUCache } from 'lru-cache';
 import { logger } from '../logger';
-import { performanceMonitor } from '../performance/performance-monitor';
+
 
 export interface CacheConfig {
   maxSize: number;

@@ -430,7 +430,7 @@ export class VideoDiscovery {
     videoId: string,
     rawCaptions: string
   ): IVideoTranscription {
-    const doc = this.mlAnalyzer ? undefined : undefined; // Use NLP if available
+    
 
     // Extract keywords and topics
     const keywords = this.contentAnalyzer.extractTags(rawCaptions, '');
@@ -551,9 +551,6 @@ export class VideoDiscovery {
     transcription?: IVideoTranscription
   ): IVideoAnalysis['quality_indicators'] {
     // Quality assessment based on various factors
-    const viewRatio = metadata.view_count / (metadata.duration / 60); // Views per minute
-    const engagementRatio =
-      metadata.like_count / Math.max(metadata.view_count, 1);
 
     const audioQuality =
       transcription?.confidence > 0.8

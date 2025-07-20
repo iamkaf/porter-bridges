@@ -6,7 +6,7 @@
  */
 
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CompletionInstaller } from '../completions';
 import { ConfigWizard } from '../config-wizard';
@@ -132,7 +132,7 @@ describe('Configuration Wizard', () => {
   let configWizard: ConfigWizard;
   let mockInquirer: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     configWizard = new ConfigWizard();
     mockInquirer = (await import('inquirer')).default;
   });

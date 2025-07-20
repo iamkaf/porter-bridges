@@ -576,11 +576,11 @@ export class DynamicDiscovery {
    */
   private async getRecentCommitsCount(repoName: string): Promise<number> {
     try {
-      const response = await this.githubApiCall(
-        `/repos/${repoName}/commits?since=${this.getRecentDate()}`
+      const response = await githubClient.getJson<Array<any>>(
+        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
       );
       return response.length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
@@ -594,7 +594,7 @@ export class DynamicDiscovery {
       return response.filter(
         (release: any) => new Date(release.published_at) > recentDate
       ).length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
@@ -605,7 +605,7 @@ export class DynamicDiscovery {
         `/repos/${repoName}/issues?since=${this.getRecentDate()}&state=all`
       );
       return response.length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }

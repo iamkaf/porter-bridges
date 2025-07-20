@@ -5,7 +5,7 @@
  * conditional requests, and response compression.
  */
 
-import { createHash } from 'node:crypto';
+
 import { promisify } from 'node:util';
 import { gunzip, gzip } from 'node:zlib';
 import { logger } from '../logger';

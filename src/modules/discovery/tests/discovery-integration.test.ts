@@ -121,7 +121,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         loader_type: 'forge',
       };
 
-      const analysis1 = await mlAnalyzer.analyzeContent(content1);
+      await mlAnalyzer.analyzeContent(content1);
       const analysis2 = await mlAnalyzer.analyzeContent(content2);
 
       expect(analysis2.similar_content_ids).toContain('content-1');
@@ -548,7 +548,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
     });
 
     it('should handle discovery from multiple source types', async () => {
-      const discoveredSources = new Map();
+      
 
       // Mock successful discovery from each source type
       const testConfig = {

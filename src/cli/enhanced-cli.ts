@@ -408,7 +408,7 @@ export class EnhancedCLI {
   private async validateConfiguration(configPath: string): Promise<void> {
     try {
       const configData = await fs.readFile(configPath, 'utf-8');
-      const config = JSON.parse(configData);
+      JSON.parse(configData); // Attempt to parse to validate JSON
 
       console.log(chalk.green('✅ Configuration is valid'));
       console.log(chalk.gray(`   File: ${configPath}`));

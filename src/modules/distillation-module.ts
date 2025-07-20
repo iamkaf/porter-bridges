@@ -38,7 +38,7 @@ class DistillationFilters {
           `🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`
         );
       }
-    } catch (error) {
+    } catch {
       // Directory might not exist yet, that's okay
     }
 

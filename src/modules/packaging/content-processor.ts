@@ -132,7 +132,7 @@ export class ContentProcessor {
               .createHash('sha256')
               .update(collectedContent)
               .digest('hex');
-          } catch (error) {
+          } catch {
             // Use defaults if collected content is not available
             fileStats = { size: 0 };
             contentChecksum = source.checksum || '';

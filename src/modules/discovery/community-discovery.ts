@@ -15,7 +15,7 @@ import { join } from 'path';
 import { logger } from '../../utils/logger';
 import { MLContentAnalyzer } from '../../utils/ml-content-analyzer';
 import { ContentAnalyzer } from './content-analyzer';
-import type { ISourceConfig } from './source-configs';
+
 import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
 export interface ICommunitySubmission {
@@ -485,7 +485,7 @@ export class CommunityDiscovery {
       if (!response.ok) {
         errors.push(`URL not accessible: ${response.status}`);
       }
-    } catch (error) {
+    } catch {
       errors.push('URL not accessible');
     }
 
@@ -612,7 +612,7 @@ export class CommunityDiscovery {
     try {
       const data = await readFile(this.submissionsPath, 'utf-8');
       return JSON.parse(data);
-    } catch (error) {
+    } catch {
       logger.warn('Failed to load submissions, returning empty array');
       return [];
     }
@@ -636,7 +636,7 @@ export class CommunityDiscovery {
     try {
       const data = await readFile(this.approvedSourcesPath, 'utf-8');
       return JSON.parse(data);
-    } catch (error) {
+    } catch {
       logger.warn('Failed to load approved sources, returning empty array');
       return [];
     }
