@@ -99,6 +99,25 @@ export class VersionGrouper {
       return patch ? `${major}.${minor}.${patch}` : `${major}.${minor}`;
     }
 
+    // Handle fabric/neoforge blog post patterns like: 2024-05-31-121.md -> 1.21
+    const blogVersionMatch = url.match(/(\d{3,4})\.md$/);
+    if (blogVersionMatch) {
+      const versionNumber = blogVersionMatch[1];
+      // Handle 3-digit patterns: 121 -> 1.21, 1205 -> 1.20.5
+      if (versionNumber.length === 3) {
+        const major = versionNumber[0];
+        const minor = versionNumber.substring(1);
+        return `${major}.${minor}`;
+      }
+      // Handle 4-digit patterns: 1205 -> 1.20.5
+      if (versionNumber.length === 4) {
+        const major = versionNumber[0];
+        const minor = versionNumber.substring(1, 3);
+        const patch = versionNumber.substring(3);
+        return `${major}.${minor}.${patch}`;
+      }
+    }
+
     // Handle other version patterns in URLs
     const versionMatch = url.match(/\b1[._](\d+)(?:[._](\d+))?\b/);
     if (versionMatch) {
@@ -117,8 +136,31 @@ export class VersionGrouper {
       return null;
     }
 
+    // First try direct pattern match for full versions (e.g., "1.21", "1.20.5")
     const matches = text.match(/\b1\.\d+(?:\.\d+)?\b/);
-    return matches ? matches[0] : null;
+    if (matches) {
+      return matches[0];
+    }
+
+    // For fabric/neoforge blog posts, also try filename patterns in titles
+    // e.g., "2024-05-31-121.md" -> extract "121" -> "1.21"
+    const filenameMatch = text.match(/(\d{3,4})\.md$/);
+    if (filenameMatch) {
+      const versionNumber = filenameMatch[1];
+      if (versionNumber.length === 3) {
+        const major = versionNumber[0];
+        const minor = versionNumber.substring(1);
+        return `${major}.${minor}`;
+      }
+      if (versionNumber.length === 4) {
+        const major = versionNumber[0];
+        const minor = versionNumber.substring(1, 3);
+        const patch = versionNumber.substring(3);
+        return `${major}.${minor}.${patch}`;
+      }
+    }
+
+    return null;
   }
 
   /**
