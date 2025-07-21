@@ -10,7 +10,7 @@ const winstonLogger = winston.createLogger({
   level: 'debug',
   defaultMeta: {
     project: 'linkie',
-    source: 'porter-bridges'
+    source: 'porter-bridges',
   },
   format: winston.format.combine(
     winston.format.timestamp(),

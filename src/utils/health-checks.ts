@@ -8,12 +8,20 @@
 
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { logger } from './logger';
-import { globalHealthCheckManager, type HealthCheckResult } from './error-handling';
-import { globalCircuitBreakerRegistry } from './circuit-breaker';
-import { globalDegradationManager } from './graceful-degradation';
-import { createHttpHealthCheck, githubClient, rssClient, mavenClient } from './http';
 import { createEnhancedAIProcessor } from './ai-processing';
+import { globalCircuitBreakerRegistry } from './circuit-breaker';
+import {
+  globalHealthCheckManager,
+  type HealthCheckResult,
+} from './error-handling';
+import { globalDegradationManager } from './graceful-degradation';
+import {
+  createHttpHealthCheck,
+  githubClient,
+  mavenClient,
+  rssClient,
+} from './http';
+import { logger } from './logger';
 
 /**
  * Overall system health status
@@ -101,9 +109,12 @@ export class PorterBridgesHealthManager {
     });
 
     // Generated directories health check
-    globalHealthCheckManager.registerCheck('generated_directories', async () => {
-      return this.checkGeneratedDirectories();
-    });
+    globalHealthCheckManager.registerCheck(
+      'generated_directories',
+      async () => {
+        return this.checkGeneratedDirectories();
+      }
+    );
 
     // Configuration health check
     globalHealthCheckManager.registerCheck('configuration', async () => {
@@ -122,16 +133,20 @@ export class PorterBridgesHealthManager {
     try {
       // Get all health check results
       const healthChecks = await globalHealthCheckManager.runAllChecks();
-      
+
       // Get circuit breaker status
       const circuitBreakers = globalCircuitBreakerRegistry.getAllStatus();
-      
+
       // Get degradation status
-      const degradationContext = globalDegradationManager.getDegradationContext();
-      const systemHealthSummary = globalDegradationManager.getSystemHealthSummary();
+      const degradationContext =
+        globalDegradationManager.getDegradationContext();
+      const systemHealthSummary =
+        globalDegradationManager.getSystemHealthSummary();
 
       // Calculate summary
-      const healthyComponents = Object.values(healthChecks).filter(c => c.healthy).length;
+      const healthyComponents = Object.values(healthChecks).filter(
+        (c) => c.healthy
+      ).length;
       const totalComponents = Object.values(healthChecks).length;
       const unhealthyComponents = totalComponents - healthyComponents;
 
@@ -147,7 +162,9 @@ export class PorterBridgesHealthManager {
 
       // Add degradation warnings
       if (degradationContext.level !== 'none') {
-        warnings.push(`System operating in ${degradationContext.level} degradation mode`);
+        warnings.push(
+          `System operating in ${degradationContext.level} degradation mode`
+        );
       }
 
       // Add circuit breaker warnings
@@ -157,8 +174,9 @@ export class PorterBridgesHealthManager {
         }
       }
 
-      const overallHealthy = healthyComponents === totalComponents && 
-                            systemHealthSummary.canContinue;
+      const overallHealthy =
+        healthyComponents === totalComponents &&
+        systemHealthSummary.canContinue;
 
       const systemHealth: SystemHealthStatus = {
         healthy: overallHealthy,
@@ -172,35 +190,31 @@ export class PorterBridgesHealthManager {
           level: degradationContext.level,
           canContinue: systemHealthSummary.canContinue,
           activeServices: degradationContext.activeServices,
-          failedServices: degradationContext.failedServices
+          failedServices: degradationContext.failedServices,
         },
         summary: {
           total: totalComponents,
           healthy: healthyComponents,
           unhealthy: unhealthyComponents,
           warnings,
-          errors
-        }
+          errors,
+        },
       };
 
       const duration = Date.now() - startTime;
-      logger.info(
-        `📊 System health check completed in ${duration}ms`,
-        {
-          healthy: overallHealthy,
-          healthyComponents,
-          totalComponents,
-          degradationLevel: degradationContext.level,
-          canContinue: systemHealthSummary.canContinue
-        }
-      );
+      logger.info(`📊 System health check completed in ${duration}ms`, {
+        healthy: overallHealthy,
+        healthyComponents,
+        totalComponents,
+        degradationLevel: degradationContext.level,
+        canContinue: systemHealthSummary.canContinue,
+      });
 
       return systemHealth;
     } catch (error) {
-      logger.error(
-        '❌ System health check failed',
-        { error: error instanceof Error ? error.message : String(error) }
-      );
+      logger.error('❌ System health check failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
 
       throw error;
     }
@@ -224,7 +238,7 @@ export class PorterBridgesHealthManager {
   }> {
     try {
       const systemHealth = await this.getSystemHealth();
-      
+
       let status: 'healthy' | 'degraded' | 'unhealthy';
       let message: string;
 
@@ -243,14 +257,14 @@ export class PorterBridgesHealthManager {
         status,
         timestamp: systemHealth.timestamp,
         uptime: systemHealth.uptime,
-        message
+        message,
       };
     } catch (error) {
       return {
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
         uptime: Date.now() - this.startTime,
-        message: `Health check failed: ${error instanceof Error ? error.message : String(error)}`
+        message: `Health check failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }
@@ -273,13 +287,13 @@ export class PorterBridgesHealthManager {
     try {
       // Test directory creation
       await fs.mkdir(testDir, { recursive: true });
-      
+
       // Test file write
       await fs.writeFile(testFile, 'health-check-test', 'utf8');
-      
+
       // Test file read
       const content = await fs.readFile(testFile, 'utf8');
-      
+
       // Test file deletion
       await fs.unlink(testFile);
 
@@ -295,8 +309,8 @@ export class PorterBridgesHealthManager {
         responseTime: Date.now() - startTime,
         details: {
           testDir,
-          operations: ['mkdir', 'writeFile', 'readFile', 'unlink']
-        }
+          operations: ['mkdir', 'writeFile', 'readFile', 'unlink'],
+        },
       };
     } catch (error) {
       return {
@@ -307,8 +321,8 @@ export class PorterBridgesHealthManager {
         responseTime: Date.now() - startTime,
         details: {
           testDir,
-          error: error instanceof Error ? error.message : String(error)
-        }
+          error: error instanceof Error ? error.message : String(error),
+        },
       };
     }
   }
@@ -320,7 +334,7 @@ export class PorterBridgesHealthManager {
     try {
       // Check if state file exists
       await fs.access(stateFile);
-      
+
       // Read and parse state file
       const stateContent = await fs.readFile(stateFile, 'utf8');
       const state = JSON.parse(stateContent);
@@ -341,18 +355,17 @@ export class PorterBridgesHealthManager {
         details: {
           stateFile,
           sourceCount,
-          lastUpdate: state.last_update
-        }
+          lastUpdate: state.last_update,
+        },
       };
     } catch (error) {
-      const isFileNotFound = error instanceof Error && 
-                             'code' in error && 
-                             error.code === 'ENOENT';
+      const isFileNotFound =
+        error instanceof Error && 'code' in error && error.code === 'ENOENT';
 
       return {
         healthy: isFileNotFound, // Missing state file is OK for new installations
         component: 'pipeline_state',
-        message: isFileNotFound 
+        message: isFileNotFound
           ? 'Pipeline state file not found (new installation)'
           : `Pipeline state check failed: ${error instanceof Error ? error.message : String(error)}`,
         timestamp: new Date().toISOString(),
@@ -360,8 +373,8 @@ export class PorterBridgesHealthManager {
         details: {
           stateFile,
           error: error instanceof Error ? error.message : String(error),
-          fileNotFound: isFileNotFound
-        }
+          fileNotFound: isFileNotFound,
+        },
       };
     }
   }
@@ -374,7 +387,7 @@ export class PorterBridgesHealthManager {
       './generated/distilled-content',
       './generated/packages',
       './generated/bundles',
-      './logs'
+      './logs',
     ];
 
     const results: Record<string, boolean> = {};
@@ -386,7 +399,9 @@ export class PorterBridgesHealthManager {
         results[dir] = true;
       } catch (error) {
         results[dir] = false;
-        errors.push(`${dir}: ${error instanceof Error ? error.message : String(error)}`);
+        errors.push(
+          `${dir}: ${error instanceof Error ? error.message : String(error)}`
+        );
       }
     }
 
@@ -404,8 +419,8 @@ export class PorterBridgesHealthManager {
       responseTime: Date.now() - startTime,
       details: {
         directories: results,
-        errors: errors.length > 0 ? errors : undefined
-      }
+        errors: errors.length > 0 ? errors : undefined,
+      },
     };
   }
 
@@ -426,10 +441,12 @@ export class PorterBridgesHealthManager {
 
     // Check Node.js version
     const nodeVersion = process.version;
-    const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
+    const majorVersion = Number.parseInt(nodeVersion.slice(1).split('.')[0]);
     checks.node_version = majorVersion >= 18;
     if (majorVersion < 18) {
-      issues.push(`Node.js version ${nodeVersion} is below minimum requirement (18)`);
+      issues.push(
+        `Node.js version ${nodeVersion} is below minimum requirement (18)`
+      );
     }
 
     // Check available memory
@@ -437,7 +454,9 @@ export class PorterBridgesHealthManager {
     const availableMemory = memoryUsage.heapTotal - memoryUsage.heapUsed;
     checks.memory = availableMemory > 100 * 1024 * 1024; // 100MB threshold
     if (!checks.memory) {
-      issues.push(`Low available memory: ${Math.round(availableMemory / 1024 / 1024)}MB`);
+      issues.push(
+        `Low available memory: ${Math.round(availableMemory / 1024 / 1024)}MB`
+      );
     }
 
     const healthy = Object.values(checks).every(Boolean);
@@ -457,9 +476,9 @@ export class PorterBridgesHealthManager {
         memoryUsage: {
           heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
           heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024),
-          external: Math.round(memoryUsage.external / 1024 / 1024)
-        }
-      }
+          external: Math.round(memoryUsage.external / 1024 / 1024),
+        },
+      },
     };
   }
 
@@ -490,7 +509,7 @@ export const globalHealthManager = new PorterBridgesHealthManager();
 export async function healthCheckCommand(): Promise<void> {
   try {
     console.log('🔍 Running system health check...\n');
-    
+
     const startTime = Date.now();
     const systemHealth = await globalHealthManager.getSystemHealth();
     const duration = Date.now() - startTime;
@@ -498,9 +517,13 @@ export async function healthCheckCommand(): Promise<void> {
     // Print overall status
     const statusEmoji = systemHealth.healthy ? '✅' : '❌';
     const uptimeHours = Math.floor(systemHealth.uptime / (1000 * 60 * 60));
-    const uptimeMinutes = Math.floor((systemHealth.uptime % (1000 * 60 * 60)) / (1000 * 60));
-    
-    console.log(`${statusEmoji} System Status: ${systemHealth.healthy ? 'HEALTHY' : 'UNHEALTHY'}`);
+    const uptimeMinutes = Math.floor(
+      (systemHealth.uptime % (1000 * 60 * 60)) / (1000 * 60)
+    );
+
+    console.log(
+      `${statusEmoji} System Status: ${systemHealth.healthy ? 'HEALTHY' : 'UNHEALTHY'}`
+    );
     console.log(`⏱️  Uptime: ${uptimeHours}h ${uptimeMinutes}m`);
     console.log(`🏷️  Version: ${systemHealth.version}`);
     console.log(`🌍 Environment: ${systemHealth.environment}`);
@@ -510,16 +533,24 @@ export async function healthCheckCommand(): Promise<void> {
     console.log('📊 Component Status:');
     for (const [name, check] of Object.entries(systemHealth.components)) {
       const emoji = check.healthy ? '✅' : '❌';
-      console.log(`  ${emoji} ${name}: ${check.message} (${check.responseTime}ms)`);
+      console.log(
+        `  ${emoji} ${name}: ${check.message} (${check.responseTime}ms)`
+      );
     }
     console.log();
 
     // Print degradation status
     if (systemHealth.degradation.level !== 'none') {
-      console.log(`⚠️  Degradation Level: ${systemHealth.degradation.level.toUpperCase()}`);
-      console.log(`🔄 Can Continue: ${systemHealth.degradation.canContinue ? 'Yes' : 'No'}`);
+      console.log(
+        `⚠️  Degradation Level: ${systemHealth.degradation.level.toUpperCase()}`
+      );
+      console.log(
+        `🔄 Can Continue: ${systemHealth.degradation.canContinue ? 'Yes' : 'No'}`
+      );
       if (systemHealth.degradation.failedServices.length > 0) {
-        console.log(`💥 Failed Services: ${systemHealth.degradation.failedServices.join(', ')}`);
+        console.log(
+          `💥 Failed Services: ${systemHealth.degradation.failedServices.join(', ')}`
+        );
       }
       console.log();
     }
@@ -554,14 +585,19 @@ export async function healthCheckCommand(): Promise<void> {
 
     // Print summary
     console.log('📈 Summary:');
-    console.log(`  Components: ${systemHealth.summary.healthy}/${systemHealth.summary.total} healthy`);
+    console.log(
+      `  Components: ${systemHealth.summary.healthy}/${systemHealth.summary.total} healthy`
+    );
     console.log(`  Warnings: ${systemHealth.summary.warnings.length}`);
     console.log(`  Errors: ${systemHealth.summary.errors.length}`);
 
     // Exit with appropriate code
     process.exit(systemHealth.healthy ? 0 : 1);
   } catch (error) {
-    console.error('❌ Health check failed:', error instanceof Error ? error.message : String(error));
+    console.error(
+      '❌ Health check failed:',
+      error instanceof Error ? error.message : String(error)
+    );
     process.exit(1);
   }
 }
@@ -578,6 +614,6 @@ export async function simpleHealthEndpoint(): Promise<{
   return {
     status: healthStatus.status,
     timestamp: healthStatus.timestamp,
-    uptime: healthStatus.uptime
+    uptime: healthStatus.uptime,
   };
 }

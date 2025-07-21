@@ -32,11 +32,13 @@ class DistillationFilters {
     let existingFiles: Set<string> = new Set();
     try {
       const files = await fs.readdir(outputDirectory);
-      existingFiles = new Set(files.filter(f => f.endsWith('.json')));
+      existingFiles = new Set(files.filter((f) => f.endsWith('.json')));
       if (existingFiles.size > 0) {
-        logger.info(`🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`);
+        logger.info(
+          `🔍 Found ${existingFiles.size} existing distilled files in ${outputDirectory}`
+        );
       }
-    } catch (error) {
+    } catch {
       // Directory might not exist yet, that's okay
     }
 
@@ -52,15 +54,20 @@ class DistillationFilters {
       if (existingFiles.has(outputFilename) && !filters.forceReprocess) {
         // Update the source status to distilled if file exists
         (source as any).status = 'distilled';
-        (source as any).distilled_at = (source as any).distilled_at || new Date().toISOString();
-        
+        (source as any).distilled_at =
+          (source as any).distilled_at || new Date().toISOString();
+
         // CRITICAL: Apply this update back to the sourcesData immediately
         if (sourcesData.sources && sourcesData.sources[sourceKey]) {
           sourcesData.sources[sourceKey].status = 'distilled';
-          sourcesData.sources[sourceKey].distilled_at = (source as any).distilled_at;
+          sourcesData.sources[sourceKey].distilled_at = (
+            source as any
+          ).distilled_at;
         }
-        
-        logger.info(`⏭️  Skipping already distilled: ${(source as any).url} (found ${outputFilename})`);
+
+        logger.info(
+          `⏭️  Skipping already distilled: ${(source as any).url} (found ${outputFilename})`
+        );
         skippedCount++;
         continue;
       }
@@ -72,16 +79,20 @@ class DistillationFilters {
         (source as any).distillation_metadata = {
           skipped: true,
           reason: 'skip_distillation hint',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         };
-        
+
         // CRITICAL: Apply this update back to the sourcesData immediately
         if (sourcesData.sources && sourcesData.sources[sourceKey]) {
           sourcesData.sources[sourceKey].status = 'packaged';
-          sourcesData.sources[sourceKey].distillation_metadata = (source as any).distillation_metadata;
+          sourcesData.sources[sourceKey].distillation_metadata = (
+            source as any
+          ).distillation_metadata;
         }
-        
-        logger.info(`⏭️  Skipping distillation (marked to skip): ${(source as any).url}`);
+
+        logger.info(
+          `⏭️  Skipping distillation (marked to skip): ${(source as any).url}`
+        );
         skippedCount++;
         continue;
       }
@@ -130,7 +141,9 @@ class DistillationFilters {
     }
 
     if (skippedCount > 0) {
-      logger.info(`✅ Skipped ${skippedCount} already distilled sources (found existing files in output directory)`);
+      logger.info(
+        `✅ Skipped ${skippedCount} already distilled sources (found existing files in output directory)`
+      );
     }
 
     return { sources, skippedCount };
@@ -249,16 +262,25 @@ export class DistillationModule {
       await fs.mkdir(this.options.outputDirectory, { recursive: true });
 
       // Filter sources to update existing distilled status
-      const filterResult = await this.filters.filterSources(sourcesData, {}, this.options.outputDirectory);
-      
-      logger.info(`✅ Skipped ${filterResult.skippedCount} already distilled sources (found existing files in output directory)`);
-      
+      const filterResult = await this.filters.filterSources(
+        sourcesData,
+        {},
+        this.options.outputDirectory
+      );
+
+      logger.info(
+        `✅ Skipped ${filterResult.skippedCount} already distilled sources (found existing files in output directory)`
+      );
+
       return {
         skippedCount: filterResult.skippedCount,
-        sources: filterResult.sources
+        sources: filterResult.sources,
       };
     } catch (error: unknown) {
-      logger.error('Failed to update existing distilled status:', error instanceof Error ? error.message : String(error));
+      logger.error(
+        'Failed to update existing distilled status:',
+        error instanceof Error ? error.message : String(error)
+      );
       throw error;
     }
   }
@@ -278,7 +300,11 @@ export class DistillationModule {
       await this.geminiProcessor.verifyGeminiCLI();
 
       // Filter sources based on criteria
-      const filterResult = await this.filters.filterSources(sourcesData, filters, this.options.outputDirectory);
+      const filterResult = await this.filters.filterSources(
+        sourcesData,
+        filters,
+        this.options.outputDirectory
+      );
       const sources = filterResult.sources;
       this.stats.setTotalSources(sources.length);
       if (filterResult.skippedCount > 0) {
@@ -302,9 +328,9 @@ export class DistillationModule {
 
       // Group sources by type for better progress reporting
       const sourcesByType = this._groupSourcesByType(sources);
-      const alreadyDistilledCount = Object.values(sourcesData.sources || {}).filter(
-        (s: any) => s.status === 'distilled'
-      ).length;
+      const alreadyDistilledCount = Object.values(
+        sourcesData.sources || {}
+      ).filter((s: any) => s.status === 'distilled').length;
       logger.info('📋 Distillation plan', {
         breakdown: this._getBreakdownCounts(sourcesByType),
         alreadyDistilled: alreadyDistilledCount,
@@ -487,7 +513,9 @@ export class DistillationModule {
     });
 
     if (this.stats.stats.skipped_sources > 0) {
-      logger.info(`⏭️  Skipped ${this.stats.stats.skipped_sources} already distilled sources (files exist in output directory)`);
+      logger.info(
+        `⏭️  Skipped ${this.stats.stats.skipped_sources} already distilled sources (files exist in output directory)`
+      );
     }
 
     if (summary.distilled_sources > 0) {

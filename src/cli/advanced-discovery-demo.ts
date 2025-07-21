@@ -10,13 +10,13 @@
  */
 
 import { Command } from 'commander';
+import { CommunityDiscovery } from '../modules/discovery/community-discovery';
+import { DiscordDiscovery } from '../modules/discovery/discord-discovery';
+import { DiscoveryCore } from '../modules/discovery/discovery-core';
+import { DynamicDiscovery } from '../modules/discovery/dynamic-discovery';
+import { VideoDiscovery } from '../modules/discovery/video-discovery';
 import { logger } from '../utils/logger';
 import { MLContentAnalyzer } from '../utils/ml-content-analyzer';
-import { DiscordDiscovery } from '../modules/discovery/discord-discovery';
-import { VideoDiscovery } from '../modules/discovery/video-discovery';
-import { DynamicDiscovery } from '../modules/discovery/dynamic-discovery';
-import { CommunityDiscovery } from '../modules/discovery/community-discovery';
-import { DiscoveryCore } from '../modules/discovery/discovery-core';
 
 /**
  * Advanced Discovery Demo Command
@@ -27,10 +27,17 @@ export class AdvancedDiscoveryDemoCommand {
   constructor() {
     this.command = new Command('advanced-discovery-demo')
       .description('Demonstrate Phase 2.1 Advanced Source Discovery features')
-      .option('--feature <feature>', 'Specific feature to demo (ml, discord, video, dynamic, community, all)', 'all')
+      .option(
+        '--feature <feature>',
+        'Specific feature to demo (ml, discord, video, dynamic, community, all)',
+        'all'
+      )
       .option('--github-token <token>', 'GitHub token for dynamic discovery')
       .option('--youtube-api-key <key>', 'YouTube API key for video discovery')
-      .option('--discord-bot-token <token>', 'Discord bot token for Discord discovery')
+      .option(
+        '--discord-bot-token <token>',
+        'Discord bot token for Discord discovery'
+      )
       .option('--verbose', 'Enable verbose logging', false)
       .action(this.execute.bind(this));
   }
@@ -41,7 +48,7 @@ export class AdvancedDiscoveryDemoCommand {
 
   private async execute(options: any): Promise<void> {
     logger.info('🚀 Starting Advanced Discovery Demo');
-    
+
     if (options.verbose) {
       // Enable verbose logging if supported
       console.log('Verbose logging enabled');
@@ -109,7 +116,7 @@ export class AdvancedDiscoveryDemoCommand {
         `,
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'neoforge'
+        loader_type: 'neoforge',
       },
       {
         id: 'tutorial-1',
@@ -128,7 +135,7 @@ export class AdvancedDiscoveryDemoCommand {
         `,
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'fabric'
+        loader_type: 'fabric',
       },
       {
         id: 'irrelevant-1',
@@ -147,8 +154,8 @@ export class AdvancedDiscoveryDemoCommand {
         `,
         source_type: 'blog_post',
         minecraft_version: undefined,
-        loader_type: undefined
-      }
+        loader_type: undefined,
+      },
     ];
 
     for (const content of testContents) {
@@ -160,16 +167,22 @@ export class AdvancedDiscoveryDemoCommand {
       logger.info(`🎯 Relevance Score: ${analysis.relevance_score.toFixed(2)}`);
       logger.info(`🔍 Confidence: ${analysis.confidence.toFixed(2)}`);
       logger.info(`📝 Content Type: ${analysis.content_type}`);
-      logger.info(`💥 Breaking Changes Likelihood: ${analysis.breaking_changes_likelihood.toFixed(2)}`);
-      logger.info(`📊 Complexity Score: ${analysis.complexity_score.toFixed(2)}`);
+      logger.info(
+        `💥 Breaking Changes Likelihood: ${analysis.breaking_changes_likelihood.toFixed(2)}`
+      );
+      logger.info(
+        `📊 Complexity Score: ${analysis.complexity_score.toFixed(2)}`
+      );
       logger.info(`😊 Sentiment: ${analysis.sentiment}`);
       logger.info(`🏷️ Keywords: ${analysis.keywords.slice(0, 5).join(', ')}`);
       logger.info(`📌 Topics: ${analysis.topics.slice(0, 3).join(', ')}`);
       logger.info(`🎮 Versions: ${analysis.version_mentions.join(', ')}`);
       logger.info(`🔗 Tags: ${analysis.tags.slice(0, 5).join(', ')}`);
-      
+
       if (analysis.similar_content_ids.length > 0) {
-        logger.info(`🔄 Similar Content: ${analysis.similar_content_ids.join(', ')}`);
+        logger.info(
+          `🔄 Similar Content: ${analysis.similar_content_ids.join(', ')}`
+        );
       }
     }
   }
@@ -182,20 +195,24 @@ export class AdvancedDiscoveryDemoCommand {
     logger.info('==========================');
 
     if (!botToken) {
-      logger.warn('⚠️ Discord bot token not provided. Skipping Discord discovery demo.');
-      logger.info('To test Discord discovery, provide a bot token with --discord-bot-token');
+      logger.warn(
+        '⚠️ Discord bot token not provided. Skipping Discord discovery demo.'
+      );
+      logger.info(
+        'To test Discord discovery, provide a bot token with --discord-bot-token'
+      );
       return;
     }
 
     const discovery = new DiscordDiscovery({
-      timeout: 10000,
-      maxMessages: 10
+      timeout: 10_000,
+      maxMessages: 10,
     });
 
     // Test Discord API connection
     logger.info('🔌 Testing Discord API connection...');
     const connectionTest = await discovery.testConnection(botToken);
-    
+
     if (!connectionTest) {
       logger.error('❌ Discord API connection failed');
       return;
@@ -219,15 +236,15 @@ export class AdvancedDiscoveryDemoCommand {
           message_filters: {
             keywords: ['release', 'update', 'version', 'changelog'],
             min_length: 50,
-            max_age_days: 30
-          }
-        }
-      }
+            max_age_days: 30,
+          },
+        },
+      },
     ];
 
     for (const { name, config } of discordConfigs) {
       logger.info(`\n📢 Testing ${name}...`);
-      
+
       try {
         const discoveredSources = new Map();
         await discovery.discoverFromDiscordChannel(
@@ -236,8 +253,10 @@ export class AdvancedDiscoveryDemoCommand {
           discoveredSources
         );
 
-        logger.info(`✅ Discovered ${discoveredSources.size} sources from ${name}`);
-        
+        logger.info(
+          `✅ Discovered ${discoveredSources.size} sources from ${name}`
+        );
+
         // Show sample of discovered sources
         let count = 0;
         for (const [url, source] of discoveredSources) {
@@ -259,8 +278,12 @@ export class AdvancedDiscoveryDemoCommand {
     logger.info('=======================');
 
     if (!youtubeApiKey) {
-      logger.warn('⚠️ YouTube API key not provided. Skipping video discovery demo.');
-      logger.info('To test video discovery, provide an API key with --youtube-api-key');
+      logger.warn(
+        '⚠️ YouTube API key not provided. Skipping video discovery demo.'
+      );
+      logger.info(
+        'To test video discovery, provide an API key with --youtube-api-key'
+      );
       return;
     }
 
@@ -269,7 +292,7 @@ export class AdvancedDiscoveryDemoCommand {
       maxVideoResults: 5,
       minVideoDuration: 300,
       maxVideoDuration: 1800,
-      enableSubtitleDownload: false // Disable for demo
+      enableSubtitleDownload: false, // Disable for demo
     });
 
     const videoConfig = {
@@ -277,7 +300,7 @@ export class AdvancedDiscoveryDemoCommand {
       url: 'https://www.youtube.com/results?search_query=minecraft+modding+tutorial',
       source_type: 'guide',
       loader_type: 'vanilla',
-      description: 'YouTube modding tutorials'
+      description: 'YouTube modding tutorials',
     };
 
     logger.info('🔍 Searching for Minecraft modding tutorials...');
@@ -296,14 +319,18 @@ export class AdvancedDiscoveryDemoCommand {
       for (const [url, source] of discoveredSources) {
         logger.info(`\n📹 Video: ${source.title}`);
         logger.info(`   🔗 URL: ${url}`);
-        logger.info(`   🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`);
+        logger.info(
+          `   🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`
+        );
         logger.info(`   🏷️ Tags: ${source.tags?.join(', ') || 'None'}`);
         logger.info(`   📊 Priority: ${source.priority || 'medium'}`);
-        
+
         if (source.metadata) {
           logger.info(`   👀 Views: ${source.metadata.view_count || 'N/A'}`);
           logger.info(`   ⏱️ Duration: ${source.metadata.duration || 'N/A'}s`);
-          logger.info(`   📺 Channel: ${source.metadata.channel_name || 'N/A'}`);
+          logger.info(
+            `   📺 Channel: ${source.metadata.channel_name || 'N/A'}`
+          );
         }
       }
     } catch (error) {
@@ -324,7 +351,7 @@ export class AdvancedDiscoveryDemoCommand {
       trendingAnalysisPeriod: 'weekly',
       enableActivityAnalysis: true,
       enableTopicAnalysis: true,
-      enableCommunityTracking: true
+      enableCommunityTracking: true,
     });
 
     const dynamicConfig = {
@@ -332,7 +359,7 @@ export class AdvancedDiscoveryDemoCommand {
       url: 'https://github.com/trending',
       source_type: 'guide',
       loader_type: 'vanilla',
-      description: 'GitHub trending repositories analysis'
+      description: 'GitHub trending repositories analysis',
     };
 
     logger.info('📈 Analyzing GitHub trending repositories...');
@@ -359,7 +386,9 @@ export class AdvancedDiscoveryDemoCommand {
         logger.info(`   📊 Relevance: ${insight.relevance_score.toFixed(2)}`);
         logger.info(`   💡 Reason: ${insight.discovery_reason}`);
         logger.info(`   🔗 Sources: ${insight.potential_sources.length}`);
-        logger.info(`   📋 Actions: ${insight.recommended_actions.slice(0, 2).join(', ')}`);
+        logger.info(
+          `   📋 Actions: ${insight.recommended_actions.slice(0, 2).join(', ')}`
+        );
       }
     } catch (error) {
       logger.error('❌ Dynamic discovery failed:', error);
@@ -378,7 +407,7 @@ export class AdvancedDiscoveryDemoCommand {
       maxSubmissionsPerUser: 5,
       autoApproveThreshold: 0.8,
       enableCommunityVoting: true,
-      minVotesForApproval: 2
+      minVotesForApproval: 2,
     });
 
     await discovery.initialize();
@@ -389,7 +418,8 @@ export class AdvancedDiscoveryDemoCommand {
     const demoSubmission = {
       url: 'https://example.com/minecraft-1.21-modding-guide',
       title: 'Complete Minecraft 1.21 Modding Guide',
-      description: 'A comprehensive guide covering all aspects of Minecraft 1.21 modding with practical examples and best practices.',
+      description:
+        'A comprehensive guide covering all aspects of Minecraft 1.21 modding with practical examples and best practices.',
       source_type: 'guide',
       loader_type: 'neoforge',
       minecraft_version: '1.21',
@@ -398,23 +428,26 @@ export class AdvancedDiscoveryDemoCommand {
       submitter: {
         username: 'demo_user',
         email: 'demo@example.com',
-        github_username: 'demo_user'
-      }
+        github_username: 'demo_user',
+      },
     };
 
     // Mock fetch for demo
-    global.fetch = (() => Promise.resolve({
-      ok: true,
-      status: 200,
-      text: () => Promise.resolve('Demo content for validation')
-    })) as any;
+    global.fetch = (() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve('Demo content for validation'),
+      })) as any;
 
     try {
       const result = await discovery.submitSource(demoSubmission);
-      
-      logger.info(`✅ Submission result: ${result.success ? 'Success' : 'Failed'}`);
+
+      logger.info(
+        `✅ Submission result: ${result.success ? 'Success' : 'Failed'}`
+      );
       logger.info(`📄 Message: ${result.message}`);
-      
+
       if (result.submissionId) {
         logger.info(`🆔 Submission ID: ${result.submissionId}`);
       }
@@ -425,7 +458,7 @@ export class AdvancedDiscoveryDemoCommand {
     // Demo contributor stats
     logger.info('\n📊 Contributor Statistics:');
     const stats = await discovery.getContributorStats('demo_user');
-    
+
     logger.info(`   📝 Total Submissions: ${stats.total_submissions}`);
     logger.info(`   ✅ Approved: ${stats.approved_submissions}`);
     logger.info(`   ❌ Rejected: ${stats.rejected_submissions}`);
@@ -436,14 +469,16 @@ export class AdvancedDiscoveryDemoCommand {
     // Demo approved sources
     logger.info('\n📚 Approved Community Sources:');
     const approvedSources = await discovery.getApprovedSources();
-    
+
     if (approvedSources.length === 0) {
       logger.info('   No approved sources yet');
     } else {
       for (const source of approvedSources.slice(0, 3)) {
         logger.info(`   📄 ${source.title}`);
         logger.info(`      🔗 ${source.url}`);
-        logger.info(`      🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`);
+        logger.info(
+          `      🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`
+        );
       }
     }
   }
@@ -458,16 +493,16 @@ export class AdvancedDiscoveryDemoCommand {
     // Run all demos
     await this.demoMLAnalysis();
     logger.info('\n' + '='.repeat(60) + '\n');
-    
+
     await this.demoDiscordDiscovery(options.discordBotToken);
     logger.info('\n' + '='.repeat(60) + '\n');
-    
+
     await this.demoVideoDiscovery(options.youtubeApiKey);
     logger.info('\n' + '='.repeat(60) + '\n');
-    
+
     await this.demoDynamicDiscovery(options.githubToken);
     logger.info('\n' + '='.repeat(60) + '\n');
-    
+
     await this.demoCommunityDiscovery();
     logger.info('\n' + '='.repeat(60) + '\n');
 
@@ -477,33 +512,42 @@ export class AdvancedDiscoveryDemoCommand {
 
     const discoveryCore = new DiscoveryCore({
       cacheDirectory: './demo-cache',
-      timeout: 10000,
+      timeout: 10_000,
       retryAttempts: 1,
       githubToken: options.githubToken,
       youtubeApiKey: options.youtubeApiKey,
       maxVideoResults: 3,
-      maxTrendingRepos: 5
+      maxTrendingRepos: 5,
     });
 
     try {
       const results = await discoveryCore.discover();
-      
+
       logger.info('✅ Full discovery completed!');
-      logger.info(`📊 Total sources discovered: ${results.stats.total_discovered}`);
-      logger.info(`⏱️ Discovery time: ${Date.now() - new Date(results.stats.discovery_start_time).getTime()}ms`);
-      logger.info(`🎯 Success rate: ${((results.stats.total_discovered / (results.stats.total_discovered + results.stats.failed_discoveries)) * 100).toFixed(1)}%`);
-      
+      logger.info(
+        `📊 Total sources discovered: ${results.stats.total_discovered}`
+      );
+      logger.info(
+        `⏱️ Discovery time: ${Date.now() - new Date(results.stats.discovery_start_time).getTime()}ms`
+      );
+      logger.info(
+        `🎯 Success rate: ${((results.stats.total_discovered / (results.stats.total_discovered + results.stats.failed_discoveries)) * 100).toFixed(1)}%`
+      );
+
       // Show distribution by source type
       logger.info('\n📈 Sources by Type:');
-      const sourceTypes = Object.values(results.sources).reduce((acc: any, source: any) => {
-        acc[source.source_type] = (acc[source.source_type] || 0) + 1;
-        return acc;
-      }, {});
-      
+      const sourceTypes = Object.values(results.sources).reduce(
+        (acc: any, source: any) => {
+          acc[source.source_type] = (acc[source.source_type] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
+
       for (const [type, count] of Object.entries(sourceTypes)) {
         logger.info(`   ${type}: ${count}`);
       }
-      
+
       // Show sample of discovered sources
       logger.info('\n📚 Sample Discovered Sources:');
       const sampleSources = Object.values(results.sources).slice(0, 5);
@@ -511,7 +555,9 @@ export class AdvancedDiscoveryDemoCommand {
         logger.info(`   📄 ${source.title || 'Untitled'}`);
         logger.info(`      🔗 ${source.url}`);
         logger.info(`      📝 Type: ${source.source_type}`);
-        logger.info(`      🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`);
+        logger.info(
+          `      🎯 Relevance: ${source.relevance_score?.toFixed(2) || 'N/A'}`
+        );
         logger.info(`      📊 Priority: ${source.priority || 'medium'}`);
       }
     } catch (error) {

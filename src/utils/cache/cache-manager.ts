@@ -7,7 +7,7 @@
 
 import { LRUCache } from 'lru-cache';
 import { logger } from '../logger';
-import { performanceMonitor } from '../performance/performance-monitor';
+
 
 export interface CacheConfig {
   maxSize: number;
@@ -53,8 +53,8 @@ export class CacheManager<K, V> {
       ttlMinutes: config.ttlMinutes || 60,
       updateAgeOnGet: config.updateAgeOnGet !== false,
       updateAgeOnHas: config.updateAgeOnHas !== false,
-      allowStale: config.allowStale || false,
-      checkInterval: config.checkInterval || 30000,
+      allowStale: config.allowStale,
+      checkInterval: config.checkInterval || 30_000,
     };
 
     this.stats = {
@@ -99,28 +99,27 @@ export class CacheManager<K, V> {
    */
   get(key: K): V | undefined {
     const entry = this.cache.get(key);
-    
+
     if (entry) {
       entry.accessCount++;
       entry.lastAccess = Date.now();
       this.stats.hits++;
-      
+
       logger.debug('📦 Cache hit', {
         key: this.safeStringify(key),
         accessCount: entry.accessCount,
         age: Date.now() - entry.timestamp,
       });
-      
+
       return entry.value;
-    } else {
-      this.stats.misses++;
-      
-      logger.debug('📦 Cache miss', {
-        key: this.safeStringify(key),
-      });
-      
-      return undefined;
     }
+    this.stats.misses++;
+
+    logger.debug('📦 Cache miss', {
+      key: this.safeStringify(key),
+    });
+
+    return;
   }
 
   /**
@@ -145,7 +144,7 @@ export class CacheManager<K, V> {
 
     this.stats.sets++;
     this.stats.totalSize += size;
-    
+
     logger.debug('📦 Cache set', {
       key: this.safeStringify(key),
       size,
@@ -166,17 +165,17 @@ export class CacheManager<K, V> {
   delete(key: K): boolean {
     const entry = this.cache.get(key);
     const deleted = this.cache.delete(key);
-    
+
     if (deleted && entry) {
       this.stats.deletes++;
       this.stats.totalSize -= entry.size;
-      
+
       logger.debug('📦 Cache delete', {
         key: this.safeStringify(key),
         size: entry.size,
       });
     }
-    
+
     return deleted;
   }
 
@@ -187,7 +186,7 @@ export class CacheManager<K, V> {
     this.cache.clear();
     this.stats.totalSize = 0;
     this.stats.evictions = 0;
-    
+
     logger.info('📦 Cache cleared');
   }
 
@@ -227,14 +226,14 @@ export class CacheManager<K, V> {
    */
   getMultiple(keys: K[]): Map<K, V> {
     const results = new Map<K, V>();
-    
+
     for (const key of keys) {
       const value = this.get(key);
       if (value !== undefined) {
         results.set(key, value);
       }
     }
-    
+
     return results;
   }
 
@@ -253,10 +252,12 @@ export class CacheManager<K, V> {
   getStats(): CacheStats {
     const itemCount = this.cache.size;
     const memoryUsageMB = this.stats.totalSize / 1024 / 1024;
-    const averageItemSize = itemCount > 0 ? this.stats.totalSize / itemCount : 0;
-    const hitRate = (this.stats.hits + this.stats.misses) > 0 
-      ? (this.stats.hits / (this.stats.hits + this.stats.misses)) * 100
-      : 0;
+    const averageItemSize =
+      itemCount > 0 ? this.stats.totalSize / itemCount : 0;
+    const hitRate =
+      this.stats.hits + this.stats.misses > 0
+        ? (this.stats.hits / (this.stats.hits + this.stats.misses)) * 100
+        : 0;
 
     return {
       ...this.stats,
@@ -279,10 +280,10 @@ export class CacheManager<K, V> {
    */
   updateConfig(newConfig: Partial<CacheConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     // Recreate cache with new config
     const oldEntries = Array.from(this.cache.entries());
-    
+
     this.cache = new LRUCache<K, CacheEntry<V>>({
       max: this.config.maxSize,
       ttl: this.config.ttlMinutes * 60 * 1000,
@@ -316,14 +317,17 @@ export class CacheManager<K, V> {
    * Get all cache values
    */
   values(): V[] {
-    return Array.from(this.cache.values()).map(entry => entry.value);
+    return Array.from(this.cache.values()).map((entry) => entry.value);
   }
 
   /**
    * Get all cache entries
    */
   entries(): [K, V][] {
-    return Array.from(this.cache.entries()).map(([key, entry]) => [key, entry.value]);
+    return Array.from(this.cache.entries()).map(([key, entry]) => [
+      key,
+      entry.value,
+    ]);
   }
 
   /**
@@ -343,7 +347,7 @@ export class CacheManager<K, V> {
   optimize(): void {
     const beforeSize = this.cache.size;
     const beforeMemory = this.stats.totalSize;
-    
+
     // Get all entries sorted by access pattern
     const entries = Array.from(this.cache.entries());
     const sortedEntries = entries.sort(([, a], [, b]) => {
@@ -362,7 +366,7 @@ export class CacheManager<K, V> {
 
     const afterSize = this.cache.size;
     const afterMemory = this.stats.totalSize;
-    
+
     logger.info('📦 Cache optimization completed', {
       beforeSize,
       afterSize,
@@ -378,13 +382,13 @@ export class CacheManager<K, V> {
    */
   cleanup(): void {
     const beforeSize = this.cache.size;
-    
+
     // LRU cache handles TTL automatically, but we can force cleanup
     this.cache.purgeStale();
-    
+
     const afterSize = this.cache.size;
     const cleanedUp = beforeSize - afterSize;
-    
+
     if (cleanedUp > 0) {
       logger.info('📦 Cache cleanup completed', {
         cleanedUpItems: cleanedUp,
@@ -424,11 +428,11 @@ export class CacheManager<K, V> {
   private startCleanupInterval(): void {
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
-      
+
       // Update stats
       this.stats.itemCount = this.cache.size;
       this.stats.memoryUsageMB = this.stats.totalSize / 1024 / 1024;
-      
+
       // Log stats periodically
       if (this.stats.itemCount > 0) {
         const stats = this.getStats();
@@ -446,7 +450,9 @@ export class CacheManager<K, V> {
 /**
  * Factory function for creating cache managers
  */
-export function createCacheManager<K, V>(config: Partial<CacheConfig> = {}): CacheManager<K, V> {
+export function createCacheManager<K, V>(
+  config: Partial<CacheConfig> = {}
+): CacheManager<K, V> {
   return new CacheManager<K, V>(config);
 }
 

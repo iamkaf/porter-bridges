@@ -1,17 +1,20 @@
 /**
  * @file Enhanced CLI Test Suite
- * 
+ *
  * Comprehensive test suite for the enhanced CLI features including
  * configuration wizard, progress manager, completions, and colorized output.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EnhancedCLI } from '../enhanced-cli';
-import { ConfigWizard } from '../config-wizard';
-import { ProgressManager, createPipelineProgressManager } from '../progress-manager';
-import { CompletionInstaller } from '../completions';
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CompletionInstaller } from '../completions';
+import { ConfigWizard } from '../config-wizard';
+import { EnhancedCLI } from '../enhanced-cli';
+import {
+  createPipelineProgressManager,
+  type ProgressManager,
+} from '../progress-manager';
 
 // Mock dependencies
 vi.mock('node:fs', () => ({
@@ -83,8 +86,8 @@ describe('Enhanced CLI', () => {
 
     it('should have all required commands', () => {
       const program = cli.getProgram();
-      const commands = program.commands.map(cmd => cmd.name());
-      
+      const commands = program.commands.map((cmd) => cmd.name());
+
       expect(commands).toContain('orchestrate');
       expect(commands).toContain('config-wizard');
       expect(commands).toContain('health');
@@ -97,8 +100,8 @@ describe('Enhanced CLI', () => {
 
     it('should have global options', () => {
       const program = cli.getProgram();
-      const options = program.options.map(opt => opt.long);
-      
+      const options = program.options.map((opt) => opt.long);
+
       expect(options).toContain('--verbose');
       expect(options).toContain('--quiet');
       expect(options).toContain('--config');
@@ -111,7 +114,7 @@ describe('Enhanced CLI', () => {
     it('should show enhanced help with styling', () => {
       const program = cli.getProgram();
       const helpText = program.helpInformation();
-      
+
       expect(helpText).toContain('Porter Bridges');
       expect(helpText).toContain('Minecraft Mod Porting Intelligence System');
     });
@@ -119,7 +122,7 @@ describe('Enhanced CLI', () => {
     it('should show version information', () => {
       const program = cli.getProgram();
       program.parse(['node', 'test', 'version']);
-      
+
       expect(consoleLogSpy).toHaveBeenCalled();
     });
   });
@@ -129,7 +132,7 @@ describe('Configuration Wizard', () => {
   let configWizard: ConfigWizard;
   let mockInquirer: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     configWizard = new ConfigWizard();
     mockInquirer = (await import('inquirer')).default;
   });
@@ -160,7 +163,10 @@ describe('Configuration Wizard', () => {
 
       await configWizard.run();
 
-      expect(fs.readFile).toHaveBeenCalledWith('./porter-bridges.config.json', 'utf-8');
+      expect(fs.readFile).toHaveBeenCalledWith(
+        './porter-bridges.config.json',
+        'utf-8'
+      );
       expect(fs.writeFile).toHaveBeenCalled();
     });
 
@@ -186,33 +192,33 @@ describe('Configuration Wizard', () => {
 
       mockInquirer.prompt.mockResolvedValueOnce({ usePreset: 'custom' });
       mockInquirer.prompt.mockResolvedValueOnce({ customize: true });
-      
+
       // Mock custom configuration prompts
       mockInquirer.prompt.mockResolvedValueOnce({
         maxConcurrency: 4,
-        timeout: 30000,
+        timeout: 30_000,
         retryAttempts: 3,
         logLevel: 'info',
       });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({
         enabledSources: ['neoforged_primers'],
       });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({
         geminiModel: 'gemini-2.5-flash',
         maxTokens: 8192,
         temperature: 0.3,
         maxConcurrentDistillations: 1,
       });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({
         enableCaching: true,
         enableCompression: true,
         cacheMemoryMB: 100,
         compressionLevel: 6,
       });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({
         packageDirectory: './packages',
         bundleDirectory: './bundles',
@@ -236,13 +242,13 @@ describe('Configuration Wizard', () => {
       mockInquirer.prompt.mockResolvedValueOnce({ usePreset: 'development' });
       mockInquirer.prompt.mockResolvedValueOnce({ customize: false });
       mockInquirer.prompt.mockResolvedValueOnce({ configureTokens: true });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({
         githubToken: 'test-github-token',
         discordBotToken: 'test-discord-token',
         youtubeApiKey: 'test-youtube-key',
       });
-      
+
       mockInquirer.prompt.mockResolvedValueOnce({ confirm: true });
 
       await configWizard.run();
@@ -254,11 +260,13 @@ describe('Configuration Wizard', () => {
   describe('Configuration Validation', () => {
     it('should validate configuration inputs', async () => {
       const config = configWizard.getConfig();
-      
+
       expect(config.general.maxConcurrency).toBeGreaterThan(0);
       expect(config.general.timeout).toBeGreaterThan(0);
       expect(config.general.retryAttempts).toBeGreaterThanOrEqual(0);
-      expect(['debug', 'info', 'warn', 'error']).toContain(config.general.logLevel);
+      expect(['debug', 'info', 'warn', 'error']).toContain(
+        config.general.logLevel
+      );
     });
   });
 });
@@ -281,7 +289,7 @@ describe('Progress Manager', () => {
   describe('Phase Management', () => {
     it('should start a phase', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Finding sources')
       );
@@ -290,7 +298,7 @@ describe('Progress Manager', () => {
     it('should update phase progress', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.updatePhase('Discovery', 'Processing sources', 5, 10);
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Processing sources (5/10)')
       );
@@ -299,7 +307,7 @@ describe('Progress Manager', () => {
     it('should complete a phase', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.completePhase('Discovery', 'All sources found');
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('All sources found')
       );
@@ -308,7 +316,7 @@ describe('Progress Manager', () => {
     it('should fail a phase', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.failPhase('Discovery', 'Network error');
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Network error')
       );
@@ -317,7 +325,7 @@ describe('Progress Manager', () => {
     it('should add warnings to a phase', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.warnPhase('Discovery', 'Some sources unavailable');
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Some sources unavailable')
       );
@@ -326,7 +334,7 @@ describe('Progress Manager', () => {
     it('should add info to a phase', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.infoPhase('Discovery', 'Found 10 sources');
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Found 10 sources')
       );
@@ -337,7 +345,7 @@ describe('Progress Manager', () => {
     it('should track phase statistics', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.completePhase('Discovery', 'All sources found');
-      
+
       const stats = progressManager.getStats();
       expect(stats.completedPhases).toBe(1);
       expect(stats.errors).toBe(0);
@@ -348,7 +356,7 @@ describe('Progress Manager', () => {
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.warnPhase('Discovery', 'Warning message');
       progressManager.failPhase('Discovery', 'Error message');
-      
+
       const stats = progressManager.getStats();
       expect(stats.errors).toBe(1);
       expect(stats.warnings).toBe(1);
@@ -359,19 +367,19 @@ describe('Progress Manager', () => {
     it('should emit phase events', () => {
       const startListener = vi.fn();
       const completeListener = vi.fn();
-      
+
       progressManager.on('phaseStart', startListener);
       progressManager.on('phaseComplete', completeListener);
-      
+
       progressManager.startPhase('Discovery', 'Finding sources');
       progressManager.completePhase('Discovery', 'All sources found');
-      
+
       expect(startListener).toHaveBeenCalledWith({
         type: 'start',
         phase: 'Discovery',
         message: '🔍 Finding sources',
       });
-      
+
       expect(completeListener).toHaveBeenCalledWith({
         type: 'complete',
         phase: 'Discovery',
@@ -432,7 +440,7 @@ describe('Completion Installer', () => {
   describe('Completion Scripts', () => {
     it('should generate valid bash completion script', () => {
       const { BASH_COMPLETION } = require('../completions');
-      
+
       expect(BASH_COMPLETION).toContain('_porter_bridges_completions');
       expect(BASH_COMPLETION).toContain('orchestrate');
       expect(BASH_COMPLETION).toContain('config-wizard');
@@ -441,7 +449,7 @@ describe('Completion Installer', () => {
 
     it('should generate valid zsh completion script', () => {
       const { ZSH_COMPLETION } = require('../completions');
-      
+
       expect(ZSH_COMPLETION).toContain('#compdef porter-bridges');
       expect(ZSH_COMPLETION).toContain('_porter_bridges');
       expect(ZSH_COMPLETION).toContain('commands');
@@ -449,7 +457,7 @@ describe('Completion Installer', () => {
 
     it('should generate valid fish completion script', () => {
       const { FISH_COMPLETION } = require('../completions');
-      
+
       expect(FISH_COMPLETION).toContain('complete -c porter-bridges');
       expect(FISH_COMPLETION).toContain('orchestrate');
       expect(FISH_COMPLETION).toContain('config-wizard');
@@ -470,10 +478,14 @@ describe('CLI Integration', () => {
 
   describe('Error Handling', () => {
     it('should handle CLI errors gracefully', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const processExitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('Process exit');
-      });
+      const consoleErrorSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
+      const processExitSpy = vi
+        .spyOn(process, 'exit')
+        .mockImplementation(() => {
+          throw new Error('Process exit');
+        });
 
       try {
         await cli.run(['node', 'test', 'invalid-command']);
@@ -489,22 +501,36 @@ describe('CLI Integration', () => {
   describe('Command Parsing', () => {
     it('should parse orchestrate command with options', () => {
       const program = cli.getProgram();
-      const command = program.commands.find(cmd => cmd.name() === 'orchestrate');
-      
+      const command = program.commands.find(
+        (cmd) => cmd.name() === 'orchestrate'
+      );
+
       expect(command).toBeDefined();
-      expect(command?.options.map(opt => opt.long)).toContain('--skip-discovery');
-      expect(command?.options.map(opt => opt.long)).toContain('--gemini-model');
-      expect(command?.options.map(opt => opt.long)).toContain('--max-concurrent');
+      expect(command?.options.map((opt) => opt.long)).toContain(
+        '--skip-discovery'
+      );
+      expect(command?.options.map((opt) => opt.long)).toContain(
+        '--gemini-model'
+      );
+      expect(command?.options.map((opt) => opt.long)).toContain(
+        '--max-concurrent'
+      );
     });
 
     it('should parse config-wizard command with options', () => {
       const program = cli.getProgram();
-      const command = program.commands.find(cmd => cmd.name() === 'config-wizard');
-      
+      const command = program.commands.find(
+        (cmd) => cmd.name() === 'config-wizard'
+      );
+
       expect(command).toBeDefined();
-      expect(command?.options.map(opt => opt.long)).toContain('--config-path');
-      expect(command?.options.map(opt => opt.long)).toContain('--preset');
-      expect(command?.options.map(opt => opt.long)).toContain('--non-interactive');
+      expect(command?.options.map((opt) => opt.long)).toContain(
+        '--config-path'
+      );
+      expect(command?.options.map((opt) => opt.long)).toContain('--preset');
+      expect(command?.options.map((opt) => opt.long)).toContain(
+        '--non-interactive'
+      );
     });
   });
 });
@@ -527,7 +553,7 @@ describe('CLI Styling and Output', () => {
     it('should show styled banner', () => {
       const program = cli.getProgram();
       const helpText = program.helpInformation();
-      
+
       expect(helpText).toContain('Porter Bridges');
       expect(helpText).toContain('🌉');
     });
@@ -535,7 +561,7 @@ describe('CLI Styling and Output', () => {
     it('should show version with styling', () => {
       const program = cli.getProgram();
       program.parse(['node', 'test', 'version']);
-      
+
       expect(consoleLogSpy).toHaveBeenCalledWith(
         expect.stringContaining('Porter Bridges')
       );
@@ -546,7 +572,7 @@ describe('CLI Styling and Output', () => {
     it('should format help text with colors', () => {
       const program = cli.getProgram();
       const helpText = program.helpInformation();
-      
+
       // Check that help text contains expected sections
       expect(helpText).toContain('Usage:');
       expect(helpText).toContain('Options:');
@@ -571,14 +597,14 @@ describe('CLI Performance', () => {
       const startTime = Date.now();
       new EnhancedCLI();
       const endTime = Date.now();
-      
+
       expect(endTime - startTime).toBeLessThan(1000); // Should initialize in under 1 second
     });
 
     it('should handle large command sets efficiently', () => {
       const program = cli.getProgram();
       const commandCount = program.commands.length;
-      
+
       expect(commandCount).toBeGreaterThan(5); // Should have multiple commands
       expect(commandCount).toBeLessThan(20); // But not too many
     });
@@ -600,8 +626,8 @@ describe('CLI Accessibility', () => {
     it('should provide meaningful command descriptions', () => {
       const program = cli.getProgram();
       const commands = program.commands;
-      
-      commands.forEach(command => {
+
+      commands.forEach((command) => {
         expect(command.description()).toBeDefined();
         expect(command.description()).not.toBe('');
       });
@@ -610,8 +636,8 @@ describe('CLI Accessibility', () => {
     it('should provide clear option descriptions', () => {
       const program = cli.getProgram();
       const globalOptions = program.options;
-      
-      globalOptions.forEach(option => {
+
+      globalOptions.forEach((option) => {
         expect(option.description).toBeDefined();
         expect(option.description).not.toBe('');
       });
@@ -621,8 +647,8 @@ describe('CLI Accessibility', () => {
   describe('No-Color Support', () => {
     it('should support --no-color option', () => {
       const program = cli.getProgram();
-      const options = program.options.map(opt => opt.long);
-      
+      const options = program.options.map((opt) => opt.long);
+
       expect(options).toContain('--no-color');
     });
   });
@@ -643,7 +669,7 @@ describe('CLI Documentation', () => {
     it('should provide comprehensive help', () => {
       const program = cli.getProgram();
       const helpText = program.helpInformation();
-      
+
       expect(helpText).toContain('Usage:');
       expect(helpText).toContain('Options:');
       expect(helpText).toContain('Commands:');
@@ -654,12 +680,12 @@ describe('CLI Documentation', () => {
 
     it('should provide command-specific help', () => {
       const program = cli.getProgram();
-      const orchestrateCommand = program.commands.find(cmd => cmd.name() === 'orchestrate');
-      
+      const orchestrateCommand = program.commands.find(
+        (cmd) => cmd.name() === 'orchestrate'
+      );
+
       expect(orchestrateCommand?.helpInformation()).toContain('Usage:');
       expect(orchestrateCommand?.helpInformation()).toContain('Options:');
     });
   });
 });
-
-export { };

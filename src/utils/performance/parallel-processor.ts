@@ -52,7 +52,7 @@ export class ParallelProcessor {
     };
 
     this.limiter = pLimit(this.config.maxConcurrency);
-    
+
     logger.info('🔄 Parallel processor initialized', {
       maxConcurrency: this.config.maxConcurrency,
       batchSize: this.config.batchSize,
@@ -66,7 +66,7 @@ export class ParallelProcessor {
   async processItems<T, R>(
     items: T[],
     processor: (item: T) => Promise<R>,
-    operationName: string = 'parallel-processing'
+    operationName = 'parallel-processing'
   ): Promise<BatchResult<T>> {
     if (items.length === 0) {
       return this.createEmptyResult();
@@ -90,7 +90,7 @@ export class ParallelProcessor {
 
     // Process items in batches
     const batches = this.createBatches(items);
-    
+
     for (const [batchIndex, batch] of batches.entries()) {
       logger.info(`📦 Processing batch ${batchIndex + 1}/${batches.length}`, {
         batchSize: batch.length,
@@ -99,25 +99,29 @@ export class ParallelProcessor {
       });
 
       // Process batch items in parallel
-      const batchPromises = batch.map(item => 
+      const batchPromises = batch.map((item) =>
         this.limiter(async () => {
-          const result = await this.processItemWithRetry(item, processor, operationName);
-          
+          const result = await this.processItemWithRetry(
+            item,
+            processor,
+            operationName
+          );
+
           processedCount++;
           performanceMonitor.incrementProcessed(operationName);
-          
+
           // Call progress callback if provided
           if (this.config.progressCallback) {
             this.config.progressCallback(processedCount, items.length, item);
           }
-          
+
           return result;
         })
       );
 
       // Wait for batch completion
       const batchResults = await Promise.allSettled(batchPromises);
-      
+
       // Process batch results
       for (const promiseResult of batchResults) {
         if (promiseResult.status === 'fulfilled') {
@@ -127,7 +131,7 @@ export class ParallelProcessor {
             error: promiseResult.reason,
             batchIndex,
           });
-          
+
           // Create failed result for unknown item
           results.push({
             item: null as any,
@@ -147,7 +151,7 @@ export class ParallelProcessor {
 
     const totalTime = Date.now() - startTime;
     const batchResult = this.createBatchResult(results, totalTime);
-    
+
     performanceMonitor.endMonitoring(operationName, 'processing', {
       totalItems: items.length,
       successful: batchResult.successful,
@@ -165,12 +169,10 @@ export class ParallelProcessor {
   async mapItems<T, R>(
     items: T[],
     mapper: (item: T) => Promise<R>,
-    operationName: string = 'parallel-mapping'
+    operationName = 'parallel-mapping'
   ): Promise<R[]> {
     const batchResult = await this.processItems(items, mapper, operationName);
-    return batchResult.results
-      .filter(r => r.success)
-      .map(r => r.result);
+    return batchResult.results.filter((r) => r.success).map((r) => r.result);
   }
 
   /**
@@ -179,12 +181,16 @@ export class ParallelProcessor {
   async filterItems<T>(
     items: T[],
     predicate: (item: T) => Promise<boolean>,
-    operationName: string = 'parallel-filtering'
+    operationName = 'parallel-filtering'
   ): Promise<T[]> {
-    const batchResult = await this.processItems(items, predicate, operationName);
+    const batchResult = await this.processItems(
+      items,
+      predicate,
+      operationName
+    );
     return batchResult.results
-      .filter(r => r.success && r.result)
-      .map(r => r.item);
+      .filter((r) => r.success && r.result)
+      .map((r) => r.item);
   }
 
   /**
@@ -193,7 +199,7 @@ export class ParallelProcessor {
   updateConcurrency(newLimit: number): void {
     this.config.maxConcurrency = newLimit;
     this.limiter = pLimit(newLimit);
-    
+
     logger.info(`🔄 Concurrency limit updated to ${newLimit}`);
   }
 
@@ -232,11 +238,11 @@ export class ParallelProcessor {
 
     while (attempts < this.config.retryAttempts) {
       attempts++;
-      
+
       try {
         const result = await processor(item);
         const processingTime = Date.now() - startTime;
-        
+
         return {
           item,
           success: true,
@@ -246,20 +252,24 @@ export class ParallelProcessor {
         };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        
-        logger.warn(`⚠️ Processing failed for item (attempt ${attempts}/${this.config.retryAttempts})`, {
-          operation: operationName,
-          error: lastError.message,
-          item: this.safeStringify(item),
-        });
+
+        logger.warn(
+          `⚠️ Processing failed for item (attempt ${attempts}/${this.config.retryAttempts})`,
+          {
+            operation: operationName,
+            error: lastError.message,
+            item: this.safeStringify(item),
+          }
+        );
 
         // Check if custom error handler wants to control retry behavior
         if (this.config.errorHandler) {
           const action = this.config.errorHandler(lastError, item);
-          
+
           if (action === 'skip') {
             break;
-          } else if (action === 'fail') {
+          }
+          if (action === 'fail') {
             throw lastError;
           }
           // 'retry' continues the loop
@@ -267,7 +277,7 @@ export class ParallelProcessor {
 
         // Wait before retry (exponential backoff)
         if (attempts < this.config.retryAttempts) {
-          const delay = this.config.retryDelay * Math.pow(2, attempts - 1);
+          const delay = this.config.retryDelay * 2 ** (attempts - 1);
           await this.sleep(delay);
         }
       }
@@ -286,11 +296,11 @@ export class ParallelProcessor {
   private createBatches<T>(items: T[]): T[][] {
     const batches: T[][] = [];
     const batchSize = this.config.batchSize;
-    
+
     for (let i = 0; i < items.length; i += batchSize) {
       batches.push(items.slice(i, i + batchSize));
     }
-    
+
     return batches;
   }
 
@@ -298,11 +308,12 @@ export class ParallelProcessor {
     results: ProcessingResult<T>[],
     totalTime: number
   ): BatchResult<T> {
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
-    const averageTime = results.length > 0 
-      ? results.reduce((sum, r) => sum + r.processingTime, 0) / results.length
-      : 0;
+    const successful = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+    const averageTime =
+      results.length > 0
+        ? results.reduce((sum, r) => sum + r.processingTime, 0) / results.length
+        : 0;
     const throughput = totalTime > 0 ? (results.length / totalTime) * 1000 : 0;
 
     return {
@@ -328,10 +339,14 @@ export class ParallelProcessor {
     };
   }
 
-  private logBatchSummary<T>(operationName: string, result: BatchResult<T>): void {
-    const successRate = result.totalItems > 0 
-      ? Math.round((result.successful / result.totalItems) * 100)
-      : 0;
+  private logBatchSummary<T>(
+    operationName: string,
+    result: BatchResult<T>
+  ): void {
+    const successRate =
+      result.totalItems > 0
+        ? Math.round((result.successful / result.totalItems) * 100)
+        : 0;
 
     logger.info(`📊 Parallel processing completed for ${operationName}`, {
       totalItems: result.totalItems,
@@ -347,8 +362,8 @@ export class ParallelProcessor {
       logger.warn(`⚠️ ${result.failed} items failed processing`, {
         operation: operationName,
         failedItems: result.results
-          .filter(r => !r.success)
-          .map(r => ({
+          .filter((r) => !r.success)
+          .map((r) => ({
             item: this.safeStringify(r.item),
             error: r.error?.message,
             attempts: r.attempts,
@@ -367,14 +382,16 @@ export class ParallelProcessor {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
 /**
  * Factory function for creating parallel processors
  */
-export function createParallelProcessor(config: Partial<ParallelProcessingConfig> = {}): ParallelProcessor {
+export function createParallelProcessor(
+  config: Partial<ParallelProcessingConfig> = {}
+): ParallelProcessor {
   return new ParallelProcessor(config);
 }
 

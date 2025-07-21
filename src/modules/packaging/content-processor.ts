@@ -8,7 +8,10 @@
 import crypto from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { generateSafeFilename, generateRawContentFilename } from '../../utils/filename-utils';
+import {
+  generateRawContentFilename,
+  generateSafeFilename,
+} from '../../utils/filename-utils';
 import { logger } from '../../utils/logger';
 
 export interface IContentProcessResult {
@@ -53,11 +56,25 @@ export class ContentProcessor {
     try {
       // Check if this source skipped distillation
       const skippedDistillation = source.processing_hints?.skip_distillation;
-      
+
       let distilledData = null;
       let distilledContent = '';
-      
-      if (!skippedDistillation) {
+
+      if (skippedDistillation) {
+        // For sources that skipped distillation, use empty structure
+        distilledData = {
+          breaking_changes: [],
+          api_updates: [],
+          migration_guides: [],
+          dependency_updates: [],
+          summaries: [],
+          metadata: {
+            source_type: source.source_type,
+            skipped_distillation: true,
+            reason: 'Changelog content - preserved as-is',
+          },
+        };
+      } else {
         // Read distilled content for sources that went through distillation
         const distilledFilePath = this.getDistilledPath(source.url);
 
@@ -75,20 +92,6 @@ export class ContentProcessor {
 
         distilledContent = await fs.readFile(distilledFilePath, 'utf-8');
         distilledData = JSON.parse(distilledContent);
-      } else {
-        // For sources that skipped distillation, use empty structure
-        distilledData = {
-          breaking_changes: [],
-          api_updates: [],
-          migration_guides: [],
-          dependency_updates: [],
-          summaries: [],
-          metadata: {
-            source_type: source.source_type,
-            skipped_distillation: true,
-            reason: 'Changelog content - preserved as-is'
-          }
-        };
       }
 
       // Copy raw content to /raw/ directory
@@ -97,11 +100,13 @@ export class ContentProcessor {
 
       // Find and copy original collected content with fallback extensions
       const collectedPath = await this.findCollectedContentFile(source.url);
-      
+
       if (collectedPath) {
         try {
           await fs.copyFile(collectedPath, rawFilePath);
-          logger.info(`📄 Copied raw content: ${rawFileName} (from ${path.basename(collectedPath)})`);
+          logger.info(
+            `📄 Copied raw content: ${rawFileName} (from ${path.basename(collectedPath)})`
+          );
         } catch (error: any) {
           logger.warn(
             `⚠️  Could not copy raw content for ${source.url}: ${error.message}`
@@ -116,15 +121,8 @@ export class ContentProcessor {
       // For sources that skipped distillation, get stats from collected content
       let fileStats;
       let contentChecksum;
-      
-      if (!skippedDistillation) {
-        const distilledFilePath = this.getDistilledPath(source.url);
-        fileStats = await fs.stat(distilledFilePath);
-        contentChecksum = crypto
-          .createHash('sha256')
-          .update(distilledContent)
-          .digest('hex');
-      } else {
+
+      if (skippedDistillation) {
         // For skipped sources, use collected content for stats
         if (collectedPath) {
           try {
@@ -134,7 +132,7 @@ export class ContentProcessor {
               .createHash('sha256')
               .update(collectedContent)
               .digest('hex');
-          } catch (error) {
+          } catch {
             // Use defaults if collected content is not available
             fileStats = { size: 0 };
             contentChecksum = source.checksum || '';
@@ -144,6 +142,13 @@ export class ContentProcessor {
           fileStats = { size: 0 };
           contentChecksum = source.checksum || '';
         }
+      } else {
+        const distilledFilePath = this.getDistilledPath(source.url);
+        fileStats = await fs.stat(distilledFilePath);
+        contentChecksum = crypto
+          .createHash('sha256')
+          .update(distilledContent)
+          .digest('hex');
       }
 
       return {
@@ -196,8 +201,12 @@ export class ContentProcessor {
    * Try to find collected content file with fallback extensions and URL encoding variants
    */
   async findCollectedContentFile(url: string): Promise<string | null> {
-    const collectedDir = path.join(this.options.distilledDirectory, '..', 'collected-content');
-    
+    const collectedDir = path.join(
+      this.options.distilledDirectory,
+      '..',
+      'collected-content'
+    );
+
     // Generate both decoded and encoded versions of the filename
     const decodedBaseName = generateSafeFilename(url);
     const encodedBaseName = url
@@ -205,10 +214,10 @@ export class ContentProcessor {
       .replace(/[^\w\-_.~]/g, '_')
       .replace(/_+/g, '_')
       .replace(/^_|_$/g, '');
-    
+
     const possibleExtensions = ['.html', '.md', '.txt'];
     const possibleBaseNames = [decodedBaseName, encodedBaseName];
-    
+
     // Try all combinations of base names and extensions
     for (const baseName of possibleBaseNames) {
       for (const ext of possibleExtensions) {
@@ -221,7 +230,7 @@ export class ContentProcessor {
         }
       }
     }
-    
+
     return null;
   }
 

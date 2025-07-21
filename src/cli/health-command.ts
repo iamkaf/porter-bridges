@@ -6,8 +6,11 @@
  */
 
 import { Command } from 'commander';
-import { healthCheckCommand, globalHealthManager } from '../utils/health-checks';
 import { globalCircuitBreakerRegistry } from '../utils/circuit-breaker';
+import {
+  globalHealthManager,
+  healthCheckCommand,
+} from '../utils/health-checks';
 import { logger } from '../utils/logger';
 
 /**
@@ -34,7 +37,7 @@ export function createHealthCommand(): Command {
         // Simple health check
         if (options.simple) {
           const healthStatus = await globalHealthManager.getHealthStatus();
-          
+
           if (options.json) {
             console.log(JSON.stringify(healthStatus, null, 2));
           } else {
@@ -42,14 +45,16 @@ export function createHealthCommand(): Command {
             console.log(`Message: ${healthStatus.message}`);
             console.log(`Uptime: ${Math.floor(healthStatus.uptime / 1000)}s`);
           }
-          
+
           process.exit(healthStatus.status === 'healthy' ? 0 : 1);
         }
 
         // Component-specific health check
         if (options.component) {
-          const result = await globalHealthManager.getComponentHealth(options.component);
-          
+          const result = await globalHealthManager.getComponentHealth(
+            options.component
+          );
+
           if (options.json) {
             console.log(JSON.stringify(result, null, 2));
           } else {
@@ -57,58 +62,71 @@ export function createHealthCommand(): Command {
             console.log(`${emoji} ${result.component}: ${result.message}`);
             console.log(`Response time: ${result.responseTime}ms`);
             console.log(`Timestamp: ${result.timestamp}`);
-            
+
             if (result.details) {
               console.log('Details:', JSON.stringify(result.details, null, 2));
             }
           }
-          
+
           process.exit(result.healthy ? 0 : 1);
         }
 
         // Watch mode
         if (options.watch) {
-          const interval = parseInt(options.interval) * 1000;
-          
-          console.log(`🔍 Health monitoring started (interval: ${options.interval}s)`);
+          const interval = Number.parseInt(options.interval) * 1000;
+
+          console.log(
+            `🔍 Health monitoring started (interval: ${options.interval}s)`
+          );
           console.log('Press Ctrl+C to stop\n');
-          
+
           let iteration = 0;
-          
+
           const checkHealth = async () => {
             iteration++;
             const timestamp = new Date().toISOString();
-            
+
             try {
               if (options.json) {
-                const systemHealth = await globalHealthManager.getSystemHealth();
+                const systemHealth =
+                  await globalHealthManager.getSystemHealth();
                 console.log(`--- Health Check ${iteration} (${timestamp}) ---`);
                 console.log(JSON.stringify(systemHealth, null, 2));
               } else {
-                const healthStatus = await globalHealthManager.getHealthStatus();
-                const statusEmoji = healthStatus.status === 'healthy' ? '✅' : 
-                                   healthStatus.status === 'degraded' ? '⚠️' : '❌';
-                
-                console.log(`[${timestamp}] ${statusEmoji} ${healthStatus.status.toUpperCase()}: ${healthStatus.message}`);
+                const healthStatus =
+                  await globalHealthManager.getHealthStatus();
+                const statusEmoji =
+                  healthStatus.status === 'healthy'
+                    ? '✅'
+                    : healthStatus.status === 'degraded'
+                      ? '⚠️'
+                      : '❌';
+
+                console.log(
+                  `[${timestamp}] ${statusEmoji} ${healthStatus.status.toUpperCase()}: ${healthStatus.message}`
+                );
               }
             } catch (error) {
-              console.error(`[${timestamp}] ❌ Health check failed:`, error instanceof Error ? error.message : String(error));
+              console.error(
+                `[${timestamp}] ❌ Health check failed:`,
+                error instanceof Error ? error.message : String(error)
+              );
             }
           };
-          
+
           // Initial check
           await checkHealth();
-          
+
           // Set up interval
           const intervalId = setInterval(checkHealth, interval);
-          
+
           // Handle graceful shutdown
           process.on('SIGINT', () => {
             console.log('\n🛑 Stopping health monitoring...');
             clearInterval(intervalId);
             process.exit(0);
           });
-          
+
           return;
         }
 
@@ -123,10 +141,13 @@ export function createHealthCommand(): Command {
       } catch (error) {
         logger.error('Health command failed', {
           error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined
+          stack: error instanceof Error ? error.stack : undefined,
         });
-        
-        console.error('❌ Health command failed:', error instanceof Error ? error.message : String(error));
+
+        console.error(
+          '❌ Health command failed:',
+          error instanceof Error ? error.message : String(error)
+        );
         process.exit(1);
       }
     });

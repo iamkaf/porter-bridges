@@ -138,7 +138,7 @@ export const PipelineSource = z
     // Legacy fields (for backward compatibility)
     size_kb: z.number().min(0).optional(),
     content_type: z.string().optional(),
-    
+
     // Processing hints
     processing_hints: z
       .object({

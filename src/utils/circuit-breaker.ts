@@ -8,8 +8,8 @@
  * - HALF_OPEN: Testing if service has recovered
  */
 
-import { logger } from './logger';
 import { EnhancedError } from './error-handling';
+import { logger } from './logger';
 
 /**
  * Circuit breaker states
@@ -17,7 +17,7 @@ import { EnhancedError } from './error-handling';
 export enum CircuitBreakerState {
   CLOSED = 'closed',
   OPEN = 'open',
-  HALF_OPEN = 'half_open'
+  HALF_OPEN = 'half_open',
 }
 
 /**
@@ -38,12 +38,12 @@ export interface CircuitBreakerConfig {
  */
 export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
   failureThreshold: 5,
-  resetTimeout: 60000, // 1 minute
-  monitoringPeriod: 10000, // 10 seconds
+  resetTimeout: 60_000, // 1 minute
+  monitoringPeriod: 10_000, // 10 seconds
   expectedResponseTime: 5000, // 5 seconds
   slowCallThreshold: 3,
-  slowCallDurationThreshold: 10000, // 10 seconds
-  minimumNumberOfCalls: 5
+  slowCallDurationThreshold: 10_000, // 10 seconds
+  minimumNumberOfCalls: 5,
 };
 
 /**
@@ -84,10 +84,7 @@ export class CircuitBreaker {
   private lastFailureTime: number;
   private resetTimeoutId: NodeJS.Timeout | null;
 
-  constructor(
-    name: string,
-    config: Partial<CircuitBreakerConfig> = {}
-  ) {
+  constructor(name: string, config: Partial<CircuitBreakerConfig> = {}) {
     this.name = name;
     this.config = { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...config };
     this.state = CircuitBreakerState.CLOSED;
@@ -101,14 +98,14 @@ export class CircuitBreaker {
    */
   async execute<T>(
     operation: () => Promise<T>,
-    operationName: string = 'operation'
+    operationName = 'operation'
   ): Promise<CircuitBreakerResult<T>> {
     const startTime = Date.now();
 
     // Check if circuit is open
     if (this.state === CircuitBreakerState.OPEN) {
       const timeSinceLastFailure = startTime - this.lastFailureTime;
-      
+
       if (timeSinceLastFailure < this.config.resetTimeout) {
         // Circuit is still open, reject immediately
         const error = EnhancedError.externalApi(
@@ -118,32 +115,28 @@ export class CircuitBreaker {
             state: this.state,
             timeSinceLastFailure,
             resetTimeout: this.config.resetTimeout,
-            metrics: this.metrics
+            metrics: this.metrics,
           },
           `circuit_breaker_${this.name}`
         );
 
-        logger.warn(
-          `⚡ Circuit breaker OPEN - rejecting ${operationName}`,
-          {
-            circuitName: this.name,
-            operationName,
-            timeSinceLastFailure,
-            resetTimeout: this.config.resetTimeout
-          }
-        );
+        logger.warn(`⚡ Circuit breaker OPEN - rejecting ${operationName}`, {
+          circuitName: this.name,
+          operationName,
+          timeSinceLastFailure,
+          resetTimeout: this.config.resetTimeout,
+        });
 
         return {
           success: false,
           error,
           duration: Date.now() - startTime,
           timestamp: startTime,
-          state: this.state
+          state: this.state,
         };
-      } else {
-        // Time to try half-open
-        this.transitionToHalfOpen();
       }
+      // Time to try half-open
+      this.transitionToHalfOpen();
     }
 
     // Execute the operation
@@ -164,7 +157,7 @@ export class CircuitBreaker {
         data: result,
         duration,
         timestamp: startTime,
-        state: this.state
+        state: this.state,
       };
     } catch (error) {
       const duration = Date.now() - startTime;
@@ -175,7 +168,7 @@ export class CircuitBreaker {
         error: enhancedError,
         duration,
         timestamp: startTime,
-        state: this.state
+        state: this.state,
       };
     }
   }
@@ -209,7 +202,7 @@ export class CircuitBreaker {
       state: this.state,
       metrics: this.getMetrics(),
       config: this.config,
-      healthy: this.state === CircuitBreakerState.CLOSED
+      healthy: this.state === CircuitBreakerState.CLOSED,
     };
   }
 
@@ -220,7 +213,7 @@ export class CircuitBreaker {
     this.state = CircuitBreakerState.CLOSED;
     this.metrics = this.initializeMetrics();
     this.lastFailureTime = 0;
-    
+
     if (this.resetTimeoutId) {
       clearTimeout(this.resetTimeoutId);
       this.resetTimeoutId = null;
@@ -228,7 +221,7 @@ export class CircuitBreaker {
 
     logger.info(`🔧 Circuit breaker ${this.name} manually reset`, {
       circuitName: this.name,
-      state: this.state
+      state: this.state,
     });
   }
 
@@ -239,7 +232,7 @@ export class CircuitBreaker {
     this.transitionToOpen();
     logger.warn(`⚡ Circuit breaker ${this.name} forced open`, {
       circuitName: this.name,
-      state: this.state
+      state: this.state,
     });
   }
 
@@ -255,7 +248,7 @@ export class CircuitBreaker {
       lastFailureTime: 0,
       lastSuccessTime: 0,
       consecutiveFailures: 0,
-      windowStart: Date.now()
+      windowStart: Date.now(),
     };
   }
 
@@ -280,23 +273,28 @@ export class CircuitBreaker {
       circuitName: this.name,
       duration,
       totalCalls: this.metrics.totalCalls,
-      successfulCalls: this.metrics.successfulCalls
+      successfulCalls: this.metrics.successfulCalls,
     });
   }
 
-  private handleFailure(error: unknown, operationName: string, duration: number): EnhancedError {
-    const enhancedError = error instanceof EnhancedError
-      ? error
-      : EnhancedError.externalApi(
-          error instanceof Error ? error.message : String(error),
-          {
-            circuitName: this.name,
-            operationName,
-            duration,
-            originalError: error
-          },
-          `circuit_breaker_${this.name}`
-        );
+  private handleFailure(
+    error: unknown,
+    operationName: string,
+    duration: number
+  ): EnhancedError {
+    const enhancedError =
+      error instanceof EnhancedError
+        ? error
+        : EnhancedError.externalApi(
+            error instanceof Error ? error.message : String(error),
+            {
+              circuitName: this.name,
+              operationName,
+              duration,
+              originalError: error,
+            },
+            `circuit_breaker_${this.name}`
+          );
 
     this.metrics.totalCalls++;
     this.metrics.failedCalls++;
@@ -314,7 +312,7 @@ export class CircuitBreaker {
       error: enhancedError.toLogFormat(),
       duration,
       consecutiveFailures: this.metrics.consecutiveFailures,
-      failureThreshold: this.config.failureThreshold
+      failureThreshold: this.config.failureThreshold,
     });
 
     // Check if we should open the circuit
@@ -354,7 +352,7 @@ export class CircuitBreaker {
       circuitName: this.name,
       state: this.state,
       metrics: this.metrics,
-      resetTimeout: this.config.resetTimeout
+      resetTimeout: this.config.resetTimeout,
     });
 
     // Schedule transition to half-open
@@ -363,7 +361,7 @@ export class CircuitBreaker {
 
   private transitionToHalfOpen(): void {
     this.state = CircuitBreakerState.HALF_OPEN;
-    
+
     if (this.resetTimeoutId) {
       clearTimeout(this.resetTimeoutId);
       this.resetTimeoutId = null;
@@ -371,7 +369,7 @@ export class CircuitBreaker {
 
     logger.info(`🔄 Circuit breaker ${this.name} transitioned to HALF_OPEN`, {
       circuitName: this.name,
-      state: this.state
+      state: this.state,
     });
   }
 
@@ -381,7 +379,7 @@ export class CircuitBreaker {
 
     logger.info(`✅ Circuit breaker ${this.name} transitioned to CLOSED`, {
       circuitName: this.name,
-      state: this.state
+      state: this.state,
     });
   }
 
@@ -398,8 +396,10 @@ export class CircuitBreaker {
   }
 
   private updateAverageResponseTime(duration: number): void {
-    const totalTime = this.metrics.averageResponseTime * (this.metrics.totalCalls - 1);
-    this.metrics.averageResponseTime = (totalTime + duration) / this.metrics.totalCalls;
+    const totalTime =
+      this.metrics.averageResponseTime * (this.metrics.totalCalls - 1);
+    this.metrics.averageResponseTime =
+      (totalTime + duration) / this.metrics.totalCalls;
   }
 
   private resetWindowIfNeeded(): void {
@@ -408,7 +408,7 @@ export class CircuitBreaker {
       // Reset metrics for new window
       this.metrics = {
         ...this.initializeMetrics(),
-        windowStart: now
+        windowStart: now,
       };
     }
   }
@@ -504,7 +504,7 @@ export class CircuitBreakerRegistry {
       totalBreakers,
       healthyBreakers,
       unhealthyBreakers: totalBreakers - healthyBreakers,
-      breakerDetails
+      breakerDetails,
     };
   }
 }
@@ -520,15 +520,14 @@ export const globalCircuitBreakerRegistry = new CircuitBreakerRegistry();
 export async function executeWithCircuitBreaker<T>(
   operation: () => Promise<T>,
   circuitName: string,
-  operationName: string = 'operation',
+  operationName = 'operation',
   config: Partial<CircuitBreakerConfig> = {}
 ): Promise<T> {
   const breaker = globalCircuitBreakerRegistry.getOrCreate(circuitName, config);
   const result = await breaker.execute(operation, operationName);
-  
+
   if (result.success) {
     return result.data!;
-  } else {
-    throw result.error!;
   }
+  throw result.error!;
 }

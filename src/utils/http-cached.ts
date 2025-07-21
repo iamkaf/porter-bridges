@@ -6,22 +6,22 @@
  */
 
 import { request } from 'undici';
+import { type CacheHitInfo, httpCache } from './cache/http-cache';
+import {
+  type CircuitBreaker,
+  type CircuitBreakerConfig,
+  DEFAULT_CIRCUIT_BREAKER_CONFIG,
+  globalCircuitBreakerRegistry,
+} from './circuit-breaker';
+import {
+  type BackoffConfig,
+  DEFAULT_BACKOFF_CONFIG,
+  EnhancedError,
+  RetryManager,
+} from './error-handling';
 import { logger } from './logger';
-import { httpCache, type CacheHitInfo } from './cache/http-cache';
 import { compressionManager } from './performance/compression-manager';
 import { performanceMonitor } from './performance/performance-monitor';
-import { 
-  EnhancedError, 
-  RetryManager, 
-  DEFAULT_BACKOFF_CONFIG,
-  type BackoffConfig 
-} from './error-handling';
-import {
-  CircuitBreaker,
-  globalCircuitBreakerRegistry,
-  DEFAULT_CIRCUIT_BREAKER_CONFIG,
-  type CircuitBreakerConfig
-} from './circuit-breaker';
 
 export interface CachedHttpConfig {
   name: string;
@@ -110,11 +110,14 @@ export class CachedHttpClient {
   /**
    * Make HTTP request with caching and compression support
    */
-  async request(url: string, options: RequestOptions = {}): Promise<CachedResponse> {
+  async request(
+    url: string,
+    options: RequestOptions = {}
+  ): Promise<CachedResponse> {
     const startTime = Date.now();
     const method = options.method || 'GET';
     const operationName = `${method.toLowerCase()}-${this.config.name}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       url,
       method,
@@ -126,12 +129,16 @@ export class CachedHttpClient {
 
     try {
       // Check cache first for GET requests
-      if (method === 'GET' && this.config.enableCache && options.cache !== false) {
+      if (
+        method === 'GET' &&
+        this.config.enableCache &&
+        options.cache !== false
+      ) {
         const cacheResult = await httpCache.get(url, method);
-        
+
         if (cacheResult.entry) {
           this.stats.cacheHits++;
-          
+
           const response: CachedResponse = {
             status: cacheResult.entry.status,
             statusText: this.getStatusText(cacheResult.entry.status),
@@ -158,21 +165,21 @@ export class CachedHttpClient {
           });
 
           return response;
-        } else {
-          this.stats.cacheMisses++;
         }
+        this.stats.cacheMisses++;
       }
 
       // Make actual HTTP request
       const response = await this.makeRequest(url, options, startTime);
-      
+
       // Cache successful GET responses
-      if (method === 'GET' && 
-          this.config.enableCache && 
-          options.cache !== false && 
-          response.status >= 200 && 
-          response.status < 300) {
-        
+      if (
+        method === 'GET' &&
+        this.config.enableCache &&
+        options.cache !== false &&
+        response.status >= 200 &&
+        response.status < 300
+      ) {
         await httpCache.set(
           url,
           method,
@@ -193,8 +200,8 @@ export class CachedHttpClient {
       return response;
     } catch (error) {
       this.stats.errorCount++;
-      
-      performanceMonitor.endMonitoring(operationName, 'http-request', { 
+
+      performanceMonitor.endMonitoring(operationName, 'http-request', {
         error: true,
         errorMessage: error instanceof Error ? error.message : String(error),
       });
@@ -206,50 +213,72 @@ export class CachedHttpClient {
   /**
    * GET request with caching
    */
-  async get(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<CachedResponse> {
+  async get(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<CachedResponse> {
     return this.request(url, { ...options, method: 'GET' });
   }
 
   /**
    * POST request
    */
-  async post(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<CachedResponse> {
+  async post(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<CachedResponse> {
     return this.request(url, { ...options, method: 'POST' });
   }
 
   /**
    * PUT request
    */
-  async put(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<CachedResponse> {
+  async put(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<CachedResponse> {
     return this.request(url, { ...options, method: 'PUT' });
   }
 
   /**
    * DELETE request
    */
-  async delete(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<CachedResponse> {
+  async delete(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<CachedResponse> {
     return this.request(url, { ...options, method: 'DELETE' });
   }
 
   /**
    * HEAD request
    */
-  async head(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<CachedResponse> {
+  async head(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<CachedResponse> {
     return this.request(url, { ...options, method: 'HEAD' });
   }
 
   /**
    * Get JSON response
    */
-  async getJson<T>(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<T> {
+  async getJson<T>(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<T> {
     const response = await this.get(url, options);
-    
+
     try {
       return JSON.parse(response.body.toString('utf-8'));
     } catch (error) {
       throw EnhancedError.validation(
         `Failed to parse JSON response from ${url}`,
-        { url, status: response.status, error: error instanceof Error ? error.message : String(error) },
+        {
+          url,
+          status: response.status,
+          error: error instanceof Error ? error.message : String(error),
+        },
         this.config.name
       );
     }
@@ -258,7 +287,10 @@ export class CachedHttpClient {
   /**
    * Get text response
    */
-  async getText(url: string, options: Omit<RequestOptions, 'method'> = {}): Promise<string> {
+  async getText(
+    url: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<string> {
     const response = await this.get(url, options);
     return response.body.toString('utf-8');
   }
@@ -266,18 +298,22 @@ export class CachedHttpClient {
   /**
    * Download file with streaming
    */
-  async downloadFile(url: string, filePath: string, options: Omit<RequestOptions, 'method'> = {}): Promise<void> {
+  async downloadFile(
+    url: string,
+    filePath: string,
+    options: Omit<RequestOptions, 'method'> = {}
+  ): Promise<void> {
     const response = await this.get(url, { ...options, compress: false });
-    
+
     const { promises: fs } = await import('node:fs');
     const path = await import('node:path');
-    
+
     // Create directory if it doesn't exist
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    
+
     // Write file
     await fs.writeFile(filePath, response.body);
-    
+
     logger.info('📥 File downloaded', {
       url,
       filePath,
@@ -310,17 +346,20 @@ export class CachedHttpClient {
     errorCount: number;
     errorRate: number;
   } {
-    const cacheHitRate = this.stats.totalRequests > 0 
-      ? (this.stats.cacheHits / this.stats.totalRequests) * 100 
-      : 0;
-    
-    const averageResponseTime = this.stats.totalRequests > 0 
-      ? this.stats.totalResponseTime / this.stats.totalRequests 
-      : 0;
-    
-    const errorRate = this.stats.totalRequests > 0 
-      ? (this.stats.errorCount / this.stats.totalRequests) * 100 
-      : 0;
+    const cacheHitRate =
+      this.stats.totalRequests > 0
+        ? (this.stats.cacheHits / this.stats.totalRequests) * 100
+        : 0;
+
+    const averageResponseTime =
+      this.stats.totalRequests > 0
+        ? this.stats.totalResponseTime / this.stats.totalRequests
+        : 0;
+
+    const errorRate =
+      this.stats.totalRequests > 0
+        ? (this.stats.errorCount / this.stats.totalRequests) * 100
+        : 0;
 
     return {
       totalRequests: this.stats.totalRequests,
@@ -371,21 +410,17 @@ export class CachedHttpClient {
   ): Promise<CachedResponse> {
     const operationName = `${options.method || 'GET'} ${url}`;
 
-    return this.retryManager.executeWithRetry(
-      async () => {
-        const result = await this.circuitBreaker.execute(
-          async () => this.executeRequest(url, options, startTime),
-          operationName
-        );
+    return this.retryManager.executeWithRetry(async () => {
+      const result = await this.circuitBreaker.execute(
+        async () => this.executeRequest(url, options, startTime),
+        operationName
+      );
 
-        if (result.success) {
-          return result.data;
-        } else {
-          throw result.error;
-        }
-      },
-      operationName
-    );
+      if (result.success) {
+        return result.data;
+      }
+      throw result.error;
+    }, operationName);
   }
 
   private async executeRequest(
@@ -396,10 +431,11 @@ export class CachedHttpClient {
     const method = options.method || 'GET';
     const headers: Record<string, string> = {
       'User-Agent': this.config.userAgent,
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      Accept:
+        'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.5',
       'Accept-Charset': 'utf-8',
-      'Connection': 'keep-alive',
+      Connection: 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
       ...options.headers,
     };
@@ -410,13 +446,17 @@ export class CachedHttpClient {
     }
 
     // Add conditional headers for caching
-    if (method === 'GET' && this.config.enableCache && options.cache !== false) {
+    if (
+      method === 'GET' &&
+      this.config.enableCache &&
+      options.cache !== false
+    ) {
       const conditionalHeaders = httpCache.getConditionalHeaders(url, method);
       Object.assign(headers, conditionalHeaders);
     }
 
     const requestStartTime = Date.now();
-    
+
     try {
       const response = await request(url, {
         method,
@@ -432,8 +472,12 @@ export class CachedHttpClient {
 
       // Handle 304 Not Modified
       if (response.statusCode === 304) {
-        const cachedEntry = httpCache.handleNotModified(url, method, responseTime);
-        
+        const cachedEntry = httpCache.handleNotModified(
+          url,
+          method,
+          responseTime
+        );
+
         if (cachedEntry) {
           return {
             status: cachedEntry.status,
@@ -457,23 +501,28 @@ export class CachedHttpClient {
       }
 
       // Read response body
-      let body = await response.body.arrayBuffer();
+      const body = await response.body.arrayBuffer();
       let bodyBuffer = Buffer.from(body);
 
       // Handle compression
       const contentEncoding = response.headers['content-encoding'];
-      if (contentEncoding && (contentEncoding.includes('gzip') || contentEncoding.includes('deflate'))) {
+      if (
+        contentEncoding &&
+        (contentEncoding.includes('gzip') ||
+          contentEncoding.includes('deflate'))
+      ) {
         const originalSize = bodyBuffer.length;
-        
+
         try {
           bodyBuffer = await compressionManager.decompressBuffer(
             bodyBuffer,
             contentEncoding.includes('gzip') ? 'gzip' : 'deflate'
           );
-          
-          const compressionRatio = originalSize > 0 ? bodyBuffer.length / originalSize : 1;
+
+          const compressionRatio =
+            originalSize > 0 ? bodyBuffer.length / originalSize : 1;
           this.stats.compressionSavings += originalSize - bodyBuffer.length;
-          
+
           logger.debug('🌐 Response decompressed', {
             url,
             originalSize,
@@ -511,7 +560,9 @@ export class CachedHttpClient {
       // Convert headers to simple object
       const responseHeaders: Record<string, string> = {};
       for (const [key, value] of Object.entries(response.headers)) {
-        responseHeaders[key] = Array.isArray(value) ? value[0] || '' : value || '';
+        responseHeaders[key] = Array.isArray(value)
+          ? value[0] || ''
+          : value || '';
       }
 
       return {
@@ -533,26 +584,26 @@ export class CachedHttpClient {
 
       // Convert other errors to EnhancedError
       const message = error instanceof Error ? error.message : String(error);
-      
+
       if (message.toLowerCase().includes('timeout')) {
         throw EnhancedError.timeout(
           `Request timeout: ${message}`,
           { url, method, timeout: options.timeout || this.config.timeout },
           this.config.name
         );
-      } else if (message.toLowerCase().includes('network')) {
+      }
+      if (message.toLowerCase().includes('network')) {
         throw EnhancedError.network(
           `Network error: ${message}`,
           { url, method, originalError: error },
           this.config.name
         );
-      } else {
-        throw EnhancedError.externalApi(
-          `HTTP request failed: ${message}`,
-          { url, method, originalError: error },
-          this.config.name
-        );
       }
+      throw EnhancedError.externalApi(
+        `HTTP request failed: ${message}`,
+        { url, method, originalError: error },
+        this.config.name
+      );
     }
   }
 
@@ -583,7 +634,9 @@ export class CachedHttpClient {
 /**
  * Factory function for creating cached HTTP clients
  */
-export function createCachedHttpClient(config: Partial<CachedHttpConfig> = {}): CachedHttpClient {
+export function createCachedHttpClient(
+  config: Partial<CachedHttpConfig> = {}
+): CachedHttpClient {
   return new CachedHttpClient(config);
 }
 
@@ -595,7 +648,7 @@ export const cachedHttpClient = createCachedHttpClient({ name: 'global' });
 export const cachedGithubClient = createCachedHttpClient({
   name: 'github',
   userAgent: 'porter-bridges/1.0.0',
-  timeout: 15000,
+  timeout: 15_000,
   enableCache: true,
   enableCompression: true,
 });
@@ -603,7 +656,7 @@ export const cachedGithubClient = createCachedHttpClient({
 export const cachedMavenClient = createCachedHttpClient({
   name: 'maven',
   userAgent: 'porter-bridges/1.0.0',
-  timeout: 30000,
+  timeout: 30_000,
   enableCache: true,
   enableCompression: true,
 });
@@ -611,7 +664,7 @@ export const cachedMavenClient = createCachedHttpClient({
 export const cachedRssClient = createCachedHttpClient({
   name: 'rss',
   userAgent: 'porter-bridges/1.0.0',
-  timeout: 10000,
+  timeout: 10_000,
   enableCache: true,
   enableCompression: true,
 });

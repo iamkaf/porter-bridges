@@ -6,10 +6,10 @@
  */
 
 import { createReadStream, createWriteStream, promises as fs } from 'node:fs';
-import { pipeline } from 'node:stream/promises';
-import { Transform, PassThrough } from 'node:stream';
-import { createGzip, createGunzip } from 'node:zlib';
 import path from 'node:path';
+import { PassThrough, Transform } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { createGunzip, createGzip } from 'node:zlib';
 import { logger } from '../logger';
 import { performanceMonitor } from '../performance/performance-monitor';
 
@@ -74,24 +74,24 @@ export class StreamingFileProcessor {
   ): Promise<StreamingResult> {
     const startTime = Date.now();
     const operationName = `copy-${path.basename(sourcePath)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       source: sourcePath,
       destination: destPath,
-      compression: options.compress || false,
+      compression: options.compress,
     });
 
     try {
       // Get source file size
       const stats = await fs.stat(sourcePath);
       const inputSize = stats.size;
-      
+
       // Create destination directory if needed
       await fs.mkdir(path.dirname(destPath), { recursive: true });
 
       // Create streams
-      const readStream = createReadStream(sourcePath, { 
-        highWaterMark: this.config.chunkSize 
+      const readStream = createReadStream(sourcePath, {
+        highWaterMark: this.config.chunkSize,
       });
       const writeStream = createWriteStream(destPath);
 
@@ -100,24 +100,28 @@ export class StreamingFileProcessor {
       const progressStream = new Transform({
         transform(chunk, encoding, callback) {
           bytesProcessed += chunk.length;
-          
+
           if (options.progressCallback) {
-            const progress = this.calculateProgress(bytesProcessed, inputSize, startTime);
+            const progress = this.calculateProgress(
+              bytesProcessed,
+              inputSize,
+              startTime
+            );
             options.progressCallback(progress);
           }
-          
+
           callback(null, chunk);
         },
       });
 
       // Set up pipeline with optional compression
       const streams = [readStream, progressStream];
-      
+
       if (options.compress && this.config.enableCompression) {
         const gzipStream = createGzip({ level: this.config.compressionLevel });
         streams.push(gzipStream);
       }
-      
+
       streams.push(writeStream);
 
       // Execute pipeline
@@ -126,9 +130,10 @@ export class StreamingFileProcessor {
       // Get final output size
       const outputStats = await fs.stat(destPath);
       const outputSize = outputStats.size;
-      
+
       const processingTime = Date.now() - startTime;
-      const throughputMBps = (inputSize / (1024 * 1024)) / (processingTime / 1000);
+      const throughputMBps =
+        inputSize / (1024 * 1024) / (processingTime / 1000);
       const compressionRatio = inputSize > 0 ? outputSize / inputSize : 1;
 
       const result: StreamingResult = {
@@ -159,14 +164,16 @@ export class StreamingFileProcessor {
 
       return result;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'streaming', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'streaming', {
+        error: true,
+      });
+
       logger.error('🌊 File copy failed', {
         source: sourcePath,
         destination: destPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -185,24 +192,24 @@ export class StreamingFileProcessor {
   ): Promise<StreamingResult> {
     const startTime = Date.now();
     const operationName = `process-${path.basename(inputPath)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       input: inputPath,
       output: outputPath,
-      compression: options.compress || false,
+      compression: options.compress,
     });
 
     try {
       // Get input file size
       const stats = await fs.stat(inputPath);
       const inputSize = stats.size;
-      
+
       // Create destination directory if needed
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
       // Create streams
-      const readStream = createReadStream(inputPath, { 
-        highWaterMark: this.config.chunkSize 
+      const readStream = createReadStream(inputPath, {
+        highWaterMark: this.config.chunkSize,
       });
       const writeStream = createWriteStream(outputPath);
 
@@ -213,12 +220,16 @@ export class StreamingFileProcessor {
           try {
             const transformed = await transformer(chunk);
             bytesProcessed += chunk.length;
-            
+
             if (options.progressCallback) {
-              const progress = this.calculateProgress(bytesProcessed, inputSize, startTime);
+              const progress = this.calculateProgress(
+                bytesProcessed,
+                inputSize,
+                startTime
+              );
               options.progressCallback(progress);
             }
-            
+
             callback(null, transformed);
           } catch (error) {
             callback(error);
@@ -228,12 +239,12 @@ export class StreamingFileProcessor {
 
       // Set up pipeline with optional compression
       const streams = [readStream, transformStream];
-      
+
       if (options.compress && this.config.enableCompression) {
         const gzipStream = createGzip({ level: this.config.compressionLevel });
         streams.push(gzipStream);
       }
-      
+
       streams.push(writeStream);
 
       // Execute pipeline
@@ -242,9 +253,10 @@ export class StreamingFileProcessor {
       // Get final output size
       const outputStats = await fs.stat(outputPath);
       const outputSize = outputStats.size;
-      
+
       const processingTime = Date.now() - startTime;
-      const throughputMBps = (inputSize / (1024 * 1024)) / (processingTime / 1000);
+      const throughputMBps =
+        inputSize / (1024 * 1024) / (processingTime / 1000);
       const compressionRatio = inputSize > 0 ? outputSize / inputSize : 1;
 
       const result: StreamingResult = {
@@ -275,14 +287,16 @@ export class StreamingFileProcessor {
 
       return result;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'streaming', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'streaming', {
+        error: true,
+      });
+
       logger.error('🌊 File processing failed', {
         input: inputPath,
         output: outputPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -301,11 +315,11 @@ export class StreamingFileProcessor {
   ): Promise<StreamingResult> {
     const startTime = Date.now();
     const operationName = `merge-${inputPaths.length}-files`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       inputCount: inputPaths.length,
       output: outputPath,
-      compression: options.compress || false,
+      compression: options.compress,
     });
 
     try {
@@ -315,13 +329,13 @@ export class StreamingFileProcessor {
         const stats = await fs.stat(inputPath);
         totalInputSize += stats.size;
       }
-      
+
       // Create destination directory if needed
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
       // Create output stream
       const writeStream = createWriteStream(outputPath);
-      
+
       // Set up compression if enabled
       let finalStream = writeStream;
       if (options.compress && this.config.enableCompression) {
@@ -336,17 +350,21 @@ export class StreamingFileProcessor {
       // Process each input file
       for (let i = 0; i < inputPaths.length; i++) {
         const inputPath = inputPaths[i]!;
-        const readStream = createReadStream(inputPath, { 
-          highWaterMark: this.config.chunkSize 
+        const readStream = createReadStream(inputPath, {
+          highWaterMark: this.config.chunkSize,
         });
 
         // Create progress tracking transform
         const progressStream = new PassThrough();
         progressStream.on('data', (chunk) => {
           bytesProcessed += chunk.length;
-          
+
           if (options.progressCallback) {
-            const progress = this.calculateProgress(bytesProcessed, totalInputSize, startTime);
+            const progress = this.calculateProgress(
+              bytesProcessed,
+              totalInputSize,
+              startTime
+            );
             options.progressCallback(progress);
           }
         });
@@ -372,10 +390,12 @@ export class StreamingFileProcessor {
       // Get final output size
       const outputStats = await fs.stat(outputPath);
       const outputSize = outputStats.size;
-      
+
       const processingTime = Date.now() - startTime;
-      const throughputMBps = (totalInputSize / (1024 * 1024)) / (processingTime / 1000);
-      const compressionRatio = totalInputSize > 0 ? outputSize / totalInputSize : 1;
+      const throughputMBps =
+        totalInputSize / (1024 * 1024) / (processingTime / 1000);
+      const compressionRatio =
+        totalInputSize > 0 ? outputSize / totalInputSize : 1;
 
       const result: StreamingResult = {
         inputSize: totalInputSize,
@@ -405,14 +425,16 @@ export class StreamingFileProcessor {
 
       return result;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'streaming', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'streaming', {
+        error: true,
+      });
+
       logger.error('🌊 File merge failed', {
         inputCount: inputPaths.length,
         output: outputPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -429,7 +451,7 @@ export class StreamingFileProcessor {
   ): Promise<StreamingResult> {
     const startTime = Date.now();
     const operationName = `decompress-${path.basename(inputPath)}`;
-    
+
     performanceMonitor.startMonitoring(operationName, {
       input: inputPath,
       output: outputPath,
@@ -439,13 +461,13 @@ export class StreamingFileProcessor {
       // Get input file size
       const stats = await fs.stat(inputPath);
       const inputSize = stats.size;
-      
+
       // Create destination directory if needed
       await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
       // Create streams
-      const readStream = createReadStream(inputPath, { 
-        highWaterMark: this.config.chunkSize 
+      const readStream = createReadStream(inputPath, {
+        highWaterMark: this.config.chunkSize,
       });
       const writeStream = createWriteStream(outputPath);
       const gunzipStream = createGunzip();
@@ -455,12 +477,16 @@ export class StreamingFileProcessor {
       const progressStream = new Transform({
         transform(chunk, encoding, callback) {
           bytesProcessed += chunk.length;
-          
+
           if (options.progressCallback) {
-            const progress = this.calculateProgress(bytesProcessed, inputSize, startTime);
+            const progress = this.calculateProgress(
+              bytesProcessed,
+              inputSize,
+              startTime
+            );
             options.progressCallback(progress);
           }
-          
+
           callback(null, chunk);
         },
       });
@@ -471,9 +497,10 @@ export class StreamingFileProcessor {
       // Get final output size
       const outputStats = await fs.stat(outputPath);
       const outputSize = outputStats.size;
-      
+
       const processingTime = Date.now() - startTime;
-      const throughputMBps = (inputSize / (1024 * 1024)) / (processingTime / 1000);
+      const throughputMBps =
+        inputSize / (1024 * 1024) / (processingTime / 1000);
       const compressionRatio = inputSize > 0 ? outputSize / inputSize : 1;
 
       const result: StreamingResult = {
@@ -504,14 +531,16 @@ export class StreamingFileProcessor {
 
       return result;
     } catch (error) {
-      performanceMonitor.endMonitoring(operationName, 'streaming', { error: true });
-      
+      performanceMonitor.endMonitoring(operationName, 'streaming', {
+        error: true,
+      });
+
       logger.error('🌊 File decompression failed', {
         input: inputPath,
         output: outputPath,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       throw error;
     }
   }
@@ -544,7 +573,7 @@ export class StreamingFileProcessor {
    */
   updateConfig(newConfig: Partial<StreamingConfig>): void {
     this.config = { ...this.config, ...newConfig };
-    
+
     logger.info('🌊 Streaming configuration updated', this.config);
   }
 
@@ -557,8 +586,9 @@ export class StreamingFileProcessor {
   ): StreamingProgress {
     const elapsed = Date.now() - startTime;
     const percentage = totalBytes > 0 ? (bytesProcessed / totalBytes) * 100 : 0;
-    const throughputMBps = elapsed > 0 ? (bytesProcessed / (1024 * 1024)) / (elapsed / 1000) : 0;
-    
+    const throughputMBps =
+      elapsed > 0 ? bytesProcessed / (1024 * 1024) / (elapsed / 1000) : 0;
+
     let estimatedRemainingMs = 0;
     if (throughputMBps > 0 && percentage > 0) {
       const remainingBytes = totalBytes - bytesProcessed;

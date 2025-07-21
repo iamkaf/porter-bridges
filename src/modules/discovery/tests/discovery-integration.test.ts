@@ -9,15 +9,15 @@
  * - Video content transcription
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { DiscoveryCore } from '../discovery-core';
+import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import { MLContentAnalyzer } from '../../../utils/ml-content-analyzer';
-import { DiscordDiscovery } from '../discord-discovery';
-import { VideoDiscovery } from '../video-discovery';
-import { DynamicDiscovery } from '../dynamic-discovery';
 import { CommunityDiscovery } from '../community-discovery';
 import { ContentAnalyzer } from '../content-analyzer';
+import { DiscordDiscovery } from '../discord-discovery';
+import { DiscoveryCore } from '../discovery-core';
+import { DynamicDiscovery } from '../dynamic-discovery';
 import { SourceConfigs } from '../source-configs';
+import { VideoDiscovery } from '../video-discovery';
 
 describe('Phase 2.1 Advanced Source Discovery', () => {
   let discoveryCore: DiscoveryCore;
@@ -27,8 +27,8 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
   beforeEach(() => {
     discoveryCore = new DiscoveryCore({
       cacheDirectory: './test-cache',
-      timeout: 10000,
-      retryAttempts: 1
+      timeout: 10_000,
+      retryAttempts: 1,
     });
 
     mlAnalyzer = new MLContentAnalyzer();
@@ -45,10 +45,11 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const testContent = {
         id: 'test-content-1',
         title: 'Minecraft 1.21 NeoForge Migration Guide',
-        content: 'This guide covers the breaking changes when migrating from Minecraft 1.20 to 1.21 with NeoForge. Key changes include new block API, entity system refactoring, and deprecated methods.',
+        content:
+          'This guide covers the breaking changes when migrating from Minecraft 1.20 to 1.21 with NeoForge. Key changes include new block API, entity system refactoring, and deprecated methods.',
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'neoforge'
+        loader_type: 'neoforge',
       };
 
       const analysis = await mlAnalyzer.analyzeContent(testContent);
@@ -67,10 +68,11 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const testContent = {
         id: 'test-content-2',
         title: 'Cooking Recipe: Chocolate Cake',
-        content: 'Here is how to make a delicious chocolate cake for your next party.',
+        content:
+          'Here is how to make a delicious chocolate cake for your next party.',
         source_type: 'blog_post',
         minecraft_version: undefined,
-        loader_type: undefined
+        loader_type: undefined,
       };
 
       const analysis = await mlAnalyzer.analyzeContent(testContent);
@@ -84,10 +86,11 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const tutorialContent = {
         id: 'tutorial-test',
         title: 'How to Create Your First Minecraft Mod',
-        content: 'Step by step tutorial for creating your first mod. Learn about setup, basic mod structure, and common patterns.',
+        content:
+          'Step by step tutorial for creating your first mod. Learn about setup, basic mod structure, and common patterns.',
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'fabric'
+        loader_type: 'fabric',
       };
 
       const analysis = await mlAnalyzer.analyzeContent(tutorialContent);
@@ -101,22 +104,24 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const content1 = {
         id: 'content-1',
         title: 'Minecraft 1.21 Breaking Changes',
-        content: 'This document outlines the breaking changes in Minecraft 1.21 that affect mod development.',
+        content:
+          'This document outlines the breaking changes in Minecraft 1.21 that affect mod development.',
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'forge'
+        loader_type: 'forge',
       };
 
       const content2 = {
         id: 'content-2',
         title: 'Minecraft 1.21 Migration Guide',
-        content: 'A comprehensive guide for migrating mods from 1.20 to 1.21, covering all breaking changes.',
+        content:
+          'A comprehensive guide for migrating mods from 1.20 to 1.21, covering all breaking changes.',
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'forge'
+        loader_type: 'forge',
       };
 
-      const analysis1 = await mlAnalyzer.analyzeContent(content1);
+      await mlAnalyzer.analyzeContent(content1);
       const analysis2 = await mlAnalyzer.analyzeContent(content2);
 
       expect(analysis2.similar_content_ids).toContain('content-1');
@@ -129,17 +134,18 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
     beforeEach(() => {
       discordDiscovery = new DiscordDiscovery({
         timeout: 5000,
-        maxMessages: 10
+        maxMessages: 10,
       });
     });
 
     it('should parse Discord webhook URL correctly', () => {
-      const webhookUrl = 'https://discord.com/api/webhooks/123456789/abcdef123456';
+      const webhookUrl =
+        'https://discord.com/api/webhooks/123456789/abcdef123456';
       const parsed = (discordDiscovery as any).parseWebhookUrl(webhookUrl);
 
       expect(parsed).toEqual({
         id: '123456789',
-        token: 'abcdef123456'
+        token: 'abcdef123456',
       });
     });
 
@@ -147,33 +153,38 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const testMessages = [
         {
           id: '1',
-          content: 'NeoForge 1.21.7 has been released! Check out the changelog.',
+          content:
+            'NeoForge 1.21.7 has been released! Check out the changelog.',
           author: { id: 'user1', username: 'developer' },
           timestamp: new Date().toISOString(),
-          embeds: []
+          embeds: [],
         },
         {
           id: '2',
           content: 'Hello everyone, how is your day?',
           author: { id: 'user2', username: 'casual' },
           timestamp: new Date().toISOString(),
-          embeds: []
+          embeds: [],
         },
         {
           id: '3',
-          content: 'Breaking changes in the latest Minecraft update affecting block registration.',
+          content:
+            'Breaking changes in the latest Minecraft update affecting block registration.',
           author: { id: 'user3', username: 'modder' },
           timestamp: new Date().toISOString(),
-          embeds: []
-        }
+          embeds: [],
+        },
       ];
 
       const filters = {
         keywords: ['release', 'breaking', 'update'],
-        min_length: 20
+        min_length: 20,
       };
 
-      const filtered = (discordDiscovery as any).filterMessages(testMessages, filters);
+      const filtered = (discordDiscovery as any).filterMessages(
+        testMessages,
+        filters
+      );
 
       expect(filtered).toHaveLength(2);
       expect(filtered[0].id).toBe('1');
@@ -183,10 +194,11 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
     it('should create source items from Discord messages', () => {
       const testMessage = {
         id: '123',
-        content: 'Fabric 1.21.7 released with improved mod loading and new API features.',
+        content:
+          'Fabric 1.21.7 released with improved mod loading and new API features.',
         author: { id: 'dev', username: 'fabric_dev' },
         timestamp: '2024-01-01T00:00:00Z',
-        embeds: []
+        embeds: [],
       };
 
       const config = {
@@ -194,7 +206,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         guild_id: '507304429255393322',
         channel_id: '507982666755670019',
         source_type: 'changelog',
-        loader_type: 'fabric'
+        loader_type: 'fabric',
       };
 
       const channel = { name: 'announcements' };
@@ -222,7 +234,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         submissionsDir: './test-submissions',
         maxSubmissionsPerUser: 5,
         autoApproveThreshold: 0.9,
-        enableCommunityVoting: true
+        enableCommunityVoting: true,
       });
 
       await communityDiscovery.initialize();
@@ -232,7 +244,8 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const validSubmission = {
         url: 'https://example.com/valid-guide',
         title: 'Minecraft 1.21 Modding Guide',
-        description: 'A comprehensive guide for modding Minecraft 1.21 with NeoForge',
+        description:
+          'A comprehensive guide for modding Minecraft 1.21 with NeoForge',
         source_type: 'guide',
         loader_type: 'neoforge',
         minecraft_version: '1.21',
@@ -240,14 +253,14 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         category: 'tutorial',
         submitter: {
           username: 'test_user',
-          email: 'test@example.com'
-        }
+          email: 'test@example.com',
+        },
       };
 
       // Mock fetch to return a successful response
       global.fetch = jest.fn().mockResolvedValue({
         ok: true,
-        status: 200
+        status: 200,
       });
 
       const result = await communityDiscovery.submitSource(validSubmission);
@@ -267,8 +280,8 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         tags: [],
         category: 'tutorial',
         submitter: {
-          username: 'test_user'
-        }
+          username: 'test_user',
+        },
       };
 
       const result = await communityDiscovery.submitSource(invalidSubmission);
@@ -313,7 +326,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         trendingAnalysisPeriod: 'weekly',
         enableActivityAnalysis: true,
         enableTopicAnalysis: true,
-        enableCommunityTracking: true
+        enableCommunityTracking: true,
       });
     });
 
@@ -333,10 +346,12 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         size: 1000,
         has_issues: true,
         has_wiki: true,
-        has_discussions: true
+        has_discussions: true,
       };
 
-      const relevanceScore = (dynamicDiscovery as any).calculateRepoRelevanceScore(testRepo);
+      const relevanceScore = (
+        dynamicDiscovery as any
+      ).calculateRepoRelevanceScore(testRepo);
 
       expect(relevanceScore).toBeGreaterThan(0.5);
     });
@@ -345,10 +360,12 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const testRepo = {
         name: 'fabric-mod-example',
         description: 'Example Fabric mod for Minecraft 1.21',
-        topics: ['minecraft', 'fabric', 'mod']
+        topics: ['minecraft', 'fabric', 'mod'],
       };
 
-      const indicators = (dynamicDiscovery as any).extractRelevanceIndicators(testRepo);
+      const indicators = (dynamicDiscovery as any).extractRelevanceIndicators(
+        testRepo
+      );
 
       expect(indicators).toContain('fabric');
       expect(indicators).toContain('minecraft');
@@ -367,8 +384,12 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const minecraftTopic = 'minecraft-mod';
       const irrelevantTopic = 'web-development';
 
-      const relevanceScore1 = (dynamicDiscovery as any).calculateTopicMinecraftRelevance(minecraftTopic);
-      const relevanceScore2 = (dynamicDiscovery as any).calculateTopicMinecraftRelevance(irrelevantTopic);
+      const relevanceScore1 = (
+        dynamicDiscovery as any
+      ).calculateTopicMinecraftRelevance(minecraftTopic);
+      const relevanceScore2 = (
+        dynamicDiscovery as any
+      ).calculateTopicMinecraftRelevance(irrelevantTopic);
 
       expect(relevanceScore1).toBeGreaterThan(0.5);
       expect(relevanceScore2).toBeLessThan(0.3);
@@ -383,7 +404,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         maxVideoResults: 5,
         minVideoDuration: 60,
         maxVideoDuration: 1800,
-        enableSubtitleDownload: false // Disable for testing
+        enableSubtitleDownload: false, // Disable for testing
       });
     });
 
@@ -405,7 +426,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const config = {
         type: 'video_discovery',
         loader_type: 'fabric',
-        source_type: 'guide'
+        source_type: 'guide',
       };
 
       const queries = (videoDiscovery as any).generateSearchQueries(config);
@@ -418,17 +439,21 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const tutorialVideo = {
         title: 'How to Create Your First Minecraft Mod - Tutorial',
         description: 'Step by step guide for beginners',
-        tags: ['tutorial', 'minecraft', 'modding']
+        tags: ['tutorial', 'minecraft', 'modding'],
       };
 
       const showcaseVideo = {
         title: 'Showcasing My New Minecraft Mod',
         description: 'Check out this cool new mod I created',
-        tags: ['showcase', 'demo']
+        tags: ['showcase', 'demo'],
       };
 
-      const classification1 = (videoDiscovery as any).classifyVideoContent(tutorialVideo);
-      const classification2 = (videoDiscovery as any).classifyVideoContent(showcaseVideo);
+      const classification1 = (videoDiscovery as any).classifyVideoContent(
+        tutorialVideo
+      );
+      const classification2 = (videoDiscovery as any).classifyVideoContent(
+        showcaseVideo
+      );
 
       expect(classification1.type).toBe('tutorial');
       expect(classification2.type).toBe('showcase');
@@ -437,22 +462,28 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
     it('should assess video quality indicators', () => {
       const highQualityVideo = {
         duration: 1200, // 20 minutes
-        view_count: 10000,
+        view_count: 10_000,
         like_count: 500,
-        comment_count: 100
+        comment_count: 100,
       };
 
       const lowQualityVideo = {
         duration: 120, // 2 minutes
         view_count: 50,
         like_count: 2,
-        comment_count: 1
+        comment_count: 1,
       };
 
-      const quality1 = (videoDiscovery as any).assessVideoQuality(highQualityVideo);
-      const quality2 = (videoDiscovery as any).assessVideoQuality(lowQualityVideo);
+      const quality1 = (videoDiscovery as any).assessVideoQuality(
+        highQualityVideo
+      );
+      const quality2 = (videoDiscovery as any).assessVideoQuality(
+        lowQualityVideo
+      );
 
-      expect(quality1.educational_value).toBeGreaterThan(quality2.educational_value);
+      expect(quality1.educational_value).toBeGreaterThan(
+        quality2.educational_value
+      );
       expect(quality1.video_quality).toBe('high');
       expect(quality2.video_quality).toBe('low');
     });
@@ -463,10 +494,11 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const testContent = {
         id: 'test-ml-integration',
         title: 'Advanced Minecraft Modding with Fabric',
-        content: 'This advanced guide covers complex modding techniques using Fabric API',
+        content:
+          'This advanced guide covers complex modding techniques using Fabric API',
         source_type: 'guide',
         minecraft_version: '1.21',
-        loader_type: 'fabric'
+        loader_type: 'fabric',
       };
 
       const mlResult = await contentAnalyzer.analyzeContentWithML(testContent);
@@ -481,8 +513,13 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
       const description = 'Important changes that affect mod development';
 
       const isRelevant = contentAnalyzer.isPortingRelevant(title, description);
-      const relevanceScore = contentAnalyzer.calculatePortingRelevance(`${title} ${description}`);
-      const version = contentAnalyzer.extractMinecraftVersion(title, description);
+      const relevanceScore = contentAnalyzer.calculatePortingRelevance(
+        `${title} ${description}`
+      );
+      const version = contentAnalyzer.extractMinecraftVersion(
+        title,
+        description
+      );
 
       expect(isRelevant).toBe(true);
       expect(relevanceScore).toBeGreaterThan(0.5);
@@ -500,18 +537,18 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         'discord_channel',
         'video_discovery',
         'dynamic_discovery',
-        'community_discovery'
+        'community_discovery',
       ];
 
-      const configuredTypes = Object.values(configs).map(c => c.type);
-      
+      const configuredTypes = Object.values(configs).map((c) => c.type);
+
       for (const expectedType of expectedTypes) {
         expect(configuredTypes).toContain(expectedType);
       }
     });
 
     it('should handle discovery from multiple source types', async () => {
-      const discoveredSources = new Map();
+      
 
       // Mock successful discovery from each source type
       const testConfig = {
@@ -519,7 +556,7 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         url: 'community://submissions',
         source_type: 'guide',
         loader_type: 'vanilla',
-        description: 'Test community discovery'
+        description: 'Test community discovery',
       };
 
       // This would test the actual discovery process
@@ -551,11 +588,13 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         url: 'https://api.github.com/search/repositories',
         source_type: 'guide',
         loader_type: 'vanilla',
-        description: 'Test dynamic discovery'
+        description: 'Test dynamic discovery',
       };
 
       // Discovery should not throw but should log errors
-      await expect(discoveryCore._discoverFromDynamicSources('test', testConfig)).not.toThrow();
+      await expect(
+        discoveryCore._discoverFromDynamicSources('test', testConfig)
+      ).not.toThrow();
     });
 
     it('should handle invalid Discord configuration', async () => {
@@ -564,10 +603,12 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         url: 'invalid-url',
         source_type: 'changelog',
         loader_type: 'fabric',
-        description: 'Invalid Discord config'
+        description: 'Invalid Discord config',
       };
 
-      await expect(discoveryCore._discoverFromDiscordChannel('test', invalidConfig)).not.toThrow();
+      await expect(
+        discoveryCore._discoverFromDiscordChannel('test', invalidConfig)
+      ).not.toThrow();
     });
 
     it('should handle malformed community submissions', async () => {
@@ -575,10 +616,12 @@ describe('Phase 2.1 Advanced Source Discovery', () => {
         url: 'https://example.com',
         title: null,
         description: undefined,
-        submitter: {}
+        submitter: {},
       };
 
-      const result = await communityDiscovery.submitSource(malformedSubmission as any);
+      const result = await communityDiscovery.submitSource(
+        malformedSubmission as any
+      );
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('validation failed');
@@ -598,12 +641,16 @@ function createMockDiscordMessage(id: string, content: string, author: string) {
     content,
     author: { id: author, username: author },
     timestamp: new Date().toISOString(),
-    embeds: []
+    embeds: [],
   };
 }
 
 // Helper function to create mock GitHub API responses
-function createMockGitHubRepo(name: string, description: string, stars: number) {
+function createMockGitHubRepo(
+  name: string,
+  description: string,
+  stars: number
+) {
   return {
     name,
     full_name: `user/${name}`,
@@ -619,12 +666,16 @@ function createMockGitHubRepo(name: string, description: string, stars: number) 
     size: 1000,
     has_issues: true,
     has_wiki: true,
-    has_discussions: true
+    has_discussions: true,
   };
 }
 
 // Helper function to create mock YouTube API responses
-function createMockYouTubeVideo(id: string, title: string, description: string) {
+function createMockYouTubeVideo(
+  id: string,
+  title: string,
+  description: string
+) {
   return {
     id,
     title,
@@ -640,6 +691,6 @@ function createMockYouTubeVideo(id: string, title: string, description: string) 
     language: 'en',
     captions_available: true,
     thumbnail_url: 'https://example.com/thumbnail.jpg',
-    url: `https://www.youtube.com/watch?v=${id}`
+    url: `https://www.youtube.com/watch?v=${id}`,
   };
 }

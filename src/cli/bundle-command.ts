@@ -93,9 +93,15 @@ export async function executeBundleCommand(options: {
     }
   } catch (error: unknown) {
     if (error instanceof Error) {
-      logger.error({ error: error.message }, '💥 Bridge Bundle creation failed');
+      logger.error(
+        { error: error.message },
+        '💥 Bridge Bundle creation failed'
+      );
     } else {
-      logger.error({ error }, '💥 Bridge Bundle creation failed with unknown error');
+      logger.error(
+        { error },
+        '💥 Bridge Bundle creation failed with unknown error'
+      );
     }
     process.exit(1);
   }

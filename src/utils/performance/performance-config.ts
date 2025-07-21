@@ -100,7 +100,7 @@ export class PerformanceConfigManager {
 
   constructor(initialConfig?: Partial<PerformanceConfig>) {
     this.config = this.createDefaultConfig();
-    
+
     if (initialConfig) {
       this.updateConfig(initialConfig);
     }
@@ -130,7 +130,7 @@ export class PerformanceConfigManager {
   updateConfig(newConfig: Partial<PerformanceConfig>): void {
     this.config = this.mergeConfig(this.config, newConfig);
     this.notifyListeners();
-    
+
     logger.info('⚡ Performance configuration updated', {
       changes: this.summarizeChanges(newConfig),
     });
@@ -152,7 +152,9 @@ export class PerformanceConfigManager {
   /**
    * Set performance profile (conservative, balanced, aggressive)
    */
-  setPerformanceProfile(profile: 'conservative' | 'balanced' | 'aggressive'): void {
+  setPerformanceProfile(
+    profile: 'conservative' | 'balanced' | 'aggressive'
+  ): void {
     switch (profile) {
       case 'conservative':
         this.updateConfig({
@@ -259,7 +261,7 @@ export class PerformanceConfigManager {
   autoDetectOptimalSettings(): void {
     const memoryGB = this.getSystemMemoryGB();
     const cpuCores = this.getSystemCpuCores();
-    
+
     logger.info('⚡ Auto-detecting optimal performance settings', {
       memoryGB,
       cpuCores,
@@ -267,7 +269,7 @@ export class PerformanceConfigManager {
 
     // Adjust settings based on system resources
     let profile: 'conservative' | 'balanced' | 'aggressive' = 'balanced';
-    
+
     if (memoryGB < 4 || cpuCores < 4) {
       profile = 'conservative';
     } else if (memoryGB >= 8 && cpuCores >= 8) {
@@ -292,7 +294,7 @@ export class PerformanceConfigManager {
       },
       streaming: {
         ...this.config.streaming,
-        maxMemoryMB: maxMemoryMB,
+        maxMemoryMB,
       },
     });
 
@@ -320,44 +322,68 @@ export class PerformanceConfigManager {
 
     // Memory recommendations
     if (memoryGB < 4) {
-      warnings.push('Low system memory detected. Consider conservative performance settings.');
-      recommendations.push('Reduce cache memory limits and enable aggressive garbage collection.');
+      warnings.push(
+        'Low system memory detected. Consider conservative performance settings.'
+      );
+      recommendations.push(
+        'Reduce cache memory limits and enable aggressive garbage collection.'
+      );
     } else if (memoryGB >= 8) {
-      optimizations.push('Sufficient memory available. Consider increasing cache sizes.');
+      optimizations.push(
+        'Sufficient memory available. Consider increasing cache sizes.'
+      );
     }
 
     // CPU recommendations
     if (cpuCores < 4) {
-      warnings.push('Limited CPU cores detected. Reduce parallel processing concurrency.');
-      recommendations.push('Set maxConcurrency to 2-4 for optimal performance.');
+      warnings.push(
+        'Limited CPU cores detected. Reduce parallel processing concurrency.'
+      );
+      recommendations.push(
+        'Set maxConcurrency to 2-4 for optimal performance.'
+      );
     } else if (cpuCores >= 8) {
-      optimizations.push('High CPU core count detected. Consider increasing parallel processing.');
+      optimizations.push(
+        'High CPU core count detected. Consider increasing parallel processing.'
+      );
     }
 
     // Configuration recommendations
     if (!this.config.parallelProcessing.enabled) {
-      optimizations.push('Enable parallel processing for significant performance improvements.');
+      optimizations.push(
+        'Enable parallel processing for significant performance improvements.'
+      );
     }
 
     if (!this.config.caching.enabled) {
-      optimizations.push('Enable caching to reduce redundant HTTP requests and processing.');
+      optimizations.push(
+        'Enable caching to reduce redundant HTTP requests and processing.'
+      );
     }
 
     if (!this.config.streaming.enabled) {
-      optimizations.push('Enable streaming for better memory efficiency with large files.');
+      optimizations.push(
+        'Enable streaming for better memory efficiency with large files.'
+      );
     }
 
     if (!this.config.compression.enabled) {
-      optimizations.push('Enable compression to reduce disk usage by up to 40%.');
+      optimizations.push(
+        'Enable compression to reduce disk usage by up to 40%.'
+      );
     }
 
     // Specific tuning recommendations
     if (this.config.parallelProcessing.maxConcurrency > cpuCores * 2) {
-      recommendations.push('Consider reducing maxConcurrency to prevent thread thrashing.');
+      recommendations.push(
+        'Consider reducing maxConcurrency to prevent thread thrashing.'
+      );
     }
 
     if (this.config.caching.maxMemoryMB > memoryGB * 1024 * 0.3) {
-      recommendations.push('Cache memory usage is high. Consider reducing cache limits.');
+      recommendations.push(
+        'Cache memory usage is high. Consider reducing cache limits.'
+      );
     }
 
     return {
@@ -425,7 +451,7 @@ export class PerformanceConfigManager {
         ttlMinutes: 60,
         httpCacheEnabled: true,
         contentCacheEnabled: true,
-        checkInterval: 30000,
+        checkInterval: 30_000,
       },
       streaming: {
         enabled: true,
@@ -457,7 +483,7 @@ export class PerformanceConfigManager {
         enableCache: true,
         enableCompression: true,
         enableStreaming: true,
-        timeout: 30000,
+        timeout: 30_000,
         maxRedirects: 5,
       },
       distillation: {
@@ -482,32 +508,46 @@ export class PerformanceConfigManager {
 
   private loadFromEnvironment(): void {
     const env = process.env;
-    
+
     // Load performance settings from environment variables
     if (env.PERFORMANCE_PARALLEL_CONCURRENCY) {
-      this.config.parallelProcessing.maxConcurrency = parseInt(env.PERFORMANCE_PARALLEL_CONCURRENCY, 10);
+      this.config.parallelProcessing.maxConcurrency = Number.parseInt(
+        env.PERFORMANCE_PARALLEL_CONCURRENCY,
+        10
+      );
     }
-    
+
     if (env.PERFORMANCE_CACHE_MEMORY_MB) {
-      this.config.caching.maxMemoryMB = parseInt(env.PERFORMANCE_CACHE_MEMORY_MB, 10);
+      this.config.caching.maxMemoryMB = Number.parseInt(
+        env.PERFORMANCE_CACHE_MEMORY_MB,
+        10
+      );
     }
-    
+
     if (env.PERFORMANCE_COMPRESSION_LEVEL) {
-      this.config.compression.level = parseInt(env.PERFORMANCE_COMPRESSION_LEVEL, 10);
+      this.config.compression.level = Number.parseInt(
+        env.PERFORMANCE_COMPRESSION_LEVEL,
+        10
+      );
     }
-    
+
     if (env.PERFORMANCE_STREAMING_THRESHOLD_KB) {
-      this.config.streaming.thresholdSize = parseInt(env.PERFORMANCE_STREAMING_THRESHOLD_KB, 10) * 1024;
+      this.config.streaming.thresholdSize =
+        Number.parseInt(env.PERFORMANCE_STREAMING_THRESHOLD_KB, 10) * 1024;
     }
-    
+
     if (env.PERFORMANCE_MONITORING_ENABLED) {
-      this.config.monitoring.enabled = env.PERFORMANCE_MONITORING_ENABLED === 'true';
+      this.config.monitoring.enabled =
+        env.PERFORMANCE_MONITORING_ENABLED === 'true';
     }
   }
 
-  private mergeConfig(current: PerformanceConfig, updates: Partial<PerformanceConfig>): PerformanceConfig {
+  private mergeConfig(
+    current: PerformanceConfig,
+    updates: Partial<PerformanceConfig>
+  ): PerformanceConfig {
     const merged = { ...current };
-    
+
     for (const [key, value] of Object.entries(updates)) {
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         merged[key as keyof PerformanceConfig] = {
@@ -518,13 +558,15 @@ export class PerformanceConfigManager {
         merged[key as keyof PerformanceConfig] = value as any;
       }
     }
-    
+
     return merged;
   }
 
-  private summarizeChanges(changes: Partial<PerformanceConfig>): Record<string, any> {
+  private summarizeChanges(
+    changes: Partial<PerformanceConfig>
+  ): Record<string, any> {
     const summary: Record<string, any> = {};
-    
+
     for (const [key, value] of Object.entries(changes)) {
       if (value && typeof value === 'object') {
         summary[key] = Object.keys(value);
@@ -532,7 +574,7 @@ export class PerformanceConfigManager {
         summary[key] = value;
       }
     }
-    
+
     return summary;
   }
 
@@ -575,9 +617,15 @@ export const performanceConfig = new PerformanceConfigManager();
 /**
  * Convenience functions for common operations
  */
-export const enablePerformanceOptimizations = () => performanceConfig.setOptimizationMode(true);
-export const disablePerformanceOptimizations = () => performanceConfig.setOptimizationMode(false);
-export const setConservativeMode = () => performanceConfig.setPerformanceProfile('conservative');
-export const setBalancedMode = () => performanceConfig.setPerformanceProfile('balanced');
-export const setAggressiveMode = () => performanceConfig.setPerformanceProfile('aggressive');
-export const autoConfigurePerformance = () => performanceConfig.autoDetectOptimalSettings();
+export const enablePerformanceOptimizations = () =>
+  performanceConfig.setOptimizationMode(true);
+export const disablePerformanceOptimizations = () =>
+  performanceConfig.setOptimizationMode(false);
+export const setConservativeMode = () =>
+  performanceConfig.setPerformanceProfile('conservative');
+export const setBalancedMode = () =>
+  performanceConfig.setPerformanceProfile('balanced');
+export const setAggressiveMode = () =>
+  performanceConfig.setPerformanceProfile('aggressive');
+export const autoConfigurePerformance = () =>
+  performanceConfig.autoDetectOptimalSettings();

@@ -25,7 +25,7 @@ export enum ErrorCategory {
   FILE_SYSTEM = 'file_system',
   CONFIGURATION = 'configuration',
   TIMEOUT = 'timeout',
-  UNKNOWN = 'unknown'
+  UNKNOWN = 'unknown',
 }
 
 /**
@@ -35,7 +35,7 @@ export enum ErrorSeverity {
   LOW = 'low',
   MEDIUM = 'medium',
   HIGH = 'high',
-  CRITICAL = 'critical'
+  CRITICAL = 'critical',
 }
 
 /**
@@ -47,7 +47,7 @@ export enum RecoveryStrategy {
   FALLBACK = 'fallback',
   ESCALATE = 'escalate',
   IGNORE = 'ignore',
-  ABORT = 'abort'
+  ABORT = 'abort',
 }
 
 /**
@@ -68,7 +68,7 @@ export class EnhancedError extends Error {
     severity: ErrorSeverity = ErrorSeverity.MEDIUM,
     recoveryStrategy: RecoveryStrategy = RecoveryStrategy.RETRY,
     context: Record<string, any> = {},
-    source: string = 'unknown'
+    source = 'unknown'
   ) {
     super(message);
     this.name = 'EnhancedError';
@@ -84,7 +84,11 @@ export class EnhancedError extends Error {
   /**
    * Create network-related error
    */
-  static network(message: string, context: Record<string, any> = {}, source: string = 'network') {
+  static network(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'network'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.NETWORK,
@@ -98,7 +102,11 @@ export class EnhancedError extends Error {
   /**
    * Create rate limit error
    */
-  static rateLimit(message: string, context: Record<string, any> = {}, source: string = 'api') {
+  static rateLimit(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'api'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.RATE_LIMIT,
@@ -112,7 +120,11 @@ export class EnhancedError extends Error {
   /**
    * Create authentication error
    */
-  static authentication(message: string, context: Record<string, any> = {}, source: string = 'auth') {
+  static authentication(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'auth'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.AUTHENTICATION,
@@ -126,7 +138,11 @@ export class EnhancedError extends Error {
   /**
    * Create validation error
    */
-  static validation(message: string, context: Record<string, any> = {}, source: string = 'validation') {
+  static validation(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'validation'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.VALIDATION,
@@ -140,7 +156,11 @@ export class EnhancedError extends Error {
   /**
    * Create system error
    */
-  static system(message: string, context: Record<string, any> = {}, source: string = 'system') {
+  static system(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'system'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.SYSTEM,
@@ -154,7 +174,11 @@ export class EnhancedError extends Error {
   /**
    * Create external API error
    */
-  static externalApi(message: string, context: Record<string, any> = {}, source: string = 'external_api') {
+  static externalApi(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'external_api'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.EXTERNAL_API,
@@ -168,7 +192,11 @@ export class EnhancedError extends Error {
   /**
    * Create AI processing error
    */
-  static aiProcessing(message: string, context: Record<string, any> = {}, source: string = 'ai_processing') {
+  static aiProcessing(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'ai_processing'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.AI_PROCESSING,
@@ -182,7 +210,11 @@ export class EnhancedError extends Error {
   /**
    * Create file system error
    */
-  static fileSystem(message: string, context: Record<string, any> = {}, source: string = 'file_system') {
+  static fileSystem(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'file_system'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.FILE_SYSTEM,
@@ -196,7 +228,11 @@ export class EnhancedError extends Error {
   /**
    * Create timeout error
    */
-  static timeout(message: string, context: Record<string, any> = {}, source: string = 'timeout') {
+  static timeout(
+    message: string,
+    context: Record<string, any> = {},
+    source = 'timeout'
+  ) {
     return new EnhancedError(
       message,
       ErrorCategory.TIMEOUT,
@@ -220,7 +256,7 @@ export class EnhancedError extends Error {
       context: this.context,
       timestamp: this.timestamp,
       source: this.source,
-      stack: this.stack
+      stack: this.stack,
     };
   }
 
@@ -232,7 +268,7 @@ export class EnhancedError extends Error {
       [ErrorSeverity.LOW]: '⚪',
       [ErrorSeverity.MEDIUM]: '🟡',
       [ErrorSeverity.HIGH]: '🟠',
-      [ErrorSeverity.CRITICAL]: '🔴'
+      [ErrorSeverity.CRITICAL]: '🔴',
     };
 
     const strategyEmoji = {
@@ -241,7 +277,7 @@ export class EnhancedError extends Error {
       [RecoveryStrategy.FALLBACK]: '🔀',
       [RecoveryStrategy.ESCALATE]: '📢',
       [RecoveryStrategy.IGNORE]: '🙈',
-      [RecoveryStrategy.ABORT]: '🛑'
+      [RecoveryStrategy.ABORT]: '🛑',
     };
 
     return `${severityEmoji[this.severity]} ${strategyEmoji[this.recoveryStrategy]} ${this.category.toUpperCase()} ERROR
@@ -260,13 +296,13 @@ export class ErrorClassifier {
   /**
    * Classify an error based on its properties
    */
-  static classify(error: unknown, source: string = 'unknown'): EnhancedError {
+  static classify(error: unknown, source = 'unknown'): EnhancedError {
     if (error instanceof EnhancedError) {
       return error;
     }
 
     if (error instanceof Error) {
-      return this.classifyStandardError(error, source);
+      return ErrorClassifier.classifyStandardError(error, source);
     }
 
     // Handle non-Error objects
@@ -284,37 +320,40 @@ export class ErrorClassifier {
   /**
    * Classify standard JavaScript errors
    */
-  private static classifyStandardError(error: Error, source: string): EnhancedError {
+  private static classifyStandardError(
+    error: Error,
+    source: string
+  ): EnhancedError {
     const message = error.message.toLowerCase();
     const context = { originalError: error, stack: error.stack };
 
     // Network-related errors
-    if (this.isNetworkError(error, message)) {
+    if (ErrorClassifier.isNetworkError(error, message)) {
       return EnhancedError.network(error.message, context, source);
     }
 
     // Rate limiting errors
-    if (this.isRateLimitError(error, message)) {
+    if (ErrorClassifier.isRateLimitError(error, message)) {
       return EnhancedError.rateLimit(error.message, context, source);
     }
 
     // Authentication errors
-    if (this.isAuthenticationError(error, message)) {
+    if (ErrorClassifier.isAuthenticationError(error, message)) {
       return EnhancedError.authentication(error.message, context, source);
     }
 
     // Timeout errors
-    if (this.isTimeoutError(error, message)) {
+    if (ErrorClassifier.isTimeoutError(error, message)) {
       return EnhancedError.timeout(error.message, context, source);
     }
 
     // File system errors
-    if (this.isFileSystemError(error, message)) {
+    if (ErrorClassifier.isFileSystemError(error, message)) {
       return EnhancedError.fileSystem(error.message, context, source);
     }
 
     // Validation errors
-    if (this.isValidationError(error, message)) {
+    if (ErrorClassifier.isValidationError(error, message)) {
       return EnhancedError.validation(error.message, context, source);
     }
 
@@ -337,7 +376,10 @@ export class ErrorClassifier {
       message.includes('enotfound') ||
       message.includes('econnreset') ||
       message.includes('socket') ||
-      ('code' in error && ['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT'].includes(error.code as string))
+      ('code' in error &&
+        ['ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT'].includes(
+          error.code as string
+        ))
     );
   }
 
@@ -376,7 +418,8 @@ export class ErrorClassifier {
       message.includes('eperm') ||
       message.includes('file') ||
       message.includes('directory') ||
-      ('code' in error && ['ENOENT', 'EACCES', 'EPERM', 'EEXIST'].includes(error.code as string))
+      ('code' in error &&
+        ['ENOENT', 'EACCES', 'EPERM', 'EEXIST'].includes(error.code as string))
     );
   }
 
@@ -408,10 +451,10 @@ export interface BackoffConfig {
  */
 export const DEFAULT_BACKOFF_CONFIG: BackoffConfig = {
   initialDelay: 1000,
-  maxDelay: 30000,
+  maxDelay: 30_000,
   multiplier: 2,
   jitter: true,
-  maxRetries: 3
+  maxRetries: 3,
 };
 
 /**
@@ -422,7 +465,7 @@ export function calculateBackoffDelay(
   config: BackoffConfig = DEFAULT_BACKOFF_CONFIG
 ): number {
   const baseDelay = Math.min(
-    config.initialDelay * Math.pow(config.multiplier, attempt - 1),
+    config.initialDelay * config.multiplier ** (attempt - 1),
     config.maxDelay
   );
 
@@ -442,7 +485,7 @@ export class RetryManager {
   private readonly config: BackoffConfig;
   private readonly source: string;
 
-  constructor(config: Partial<BackoffConfig> = {}, source: string = 'retry_manager') {
+  constructor(config: Partial<BackoffConfig> = {}, source = 'retry_manager') {
     this.config = { ...DEFAULT_BACKOFF_CONFIG, ...config };
     this.source = source;
   }
@@ -452,7 +495,7 @@ export class RetryManager {
    */
   async executeWithRetry<T>(
     operation: () => Promise<T>,
-    operationName: string = 'operation',
+    operationName = 'operation',
     customConfig?: Partial<BackoffConfig>
   ): Promise<T> {
     const config = { ...this.config, ...customConfig };
@@ -461,14 +504,14 @@ export class RetryManager {
     for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
       try {
         const result = await operation();
-        
+
         if (attempt > 1) {
           logger.info(
             `✅ ${operationName} succeeded after ${attempt} attempts`,
             { source: this.source, attempt }
           );
         }
-        
+
         return result;
       } catch (error) {
         const enhancedError = ErrorClassifier.classify(error, this.source);
@@ -480,16 +523,16 @@ export class RetryManager {
             source: this.source,
             error: enhancedError.toLogFormat(),
             attempt,
-            maxRetries: config.maxRetries
+            maxRetries: config.maxRetries,
           }
         );
 
         // Check if error is retryable
         if (!enhancedError.retryable) {
-          logger.error(
-            `🛑 ${operationName} failed with non-retryable error`,
-            { source: this.source, error: enhancedError.toLogFormat() }
-          );
+          logger.error(`🛑 ${operationName} failed with non-retryable error`, {
+            source: this.source,
+            error: enhancedError.toLogFormat(),
+          });
           throw enhancedError;
         }
 
@@ -508,19 +551,22 @@ export class RetryManager {
           `⏳ Retrying ${operationName} in ${delay}ms (attempt ${attempt + 1}/${config.maxRetries})`,
           { source: this.source, delay, nextAttempt: attempt + 1 }
         );
-        
-        await new Promise(resolve => setTimeout(resolve, delay));
+
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
 
     // This should never be reached, but TypeScript needs it
-    throw lastError || new EnhancedError(
-      `${operationName} failed after ${config.maxRetries} attempts`,
-      ErrorCategory.UNKNOWN,
-      ErrorSeverity.HIGH,
-      RecoveryStrategy.ESCALATE,
-      {},
-      this.source
+    throw (
+      lastError ||
+      new EnhancedError(
+        `${operationName} failed after ${config.maxRetries} attempts`,
+        ErrorCategory.UNKNOWN,
+        ErrorSeverity.HIGH,
+        RecoveryStrategy.ESCALATE,
+        {},
+        this.source
+      )
     );
   }
 }
@@ -564,14 +610,17 @@ export class HealthCheckManager {
       try {
         results[name] = await checkFn();
       } catch (error) {
-        const enhancedError = ErrorClassifier.classify(error, `health_check_${name}`);
+        const enhancedError = ErrorClassifier.classify(
+          error,
+          `health_check_${name}`
+        );
         results[name] = {
           healthy: false,
           component: name,
           message: enhancedError.message,
           timestamp: new Date().toISOString(),
           responseTime: -1,
-          details: enhancedError.toLogFormat()
+          details: enhancedError.toLogFormat(),
         };
       }
     }
@@ -612,7 +661,7 @@ export class HealthCheckManager {
     };
   }> {
     const checks = await this.runAllChecks();
-    const healthyCount = Object.values(checks).filter(c => c.healthy).length;
+    const healthyCount = Object.values(checks).filter((c) => c.healthy).length;
     const totalCount = Object.values(checks).length;
 
     return {
@@ -622,8 +671,8 @@ export class HealthCheckManager {
         total: totalCount,
         healthy: healthyCount,
         unhealthy: totalCount - healthyCount,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     };
   }
 }
@@ -659,10 +708,10 @@ export class ErrorRecoveryCoordinator {
   ): Promise<void> {
     const enhancedError = ErrorClassifier.classify(error, context.source);
 
-    logger.error(
-      `🚨 Error occurred in ${context.operation}`,
-      { error: enhancedError.toLogFormat(), context }
-    );
+    logger.error(`🚨 Error occurred in ${context.operation}`, {
+      error: enhancedError.toLogFormat(),
+      context,
+    });
 
     // Apply recovery strategy
     switch (enhancedError.recoveryStrategy) {
@@ -679,33 +728,29 @@ export class ErrorRecoveryCoordinator {
         break;
 
       case RecoveryStrategy.ESCALATE:
-        logger.error(
-          `📢 Escalating error for ${context.operation}`,
-          { error: enhancedError.toLogFormat() }
-        );
+        logger.error(`📢 Escalating error for ${context.operation}`, {
+          error: enhancedError.toLogFormat(),
+        });
         // Could send to monitoring system, alert admins, etc.
         break;
 
       case RecoveryStrategy.CIRCUIT_BREAKER:
-        logger.warn(
-          `⚡ Circuit breaker triggered for ${context.operation}`,
-          { error: enhancedError.toLogFormat() }
-        );
+        logger.warn(`⚡ Circuit breaker triggered for ${context.operation}`, {
+          error: enhancedError.toLogFormat(),
+        });
         // Circuit breaker logic would be implemented here
         break;
 
       case RecoveryStrategy.ABORT:
-        logger.error(
-          `🛑 Aborting operation ${context.operation}`,
-          { error: enhancedError.toLogFormat() }
-        );
+        logger.error(`🛑 Aborting operation ${context.operation}`, {
+          error: enhancedError.toLogFormat(),
+        });
         throw enhancedError;
 
       case RecoveryStrategy.IGNORE:
-        logger.warn(
-          `🙈 Ignoring error in ${context.operation}`,
-          { error: enhancedError.toLogFormat() }
-        );
+        logger.warn(`🙈 Ignoring error in ${context.operation}`, {
+          error: enhancedError.toLogFormat(),
+        });
         break;
     }
   }

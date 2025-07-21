@@ -9,8 +9,8 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import type { LoaderType, Priority, SourceType } from '../../constants/enums';
-import { createHttpError, githubClient } from '../../utils/http';
 import { generateCollectedContentFilename } from '../../utils/filename-utils';
+import { createHttpError, githubClient } from '../../utils/http';
 import { logger } from '../../utils/logger';
 import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
@@ -36,7 +36,8 @@ export class GitHubReleasesDiscovery {
       includePreReleases: true,
       timeout: options.timeout || 30_000,
       maxReleases: options.maxReleases || 20, // Limit to recent releases
-      contentDirectory: options.contentDirectory || './generated/collected-content',
+      contentDirectory:
+        options.contentDirectory || './generated/collected-content',
       ...options,
     };
 
@@ -104,9 +105,16 @@ export class GitHubReleasesDiscovery {
           collection_metadata: {
             status_code: 200,
             content_type: 'application/json; charset=utf-8',
-            content_length: String(Buffer.byteLength(release.body as string || '', 'utf8')),
-            size_bytes: Buffer.byteLength(release.body as string || '', 'utf8'),
-            size_kb: Math.round(Buffer.byteLength(release.body as string || '', 'utf8') / 1024),
+            content_length: String(
+              Buffer.byteLength((release.body as string) || '', 'utf8')
+            ),
+            size_bytes: Buffer.byteLength(
+              (release.body as string) || '',
+              'utf8'
+            ),
+            size_kb: Math.round(
+              Buffer.byteLength((release.body as string) || '', 'utf8') / 1024
+            ),
             collection_attempt: 1,
             final_url: release.html_url as string,
             source: 'github_api',
@@ -123,7 +131,10 @@ export class GitHubReleasesDiscovery {
         });
 
         // Save API content to file
-        await this._saveApiContent(release.html_url as string, release.body as string || '');
+        await this._saveApiContent(
+          release.html_url as string,
+          (release.body as string) || ''
+        );
 
         sources.push(sourceItem);
       }

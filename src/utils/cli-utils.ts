@@ -22,10 +22,12 @@ export class CLIUtils {
       verticalLayout: 'fitted',
     });
 
-    const gradientArt = gradient(['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'])(asciiArt);
-    
+    const gradientArt = gradient(['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4'])(
+      asciiArt
+    );
+
     let header = gradientArt;
-    
+
     if (subtitle) {
       header += '\n\n' + chalk.cyan.italic(subtitle);
     }
@@ -36,12 +38,15 @@ export class CLIUtils {
   /**
    * Create a styled box with content
    */
-  static createBox(content: string, options?: {
-    title?: string;
-    type?: 'info' | 'success' | 'warning' | 'error';
-    padding?: number;
-    margin?: number;
-  }): string {
+  static createBox(
+    content: string,
+    options?: {
+      title?: string;
+      type?: 'info' | 'success' | 'warning' | 'error';
+      padding?: number;
+      margin?: number;
+    }
+  ): string {
     const { title, type = 'info', padding = 1, margin = 1 } = options || {};
 
     let borderColor = '#ffffff';
@@ -93,7 +98,10 @@ export class CLIUtils {
   /**
    * Create a status indicator
    */
-  static createStatus(status: 'pending' | 'running' | 'success' | 'error' | 'warning', message: string): string {
+  static createStatus(
+    status: 'pending' | 'running' | 'success' | 'error' | 'warning',
+    message: string
+  ): string {
     let icon: string;
     let color: typeof chalk.white;
 
@@ -126,14 +134,18 @@ export class CLIUtils {
   /**
    * Create a table with data
    */
-  static createTable(headers: string[], rows: string[][], options?: {
-    title?: string;
-    style?: 'compact' | 'default' | 'fancy';
-  }): string {
+  static createTable(
+    headers: string[],
+    rows: string[][],
+    options?: {
+      title?: string;
+      style?: 'compact' | 'default' | 'fancy';
+    }
+  ): string {
     const { title, style = 'default' } = options || {};
 
-    let tableOptions: any = {
-      head: headers.map(h => chalk.cyan.bold(h)),
+    const tableOptions: any = {
+      head: headers.map((h) => chalk.cyan.bold(h)),
     };
 
     switch (style) {
@@ -157,7 +169,7 @@ export class CLIUtils {
     table.push(...rows);
 
     let result = table.toString();
-    
+
     if (title) {
       result = chalk.bold.underline(title) + '\n\n' + result;
     }
@@ -171,11 +183,12 @@ export class CLIUtils {
   static createSeparator(title?: string, length = 60): string {
     const line = '═'.repeat(length);
     const gradientLine = gradient(['#ff6b6b', '#4ecdc4'])(line);
-    
+
     if (title) {
       const titleLength = title.length;
       const padding = Math.max(0, Math.floor((length - titleLength - 2) / 2));
-      const paddedTitle = '═'.repeat(padding) + ` ${title} ` + '═'.repeat(padding);
+      const paddedTitle =
+        '═'.repeat(padding) + ` ${title} ` + '═'.repeat(padding);
       return gradient(['#ff6b6b', '#4ecdc4'])(paddedTitle);
     }
 
@@ -185,55 +198,66 @@ export class CLIUtils {
   /**
    * Create a formatted list
    */
-  static createList(items: string[], options?: {
-    type?: 'bullet' | 'number' | 'check';
-    indent?: number;
-  }): string {
+  static createList(
+    items: string[],
+    options?: {
+      type?: 'bullet' | 'number' | 'check';
+      indent?: number;
+    }
+  ): string {
     const { type = 'bullet', indent = 2 } = options || {};
     const indentStr = ' '.repeat(indent);
 
-    return items.map((item, index) => {
-      let prefix: string;
-      
-      switch (type) {
-        case 'number':
-          prefix = chalk.cyan(`${index + 1}.`);
-          break;
-        case 'check':
-          prefix = chalk.green('✓');
-          break;
-        case 'bullet':
-        default:
-          prefix = chalk.blue('•');
-      }
+    return items
+      .map((item, index) => {
+        let prefix: string;
 
-      return `${indentStr}${prefix} ${item}`;
-    }).join('\n');
+        switch (type) {
+          case 'number':
+            prefix = chalk.cyan(`${index + 1}.`);
+            break;
+          case 'check':
+            prefix = chalk.green('✓');
+            break;
+          case 'bullet':
+          default:
+            prefix = chalk.blue('•');
+        }
+
+        return `${indentStr}${prefix} ${item}`;
+      })
+      .join('\n');
   }
 
   /**
    * Create a key-value display
    */
-  static createKeyValue(data: Record<string, any>, options?: {
-    title?: string;
-    indent?: number;
-    colorKeys?: boolean;
-  }): string {
+  static createKeyValue(
+    data: Record<string, any>,
+    options?: {
+      title?: string;
+      indent?: number;
+      colorKeys?: boolean;
+    }
+  ): string {
     const { title, indent = 2, colorKeys = true } = options || {};
     const indentStr = ' '.repeat(indent);
 
-    const maxKeyLength = Math.max(...Object.keys(data).map(k => k.length));
+    const maxKeyLength = Math.max(...Object.keys(data).map((k) => k.length));
 
     const lines = Object.entries(data).map(([key, value]) => {
       const paddedKey = key.padEnd(maxKeyLength);
       const coloredKey = colorKeys ? chalk.cyan(paddedKey) : paddedKey;
-      const coloredValue = typeof value === 'string' ? chalk.white(value) : chalk.yellow(String(value));
-      
+      const coloredValue =
+        typeof value === 'string'
+          ? chalk.white(value)
+          : chalk.yellow(String(value));
+
       return `${indentStr}${coloredKey}: ${coloredValue}`;
     });
 
     let result = lines.join('\n');
-    
+
     if (title) {
       result = chalk.bold.underline(title) + '\n\n' + result;
     }
@@ -246,12 +270,12 @@ export class CLIUtils {
    */
   static createWarning(message: string, details?: string[]): string {
     let content = chalk.yellow.bold('⚠️  WARNING: ') + chalk.yellow(message);
-    
+
     if (details && details.length > 0) {
-      content += '\n\n' + details.map(detail => `  • ${detail}`).join('\n');
+      content += '\n\n' + details.map((detail) => `  • ${detail}`).join('\n');
     }
 
-    return this.createBox(content, { type: 'warning' });
+    return CLIUtils.createBox(content, { type: 'warning' });
   }
 
   /**
@@ -259,12 +283,12 @@ export class CLIUtils {
    */
   static createError(message: string, details?: string[]): string {
     let content = chalk.red.bold('❌ ERROR: ') + chalk.red(message);
-    
+
     if (details && details.length > 0) {
-      content += '\n\n' + details.map(detail => `  • ${detail}`).join('\n');
+      content += '\n\n' + details.map((detail) => `  • ${detail}`).join('\n');
     }
 
-    return this.createBox(content, { type: 'error' });
+    return CLIUtils.createBox(content, { type: 'error' });
   }
 
   /**
@@ -272,12 +296,12 @@ export class CLIUtils {
    */
   static createSuccess(message: string, details?: string[]): string {
     let content = chalk.green.bold('✅ SUCCESS: ') + chalk.green(message);
-    
+
     if (details && details.length > 0) {
-      content += '\n\n' + details.map(detail => `  • ${detail}`).join('\n');
+      content += '\n\n' + details.map((detail) => `  • ${detail}`).join('\n');
     }
 
-    return this.createBox(content, { type: 'success' });
+    return CLIUtils.createBox(content, { type: 'success' });
   }
 
   /**
@@ -285,12 +309,12 @@ export class CLIUtils {
    */
   static createInfo(message: string, details?: string[]): string {
     let content = chalk.cyan.bold('ℹ️  INFO: ') + chalk.cyan(message);
-    
+
     if (details && details.length > 0) {
-      content += '\n\n' + details.map(detail => `  • ${detail}`).join('\n');
+      content += '\n\n' + details.map((detail) => `  • ${detail}`).join('\n');
     }
 
-    return this.createBox(content, { type: 'info' });
+    return CLIUtils.createBox(content, { type: 'info' });
   }
 
   /**
@@ -315,15 +339,20 @@ export class CLIUtils {
 
       if (notifier.update) {
         const message = `Update available: ${chalk.dim(notifier.update.current)} → ${chalk.green(notifier.update.latest)}`;
-        const updateBox = this.createBox(
-          message + '\n\n' + chalk.cyan('Run: ') + chalk.white('npm install -g porter-bridges'),
+        const updateBox = CLIUtils.createBox(
+          message +
+            '\n\n' +
+            chalk.cyan('Run: ') +
+            chalk.white('npm install -g porter-bridges'),
           { title: 'Update Available', type: 'info' }
         );
-        
+
         console.log(updateBox);
       }
     } catch (error) {
-      logger.debug('Failed to check for updates', { error: error instanceof Error ? error.message : error });
+      logger.debug('Failed to check for updates', {
+        error: error instanceof Error ? error.message : error,
+      });
     }
   }
 
@@ -342,9 +371,11 @@ export class CLIUtils {
 
     const start = () => {
       if (interval) return;
-      
+
       interval = setInterval(() => {
-        process.stdout.write(`\r${chalk.cyan(frames[currentFrame])} ${currentMessage}`);
+        process.stdout.write(
+          `\r${chalk.cyan(frames[currentFrame])} ${currentMessage}`
+        );
         currentFrame = (currentFrame + 1) % frames.length;
       }, 100);
     };
@@ -353,7 +384,9 @@ export class CLIUtils {
       if (interval) {
         clearInterval(interval);
         interval = null;
-        process.stdout.write('\r' + ' '.repeat(currentMessage.length + 2) + '\r');
+        process.stdout.write(
+          '\r' + ' '.repeat(currentMessage.length + 2) + '\r'
+        );
       }
     };
 
@@ -390,11 +423,11 @@ export class CLIUtils {
 
     if (hours > 0) {
       return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds % 60}s`;
-    } else {
-      return `${seconds}s`;
     }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds % 60}s`;
+    }
+    return `${seconds}s`;
   }
 
   /**

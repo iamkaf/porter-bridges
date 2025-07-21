@@ -76,7 +76,7 @@ export class PackageModule {
       // Create PACKAGED_DATA_MODEL compliant structure
       const packagePath = path.join(
         this.options.packageDirectory,
-        `linkie-porting-data-v${this.options.version}`
+        `bridge-bundle-v${this.options.version}`
       );
       const rawPath = path.join(packagePath, 'raw');
       const distilledPath = path.join(packagePath, 'distilled');
@@ -107,17 +107,44 @@ export class PackageModule {
         });
 
         // Group content by loader type for better organization
-        const loaderData: Record<string, {
-          breakingChanges: any[];
-          apiUpdates: any[];
-          migrationGuides: any[];
-          dependencyUpdates: any[];
-          summaries: any[];
-        }> = {
-          vanilla: { breakingChanges: [], apiUpdates: [], migrationGuides: [], dependencyUpdates: [], summaries: [] },
-          fabric: { breakingChanges: [], apiUpdates: [], migrationGuides: [], dependencyUpdates: [], summaries: [] },
-          neoforge: { breakingChanges: [], apiUpdates: [], migrationGuides: [], dependencyUpdates: [], summaries: [] },
-          forge: { breakingChanges: [], apiUpdates: [], migrationGuides: [], dependencyUpdates: [], summaries: [] },
+        const loaderData: Record<
+          string,
+          {
+            breakingChanges: any[];
+            apiUpdates: any[];
+            migrationGuides: any[];
+            dependencyUpdates: any[];
+            summaries: any[];
+          }
+        > = {
+          vanilla: {
+            breakingChanges: [],
+            apiUpdates: [],
+            migrationGuides: [],
+            dependencyUpdates: [],
+            summaries: [],
+          },
+          fabric: {
+            breakingChanges: [],
+            apiUpdates: [],
+            migrationGuides: [],
+            dependencyUpdates: [],
+            summaries: [],
+          },
+          neoforge: {
+            breakingChanges: [],
+            apiUpdates: [],
+            migrationGuides: [],
+            dependencyUpdates: [],
+            summaries: [],
+          },
+          forge: {
+            breakingChanges: [],
+            apiUpdates: [],
+            migrationGuides: [],
+            dependencyUpdates: [],
+            summaries: [],
+          },
         };
 
         for (const source of sources) {
@@ -138,7 +165,7 @@ export class PackageModule {
 
               // Determine loader type for content distribution
               const loaderType = this._normalizeLoaderType(source.loader_type);
-              
+
               // Categorize distilled content and add source attribution to appropriate loader bucket
               if (result.distilledData.breaking_changes) {
                 const attributedBreakingChanges =
@@ -146,7 +173,9 @@ export class PackageModule {
                     ...item,
                     source_url: source.url,
                   }));
-                loaderData[loaderType].breakingChanges.push(...attributedBreakingChanges);
+                loaderData[loaderType].breakingChanges.push(
+                  ...attributedBreakingChanges
+                );
               }
               if (result.distilledData.api_updates) {
                 const attributedApiUpdates =
@@ -162,7 +191,9 @@ export class PackageModule {
                     ...item,
                     source_url: source.url,
                   }));
-                loaderData[loaderType].migrationGuides.push(...attributedMigrationGuides);
+                loaderData[loaderType].migrationGuides.push(
+                  ...attributedMigrationGuides
+                );
               }
               if (result.distilledData.dependency_updates) {
                 const attributedDependencyUpdates =
@@ -170,7 +201,9 @@ export class PackageModule {
                     ...item,
                     source_url: source.url,
                   }));
-                loaderData[loaderType].dependencyUpdates.push(...attributedDependencyUpdates);
+                loaderData[loaderType].dependencyUpdates.push(
+                  ...attributedDependencyUpdates
+                );
               }
               if (result.distilledData.summary) {
                 loaderData[loaderType].summaries.push({
@@ -204,12 +237,13 @@ export class PackageModule {
         // Process and write content by loader type for cherry-pickable organization
         for (const [loaderType, data] of Object.entries(loaderData)) {
           // Skip empty loader categories
-          const hasContent = data.breakingChanges.length > 0 || 
-                            data.apiUpdates.length > 0 || 
-                            data.migrationGuides.length > 0 || 
-                            data.dependencyUpdates.length > 0 || 
-                            data.summaries.length > 0;
-          
+          const hasContent =
+            data.breakingChanges.length > 0 ||
+            data.apiUpdates.length > 0 ||
+            data.migrationGuides.length > 0 ||
+            data.dependencyUpdates.length > 0 ||
+            data.summaries.length > 0;
+
           if (!hasContent) {
             continue;
           }
@@ -233,8 +267,11 @@ export class PackageModule {
                 data.breakingChanges,
                 'breaking_change'
               );
-            
-            const breakingChangesPath = path.join(loaderPath, 'breaking-changes.json');
+
+            const breakingChangesPath = path.join(
+              loaderPath,
+              'breaking-changes.json'
+            );
             await fs.writeFile(
               breakingChangesPath,
               JSON.stringify(
@@ -244,18 +281,26 @@ export class PackageModule {
                   breaking_changes: processedBreakingChanges,
                   processing_metadata: {
                     total_sources: data.breakingChanges.length,
-                    deduplicated_count: data.breakingChanges.length - processedBreakingChanges.length,
-                    cross_references_added: this.crossReferenceAnalyzer.countCrossReferences(processedBreakingChanges),
+                    deduplicated_count:
+                      data.breakingChanges.length -
+                      processedBreakingChanges.length,
+                    cross_references_added:
+                      this.crossReferenceAnalyzer.countCrossReferences(
+                        processedBreakingChanges
+                      ),
                   },
                 },
                 null,
                 2
               )
             );
-            logger.info(`📝 Wrote ${loaderType} breaking changes for ${version}`, {
-              original: data.breakingChanges.length,
-              processed: processedBreakingChanges.length,
-            });
+            logger.info(
+              `📝 Wrote ${loaderType} breaking changes for ${version}`,
+              {
+                original: data.breakingChanges.length,
+                processed: processedBreakingChanges.length,
+              }
+            );
           }
 
           // Apply cross-referencing and de-duplication for API updates
@@ -265,7 +310,7 @@ export class PackageModule {
                 data.apiUpdates,
                 'api_update'
               );
-            
+
             const apiUpdatesPath = path.join(loaderPath, 'api-updates.json');
             await fs.writeFile(
               apiUpdatesPath,
@@ -276,8 +321,12 @@ export class PackageModule {
                   api_updates: processedApiUpdates,
                   processing_metadata: {
                     total_sources: data.apiUpdates.length,
-                    deduplicated_count: data.apiUpdates.length - processedApiUpdates.length,
-                    cross_references_added: this.crossReferenceAnalyzer.countCrossReferences(processedApiUpdates),
+                    deduplicated_count:
+                      data.apiUpdates.length - processedApiUpdates.length,
+                    cross_references_added:
+                      this.crossReferenceAnalyzer.countCrossReferences(
+                        processedApiUpdates
+                      ),
                   },
                 },
                 null,
@@ -292,7 +341,10 @@ export class PackageModule {
 
           // Write migration guides (no cross-referencing needed)
           if (data.migrationGuides.length > 0) {
-            const migrationGuidesPath = path.join(loaderPath, 'migration-guides.json');
+            const migrationGuidesPath = path.join(
+              loaderPath,
+              'migration-guides.json'
+            );
             await fs.writeFile(
               migrationGuidesPath,
               JSON.stringify(
@@ -308,9 +360,12 @@ export class PackageModule {
                 2
               )
             );
-            logger.info(`📝 Wrote ${loaderType} migration guides for ${version}`, {
-              count: data.migrationGuides.length,
-            });
+            logger.info(
+              `📝 Wrote ${loaderType} migration guides for ${version}`,
+              {
+                count: data.migrationGuides.length,
+              }
+            );
           }
 
           // Write dependency updates with cross-referencing
@@ -320,8 +375,11 @@ export class PackageModule {
                 data.dependencyUpdates,
                 'dependency_update'
               );
-            
-            const dependencyUpdatesPath = path.join(loaderPath, 'dependency-updates.json');
+
+            const dependencyUpdatesPath = path.join(
+              loaderPath,
+              'dependency-updates.json'
+            );
             await fs.writeFile(
               dependencyUpdatesPath,
               JSON.stringify(
@@ -331,18 +389,26 @@ export class PackageModule {
                   dependency_updates: processedDependencyUpdates,
                   processing_metadata: {
                     total_sources: data.dependencyUpdates.length,
-                    deduplicated_count: data.dependencyUpdates.length - processedDependencyUpdates.length,
-                    cross_references_added: this.crossReferenceAnalyzer.countCrossReferences(processedDependencyUpdates),
+                    deduplicated_count:
+                      data.dependencyUpdates.length -
+                      processedDependencyUpdates.length,
+                    cross_references_added:
+                      this.crossReferenceAnalyzer.countCrossReferences(
+                        processedDependencyUpdates
+                      ),
                   },
                 },
                 null,
                 2
               )
             );
-            logger.info(`📝 Wrote ${loaderType} dependency updates for ${version}`, {
-              original: data.dependencyUpdates.length,
-              processed: processedDependencyUpdates.length,
-            });
+            logger.info(
+              `📝 Wrote ${loaderType} dependency updates for ${version}`,
+              {
+                original: data.dependencyUpdates.length,
+                processed: processedDependencyUpdates.length,
+              }
+            );
           }
 
           // Write summaries (no cross-referencing needed)
@@ -416,10 +482,12 @@ export class PackageModule {
     const sources = Object.values(sourcesData.sources || {});
     // Include both distilled sources and sources that skipped distillation
     // Exclude failed sources as they are blocking states
-    return sources.filter((source) => 
-      (source.status === 'distilled' || 
-      (source.status === 'packaged' && source.processing_hints?.skip_distillation)) &&
-      source.status !== 'failed'
+    return sources.filter(
+      (source) =>
+        (source.status === 'distilled' ||
+          (source.status === 'packaged' &&
+            source.processing_hints?.skip_distillation)) &&
+        source.status !== 'failed'
     );
   }
 
@@ -428,7 +496,7 @@ export class PackageModule {
    */
   _generatePackageMetadata(packageResults: any, _sourcesData: any): any {
     return {
-      name: 'linkie-porting-data',
+      name: 'bridge-bundle',
       version: this.options.version,
       description:
         'A comprehensive, versioned collection of Minecraft mod porting data.',
@@ -615,7 +683,7 @@ export class PackageModule {
    */
   private _normalizeLoaderType(loaderType: string): string {
     const normalized = loaderType?.toLowerCase() || 'unknown';
-    
+
     // Map common variations to standard names
     switch (normalized) {
       case 'vanilla':
@@ -633,10 +701,12 @@ export class PackageModule {
       default:
         // For unknown types, try to infer from loader type if it contains known keywords
         if (normalized.includes('fabric')) return 'fabric';
-        if (normalized.includes('neoforge') || normalized.includes('neoforged')) return 'neoforge';
+        if (normalized.includes('neoforge') || normalized.includes('neoforged'))
+          return 'neoforge';
         if (normalized.includes('forge')) return 'forge';
-        if (normalized.includes('vanilla') || normalized.includes('minecraft')) return 'vanilla';
-        
+        if (normalized.includes('vanilla') || normalized.includes('minecraft'))
+          return 'vanilla';
+
         // Default to vanilla for unknown types (most breaking changes are vanilla)
         return 'vanilla';
     }

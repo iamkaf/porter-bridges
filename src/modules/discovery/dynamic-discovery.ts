@@ -10,10 +10,10 @@
  */
 
 import { logger } from '../../utils/logger';
-import { SourceItemFactory, type ISourceItem } from './source-item-factory';
-import { ContentAnalyzer } from './content-analyzer';
 import { MLContentAnalyzer } from '../../utils/ml-content-analyzer';
+import { ContentAnalyzer } from './content-analyzer';
 import type { ISourceConfig } from './source-configs';
+import { type ISourceItem, SourceItemFactory } from './source-item-factory';
 
 export interface IDynamicDiscoveryOptions {
   userAgent?: string;
@@ -98,7 +98,7 @@ export class DynamicDiscovery {
   constructor(options: IDynamicDiscoveryOptions = {}) {
     this.options = {
       userAgent: options.userAgent || 'porter-bridges/1.0.0',
-      timeout: options.timeout || 30000,
+      timeout: options.timeout || 30_000,
       retryAttempts: options.retryAttempts || 3,
       maxTrendingRepos: options.maxTrendingRepos || 50,
       trendingAnalysisPeriod: options.trendingAnalysisPeriod || 'weekly',
@@ -106,7 +106,7 @@ export class DynamicDiscovery {
       enableActivityAnalysis: options.enableActivityAnalysis !== false,
       enableTopicAnalysis: options.enableTopicAnalysis !== false,
       enableCommunityTracking: options.enableCommunityTracking !== false,
-      ...options
+      ...options,
     };
 
     this.sourceItemFactory = new SourceItemFactory();
@@ -146,8 +146,8 @@ export class DynamicDiscovery {
       }
 
       // Convert high-confidence insights to source items
-      const highConfidenceInsights = insights.filter(i => i.confidence > 0.7);
-      
+      const highConfidenceInsights = insights.filter((i) => i.confidence > 0.7);
+
       for (const insight of highConfidenceInsights) {
         const sources = await this.convertInsightToSources(insight, config);
         for (const source of sources) {
@@ -155,7 +155,9 @@ export class DynamicDiscovery {
         }
       }
 
-      logger.info(`✅ Dynamic discovery completed: ${insights.length} insights, ${highConfidenceInsights.length} high-confidence`);
+      logger.info(
+        `✅ Dynamic discovery completed: ${insights.length} insights, ${highConfidenceInsights.length} high-confidence`
+      );
       return insights;
     } catch (error) {
       logger.error('Dynamic discovery failed:', error);
@@ -173,11 +175,15 @@ export class DynamicDiscovery {
 
     try {
       const trendingRepos = await this.getTrendingRepositories();
-      const minecraftRepos = await this.filterMinecraftRelevantRepos(trendingRepos);
+      const minecraftRepos =
+        await this.filterMinecraftRelevantRepos(trendingRepos);
 
       for (const repo of minecraftRepos) {
         const activityAnalysis = await this.analyzeRepositoryActivity(repo);
-        const relevanceScore = this.calculateRepoRelevanceScore(repo, activityAnalysis);
+        const relevanceScore = this.calculateRepoRelevanceScore(
+          repo,
+          activityAnalysis
+        );
 
         if (relevanceScore > 0.5) {
           insights.push({
@@ -186,24 +192,26 @@ export class DynamicDiscovery {
             relevance_score: relevanceScore,
             data: {
               repository: repo,
-              activity: activityAnalysis
+              activity: activityAnalysis,
             },
             discovery_reason: `Trending repository with ${repo.stars} stars, ${activityAnalysis.recent_commits} recent commits`,
             potential_sources: [
               `${repo.html_url}/releases`,
               `${repo.html_url}/wiki`,
-              `${repo.html_url}/discussions`
+              `${repo.html_url}/discussions`,
             ],
             recommended_actions: [
               'Monitor for new releases',
               'Check wiki for documentation',
-              'Track discussions for updates'
-            ]
+              'Track discussions for updates',
+            ],
           });
         }
       }
 
-      logger.info(`📊 Analyzed ${trendingRepos.length} trending repos, found ${insights.length} relevant insights`);
+      logger.info(
+        `📊 Analyzed ${trendingRepos.length} trending repos, found ${insights.length} relevant insights`
+      );
       return insights;
     } catch (error) {
       logger.error('Failed to analyze trending repositories:', error);
@@ -221,32 +229,36 @@ export class DynamicDiscovery {
 
     try {
       const hotTopics = await this.getHotTopics();
-      const minecraftTopics = hotTopics.filter(t => t.minecraft_relevance > 0.6);
+      const minecraftTopics = hotTopics.filter(
+        (t) => t.minecraft_relevance > 0.6
+      );
 
       for (const topic of minecraftTopics) {
         const topicInsight = await this.analyzeTopicImplications(topic);
-        
+
         if (topicInsight.confidence > 0.6) {
           insights.push({
             type: 'hot_topic',
             confidence: topicInsight.confidence,
             relevance_score: topic.minecraft_relevance,
             data: {
-              topic: topic,
-              implications: topicInsight
+              topic,
+              implications: topicInsight,
             },
             discovery_reason: `Hot topic "${topic.name}" with ${topic.frequency} mentions and ${topic.related_repositories.length} related repos`,
             potential_sources: topicInsight.potential_sources,
             recommended_actions: [
               'Monitor repositories using this topic',
               'Track discussions around this topic',
-              'Look for related documentation'
-            ]
+              'Look for related documentation',
+            ],
           });
         }
       }
 
-      logger.info(`📊 Analyzed ${hotTopics.length} topics, found ${insights.length} relevant insights`);
+      logger.info(
+        `📊 Analyzed ${hotTopics.length} topics, found ${insights.length} relevant insights`
+      );
       return insights;
     } catch (error) {
       logger.error('Failed to analyze topic trends:', error);
@@ -275,7 +287,9 @@ export class DynamicDiscovery {
       const releaseInsights = await this.analyzeReleasePatterns();
       insights.push(...releaseInsights);
 
-      logger.info(`📊 Analyzed community activity, found ${insights.length} insights`);
+      logger.info(
+        `📊 Analyzed community activity, found ${insights.length} insights`
+      );
       return insights;
     } catch (error) {
       logger.error('Failed to analyze community activity:', error);
@@ -288,7 +302,7 @@ export class DynamicDiscovery {
    */
   private async getTrendingRepositories(): Promise<ITrendingRepository[]> {
     const cacheKey = `trending_${this.options.trendingAnalysisPeriod}`;
-    
+
     if (this.trendingCache.has(cacheKey)) {
       return this.trendingCache.get(cacheKey)!;
     }
@@ -300,7 +314,7 @@ export class DynamicDiscovery {
         'minecraft fabric',
         'minecraft neoforge',
         'minecraft modding',
-        'minecraft api'
+        'minecraft api',
       ];
 
       const allRepos: ITrendingRepository[] = [];
@@ -327,10 +341,12 @@ export class DynamicDiscovery {
   /**
    * Search repositories using GitHub API
    */
-  private async searchRepositories(query: string): Promise<ITrendingRepository[]> {
+  private async searchRepositories(
+    query: string
+  ): Promise<ITrendingRepository[]> {
     const headers: Record<string, string> = {
       'User-Agent': this.options.userAgent!,
-      'Accept': 'application/vnd.github.v3+json'
+      Accept: 'application/vnd.github.v3+json',
     };
 
     if (this.options.githubToken) {
@@ -339,7 +355,7 @@ export class DynamicDiscovery {
 
     const period = this.options.trendingAnalysisPeriod;
     const dateThreshold = new Date();
-    
+
     if (period === 'daily') {
       dateThreshold.setDate(dateThreshold.getDate() - 1);
     } else if (period === 'weekly') {
@@ -366,7 +382,9 @@ export class DynamicDiscovery {
   /**
    * Filter repositories for Minecraft modding relevance
    */
-  private async filterMinecraftRelevantRepos(repos: ITrendingRepository[]): Promise<ITrendingRepository[]> {
+  private async filterMinecraftRelevantRepos(
+    repos: ITrendingRepository[]
+  ): Promise<ITrendingRepository[]> {
     const relevant: ITrendingRepository[] = [];
 
     for (const repo of repos) {
@@ -382,17 +400,29 @@ export class DynamicDiscovery {
   /**
    * Calculate repository relevance score
    */
-  private calculateRepoRelevanceScore(repo: ITrendingRepository, activity?: IActivityAnalysis): number {
+  private calculateRepoRelevanceScore(
+    repo: ITrendingRepository,
+    activity?: IActivityAnalysis
+  ): number {
     let score = 0;
 
     // Topic relevance
-    const minecraftTopics = ['minecraft', 'minecraft-mod', 'minecraft-forge', 'minecraft-fabric', 'minecraft-neoforge'];
-    const topicMatches = repo.topics.filter(t => minecraftTopics.includes(t)).length;
+    const minecraftTopics = [
+      'minecraft',
+      'minecraft-mod',
+      'minecraft-forge',
+      'minecraft-fabric',
+      'minecraft-neoforge',
+    ];
+    const topicMatches = repo.topics.filter((t) =>
+      minecraftTopics.includes(t)
+    ).length;
     score += topicMatches * 0.2;
 
     // Description relevance
     const description = (repo.description || '').toLowerCase();
-    const relevanceScore = this.contentAnalyzer.calculatePortingRelevance(description);
+    const relevanceScore =
+      this.contentAnalyzer.calculatePortingRelevance(description);
     score += relevanceScore * 0.3;
 
     // Repository activity
@@ -410,7 +440,9 @@ export class DynamicDiscovery {
     if (repo.language === 'Kotlin') score += 0.05;
 
     // Recent activity
-    const daysSinceUpdate = (Date.now() - new Date(repo.updated_at).getTime()) / (1000 * 60 * 60 * 24);
+    const daysSinceUpdate =
+      (Date.now() - new Date(repo.updated_at).getTime()) /
+      (1000 * 60 * 60 * 24);
     if (daysSinceUpdate < 30) score += 0.1;
 
     return Math.min(score, 1.0);
@@ -419,9 +451,11 @@ export class DynamicDiscovery {
   /**
    * Analyze repository activity
    */
-  private async analyzeRepositoryActivity(repo: ITrendingRepository): Promise<IActivityAnalysis> {
+  private async analyzeRepositoryActivity(
+    repo: ITrendingRepository
+  ): Promise<IActivityAnalysis> {
     const cacheKey = repo.full_name;
-    
+
     if (this.activityCache.has(cacheKey)) {
       return this.activityCache.get(cacheKey)!;
     }
@@ -432,15 +466,17 @@ export class DynamicDiscovery {
         recent_commits: await this.getRecentCommitsCount(repo.full_name),
         recent_releases: await this.getRecentReleasesCount(repo.full_name),
         recent_issues: await this.getRecentIssuesCount(repo.full_name),
-        recent_discussions: await this.getRecentDiscussionsCount(repo.full_name),
+        recent_discussions: await this.getRecentDiscussionsCount(
+          repo.full_name
+        ),
         activity_score: 0,
         relevance_indicators: [],
         minecraft_version_mentions: [],
-        loader_type_indicators: []
+        loader_type_indicators: [],
       };
 
       // Calculate activity score
-      analysis.activity_score = 
+      analysis.activity_score =
         analysis.recent_commits * 2 +
         analysis.recent_releases * 5 +
         analysis.recent_issues * 1 +
@@ -448,14 +484,16 @@ export class DynamicDiscovery {
 
       // Extract relevance indicators
       analysis.relevance_indicators = this.extractRelevanceIndicators(repo);
-      analysis.minecraft_version_mentions = this.extractVersionMentions(repo.description || '');
+      analysis.minecraft_version_mentions = this.extractVersionMentions(
+        repo.description || ''
+      );
       analysis.loader_type_indicators = this.extractLoaderTypeIndicators(repo);
 
       this.activityCache.set(cacheKey, analysis);
       return analysis;
     } catch (error) {
       logger.error(`Failed to analyze activity for ${repo.full_name}:`, error);
-      
+
       // Return basic analysis on error
       return {
         repository: repo.full_name,
@@ -466,7 +504,7 @@ export class DynamicDiscovery {
         activity_score: 0,
         relevance_indicators: [],
         minecraft_version_mentions: [],
-        loader_type_indicators: []
+        loader_type_indicators: [],
       };
     }
   }
@@ -476,7 +514,7 @@ export class DynamicDiscovery {
    */
   private async getHotTopics(): Promise<ITrendingTopic[]> {
     const cacheKey = 'hot_topics';
-    
+
     if (this.topicCache.has(cacheKey)) {
       return this.topicCache.get(cacheKey)!;
     }
@@ -490,7 +528,7 @@ export class DynamicDiscovery {
       for (const repo of trendingRepos) {
         for (const topic of repo.topics) {
           topicFrequency.set(topic, (topicFrequency.get(topic) || 0) + 1);
-          
+
           if (!topicRepos.has(topic)) {
             topicRepos.set(topic, []);
           }
@@ -500,11 +538,13 @@ export class DynamicDiscovery {
 
       // Create trending topics
       const hotTopics: ITrendingTopic[] = [];
-      
+
       for (const [topic, frequency] of topicFrequency.entries()) {
-        if (frequency >= 3) { // Topic must appear in at least 3 repos
-          const minecraftRelevance = this.calculateTopicMinecraftRelevance(topic);
-          
+        if (frequency >= 3) {
+          // Topic must appear in at least 3 repos
+          const minecraftRelevance =
+            this.calculateTopicMinecraftRelevance(topic);
+
           if (minecraftRelevance > 0.3) {
             hotTopics.push({
               name: topic,
@@ -513,15 +553,17 @@ export class DynamicDiscovery {
               related_keywords: this.extractRelatedKeywords(topic),
               trend_score: frequency * minecraftRelevance,
               minecraft_relevance: minecraftRelevance,
-              loader_associations: this.extractLoaderAssociations(topic)
+              loader_associations: this.extractLoaderAssociations(topic),
             });
           }
         }
       }
 
-      const sortedTopics = hotTopics.sort((a, b) => b.trend_score - a.trend_score);
+      const sortedTopics = hotTopics.sort(
+        (a, b) => b.trend_score - a.trend_score
+      );
       this.topicCache.set(cacheKey, sortedTopics);
-      
+
       return sortedTopics;
     } catch (error) {
       logger.error('Failed to get hot topics:', error);
@@ -534,28 +576,36 @@ export class DynamicDiscovery {
    */
   private async getRecentCommitsCount(repoName: string): Promise<number> {
     try {
-      const response = await this.githubApiCall(`/repos/${repoName}/commits?since=${this.getRecentDate()}`);
+      const response = await githubClient.getJson<Array<any>>(
+        `https://api.github.com/repos/${owner}/${repo}/commits?per_page=1`,
+      );
       return response.length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
 
   private async getRecentReleasesCount(repoName: string): Promise<number> {
     try {
-      const response = await this.githubApiCall(`/repos/${repoName}/releases?per_page=10`);
+      const response = await this.githubApiCall(
+        `/repos/${repoName}/releases?per_page=10`
+      );
       const recentDate = new Date(this.getRecentDate());
-      return response.filter((release: any) => new Date(release.published_at) > recentDate).length;
-    } catch (error) {
+      return response.filter(
+        (release: any) => new Date(release.published_at) > recentDate
+      ).length;
+    } catch {
       return 0;
     }
   }
 
   private async getRecentIssuesCount(repoName: string): Promise<number> {
     try {
-      const response = await this.githubApiCall(`/repos/${repoName}/issues?since=${this.getRecentDate()}&state=all`);
+      const response = await this.githubApiCall(
+        `/repos/${repoName}/issues?since=${this.getRecentDate()}&state=all`
+      );
       return response.length;
-    } catch (error) {
+    } catch {
       return 0;
     }
   }
@@ -568,15 +618,17 @@ export class DynamicDiscovery {
   private async githubApiCall(endpoint: string): Promise<any> {
     const headers: Record<string, string> = {
       'User-Agent': this.options.userAgent!,
-      'Accept': 'application/vnd.github.v3+json'
+      Accept: 'application/vnd.github.v3+json',
     };
 
     if (this.options.githubToken) {
       headers['Authorization'] = `token ${this.options.githubToken}`;
     }
 
-    const response = await fetch(`${this.githubApiBase}${endpoint}`, { headers });
-    
+    const response = await fetch(`${this.githubApiBase}${endpoint}`, {
+      headers,
+    });
+
     if (!response.ok) {
       throw new Error(`GitHub API error: ${response.status}`);
     }
@@ -590,9 +642,11 @@ export class DynamicDiscovery {
     return date.toISOString();
   }
 
-  private removeDuplicateRepos(repos: ITrendingRepository[]): ITrendingRepository[] {
+  private removeDuplicateRepos(
+    repos: ITrendingRepository[]
+  ): ITrendingRepository[] {
     const seen = new Set<string>();
-    return repos.filter(repo => {
+    return repos.filter((repo) => {
       if (seen.has(repo.full_name)) {
         return false;
       }
@@ -604,15 +658,23 @@ export class DynamicDiscovery {
   private extractRelevanceIndicators(repo: ITrendingRepository): string[] {
     const indicators: string[] = [];
     const text = `${repo.name} ${repo.description || ''}`.toLowerCase();
-    
-    const keywords = ['mod', 'forge', 'fabric', 'neoforge', 'minecraft', 'api', 'library'];
-    
+
+    const keywords = [
+      'mod',
+      'forge',
+      'fabric',
+      'neoforge',
+      'minecraft',
+      'api',
+      'library',
+    ];
+
     for (const keyword of keywords) {
       if (text.includes(keyword)) {
         indicators.push(keyword);
       }
     }
-    
+
     return indicators;
   }
 
@@ -623,30 +685,38 @@ export class DynamicDiscovery {
 
   private extractLoaderTypeIndicators(repo: ITrendingRepository): string[] {
     const indicators: string[] = [];
-    const text = `${repo.name} ${repo.description || ''} ${repo.topics.join(' ')}`.toLowerCase();
-    
+    const text =
+      `${repo.name} ${repo.description || ''} ${repo.topics.join(' ')}`.toLowerCase();
+
     const loaders = ['forge', 'fabric', 'neoforge', 'quilt'];
-    
+
     for (const loader of loaders) {
       if (text.includes(loader)) {
         indicators.push(loader);
       }
     }
-    
+
     return indicators;
   }
 
   private calculateTopicMinecraftRelevance(topic: string): number {
-    const minecraftKeywords = ['minecraft', 'mod', 'forge', 'fabric', 'neoforge', 'quilt'];
+    const minecraftKeywords = [
+      'minecraft',
+      'mod',
+      'forge',
+      'fabric',
+      'neoforge',
+      'quilt',
+    ];
     const lowerTopic = topic.toLowerCase();
-    
+
     let score = 0;
     for (const keyword of minecraftKeywords) {
       if (lowerTopic.includes(keyword)) {
         score += 0.3;
       }
     }
-    
+
     return Math.min(score, 1.0);
   }
 
@@ -658,15 +728,15 @@ export class DynamicDiscovery {
   private extractLoaderAssociations(topic: string): string[] {
     const associations: string[] = [];
     const lowerTopic = topic.toLowerCase();
-    
+
     const loaders = ['forge', 'fabric', 'neoforge', 'quilt'];
-    
+
     for (const loader of loaders) {
       if (lowerTopic.includes(loader)) {
         associations.push(loader);
       }
     }
-    
+
     return associations;
   }
 
@@ -692,28 +762,33 @@ export class DynamicDiscovery {
     // Implementation would analyze what a trending topic means for the ecosystem
     return {
       confidence: 0.7,
-      potential_sources: topic.related_repositories.map(repo => `https://github.com/${repo}`)
+      potential_sources: topic.related_repositories.map(
+        (repo) => `https://github.com/${repo}`
+      ),
     };
   }
 
-  private async convertInsightToSources(insight: IDiscoveryInsight, config: ISourceConfig): Promise<ISourceItem[]> {
+  private async convertInsightToSources(
+    insight: IDiscoveryInsight,
+    config: ISourceConfig
+  ): Promise<ISourceItem[]> {
     const sources: ISourceItem[] = [];
 
     for (const url of insight.potential_sources) {
       const sourceItem: ISourceItem = {
         status: 'discovered',
-        url: url,
+        url,
         source_type: 'guide',
         title: `Dynamic Discovery: ${insight.type}`,
         loader_type: config.loader_type as any,
         priority: insight.confidence > 0.8 ? 'high' : 'medium',
         relevance_score: insight.relevance_score,
-        tags: [`dynamic-discovery`, insight.type],
+        tags: ['dynamic-discovery', insight.type],
         metadata: {
           discovery_insight: insight,
           discovery_method: 'dynamic',
-          confidence: insight.confidence
-        }
+          confidence: insight.confidence,
+        },
       };
 
       sources.push(this.sourceItemFactory.createSourceItem(sourceItem));
