@@ -11,22 +11,26 @@ import type {
 } from '../types/pipeline';
 import { CriticalError, PipelineValidator } from '../utils/critical-error';
 import { logger } from '../utils/logger';
-import type { PipelineState } from '../utils/pipeline-state-manager';
+import { PipelineStateManager, type PipelineState } from '../utils/pipeline-state-manager';
 
 export async function executeCollectionCommand(options: CollectionCLIOptions) {
   try {
     logger.info('🚀 Porter Bridges - Collection Module');
 
-    // Load discovered sources
+    // Initialize pipeline state manager
+    const stateManager = new PipelineStateManager();
+    
+    // Load pipeline state (always use state manager for persistence)
     let sourcesData: PipelineState;
     try {
-      sourcesData = JSON.parse(await fs.readFile(options.input, 'utf8'));
+      // Load from pipeline state manager
+      await stateManager.loadState();
+      sourcesData = stateManager.getState();
       logger.info(
         {
-          inputFile: options.input,
           sourceCount: Object.keys(sourcesData.sources || {}).length,
         },
-        '📂 Loaded sources'
+        '📂 Loaded pipeline state'
       );
     } catch (error: any) {
       logger.error(
@@ -76,13 +80,22 @@ export async function executeCollectionCommand(options: CollectionCLIOptions) {
       ? await collection.resumeCollection(sourcesData, filters)
       : await collection.collect(sourcesData, filters);
 
-    // CRITICAL: Validate collection output before proceeding
+    // Update pipeline state with collection results FIRST (before validation)
+    for (const [sourceKey, source] of Object.entries(results.sources)) {
+      stateManager.updateSource(sourceKey, source);
+    }
+    stateManager.updatePhaseStats('collection', results.collection_metadata || {});
+    await stateManager.saveState();
+
+    // CRITICAL: Validate collection output after saving state
     try {
       PipelineValidator.validateCollectionOutput(results);
       logger.info('✅ Collection validation passed');
     } catch (error: any) {
       if (error instanceof CriticalError) {
         logger.error('🚨 CRITICAL COLLECTION FAILURE', error.toLogFormat());
+        // State was already saved above, so this is just a warning about overall failure rate
+        logger.warn('⚠️  State has been saved despite validation failure');
         process.exit(1);
       }
       throw error;
@@ -99,7 +112,7 @@ export async function executeCollectionCommand(options: CollectionCLIOptions) {
       },
     };
 
-    // Write results to file
+    // Write results to file (for backward compatibility)
     await fs.mkdir(path.dirname(options.output), { recursive: true });
     await fs.writeFile(options.output, JSON.stringify(outputData, null, 2));
 

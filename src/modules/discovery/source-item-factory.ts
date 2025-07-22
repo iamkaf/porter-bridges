@@ -114,6 +114,9 @@ export interface ISourceItem {
       | 'bundling'
       | 'bundled';
   };
+  processing_hints?: {
+    skip_distillation?: boolean;
+  };
 }
 
 /**
@@ -142,13 +145,14 @@ export class SourceItemFactory {
       collected_at: data.collected_at,
       collection_metadata: data.collection_metadata,
       metadata: data.metadata,
-      // Mark changelogs to skip distillation
+      // Use provided processing_hints or set defaults
       processing_hints:
-        data.source_type === 'changelog'
+        data.processing_hints || 
+        (data.source_type === 'changelog'
           ? {
               skip_distillation: true,
             }
-          : undefined,
+          : undefined),
     };
 
     // Validate against schema

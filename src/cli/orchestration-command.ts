@@ -769,7 +769,13 @@ export class OrchestrationCommand {
     // CRITICAL: Validate collection output
     PipelineValidator.validateCollectionOutput(results);
 
-    // Note: Results are now saved via PipelineStateManager in the calling code
+    // Update pipeline state with collection results
+    for (const [sourceKey, source] of Object.entries(results.sources)) {
+      this.pipelineState.updateSource(sourceKey, source);
+    }
+    this.pipelineState.updatePhaseStats('collection', results.collection_metadata || {});
+    await this.pipelineState.saveState();
+
     logger.info('✅ Collection validation passed', {
       collected: Object.values(results.sources).filter(
         (s: any) => s.status === 'collected'
