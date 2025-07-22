@@ -38,6 +38,12 @@ export interface ISourceConfig {
   // Community submission configuration
   submissionsDir?: string;
   maxSubmissionsPerUser?: number;
+  // Loader documentation specific configuration
+  owner?: string;
+  repo?: string;
+  path?: string;
+  glob?: string;
+  versions?: string[];
 }
 
 export interface ISourceConfigs {
@@ -168,6 +174,28 @@ export class SourceConfigs {
         description: 'Community-submitted modding sources',
         submissionsDir: './generated/community-submissions',
         maxSubmissionsPerUser: 10,
+      },
+      // Loader documentation sources
+      fabric_documentation: {
+        type: 'loader_docs',
+        url: 'https://github.com/FabricMC/fabric-docs',
+        source_type: 'documentation',
+        loader_type: 'fabric',
+        description: 'Official Fabric documentation for multiple Minecraft versions',
+      },
+      neoforge_documentation: {
+        type: 'loader_docs',
+        url: 'https://github.com/neoforged/Documentation',
+        source_type: 'documentation',
+        loader_type: 'neoforge',
+        description: 'Official NeoForge documentation for multiple Minecraft versions',
+      },
+      forge_documentation: {
+        type: 'loader_docs',
+        url: 'https://github.com/MinecraftForge/Documentation',
+        source_type: 'documentation',
+        loader_type: 'forge',
+        description: 'Official Minecraft Forge documentation for multiple Minecraft versions',
       },
     };
   }
