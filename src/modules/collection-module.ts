@@ -23,6 +23,7 @@ import { generateCollectedContentFilename } from '../utils/filename-utils';
 import { logger } from '../utils/logger';
 import type { PipelineState } from '../utils/pipeline-state-manager';
 import { CollectionStats } from './collection/collection-stats';
+import { DocumentationCollector } from './collection/documentation-collector';
 
 /**
  * Simple filters for collection sources
@@ -244,6 +245,7 @@ export class CollectionModule {
   private filters: CollectionFilters;
   private stats: CollectionStats;
   private downloader: ContentDownloader;
+  private documentationCollector: DocumentationCollector;
 
   constructor(
     options: {
@@ -265,6 +267,7 @@ export class CollectionModule {
     this.filters = new CollectionFilters();
     this.stats = new CollectionStats();
     this.downloader = new ContentDownloader();
+    this.documentationCollector = new DocumentationCollector();
   }
 
   /**
@@ -341,6 +344,19 @@ export class CollectionModule {
             this.options.progressCallback(i, sources.length, displayName);
           }
 
+          // Route documentation sources to DocumentationCollector
+          if (source.source_type === 'documentation') {
+            const result = await this.documentationCollector.collect(source);
+            this.stats.incrementCollected(result.totalSize);
+            
+            // Update source in sourcesData
+            if (sourcesData.sources[source.url]) {
+              Object.assign(sourcesData.sources[source.url]!, source);
+            }
+            continue;
+          }
+
+          // Regular content collection for non-documentation sources
           const result = await this.downloader.collectSourceWithRetry(source);
 
           // Save content to file

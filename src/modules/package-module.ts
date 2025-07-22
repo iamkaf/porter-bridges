@@ -80,14 +80,17 @@ export class PackageModule {
       );
       const rawPath = path.join(packagePath, 'raw');
       const distilledPath = path.join(packagePath, 'distilled');
+      const docsPath = path.join(packagePath, 'docs');
 
       await fs.mkdir(rawPath, { recursive: true });
       await fs.mkdir(distilledPath, { recursive: true });
+      await fs.mkdir(docsPath, { recursive: true });
 
       logger.info('📁 Created package structure', {
         packagePath,
         rawPath,
         distilledPath,
+        docsPath,
       });
 
       // Process sources and organize by version
@@ -152,7 +155,8 @@ export class PackageModule {
             const result = await this.contentProcessor.processSourceForVersion(
               source,
               rawPath,
-              versionPath
+              versionPath,
+              docsPath
             );
 
             if (result) {
@@ -599,6 +603,7 @@ export class PackageModule {
         '## Structure Description\n\n' +
         '- **raw/** - Original collected content files\n' +
         '- **distilled/** - AI-processed structured content organized by Minecraft version\n' +
+        '- **docs/** - Complete documentation corpus organized by loader and version\n' +
         '- **package.json** - Package metadata and manifest\n' +
         '- **TREE.md** - This directory structure documentation\n';
 

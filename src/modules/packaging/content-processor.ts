@@ -51,7 +51,8 @@ export class ContentProcessor {
   async processSourceForVersion(
     source: any,
     rawPath: string,
-    _versionPath: string
+    _versionPath: string,
+    docsPath?: string
   ): Promise<IContentProcessResult> {
     try {
       // Check if this source skipped distillation
@@ -61,19 +62,38 @@ export class ContentProcessor {
       let distilledContent = '';
 
       if (skippedDistillation) {
-        // For sources that skipped distillation, use empty structure
-        distilledData = {
-          breaking_changes: [],
-          api_updates: [],
-          migration_guides: [],
-          dependency_updates: [],
-          summaries: [],
-          metadata: {
-            source_type: source.source_type,
-            skipped_distillation: true,
-            reason: 'Changelog content - preserved as-is',
-          },
-        };
+        // Handle documentation sources specially
+        if (source.source_type === 'documentation' && docsPath) {
+          await this.copyDocumentationCorpus(source, docsPath);
+          
+          distilledData = {
+            breaking_changes: [],
+            api_updates: [],
+            migration_guides: [],
+            dependency_updates: [],
+            summaries: [],
+            metadata: {
+              source_type: source.source_type,
+              skipped_distillation: true,
+              reason: 'Documentation corpus - copied to docs/ directory',
+              docs_location: `docs/${source.loader_type}/${source.minecraft_version}/`,
+            },
+          };
+        } else {
+          // For other sources that skipped distillation, use empty structure
+          distilledData = {
+            breaking_changes: [],
+            api_updates: [],
+            migration_guides: [],
+            dependency_updates: [],
+            summaries: [],
+            metadata: {
+              source_type: source.source_type,
+              skipped_distillation: true,
+              reason: 'Changelog content - preserved as-is',
+            },
+          };
+        }
       } else {
         // Read distilled content for sources that went through distillation
         const distilledFilePath = this.getDistilledPath(source.url);
@@ -240,6 +260,65 @@ export class ContentProcessor {
    */
   generateRawFileName(source: any): string {
     return generateRawContentFilename(source);
+  }
+
+  /**
+   * Copy documentation corpus from collected-docs to package docs directory
+   */
+  async copyDocumentationCorpus(source: any, docsPath: string): Promise<void> {
+    try {
+      // Build source path from collected-docs structure
+      const collectedDocsDir = process.env.PORTER_BRIDGES_DOCS_DIR || './generated/collected-docs';
+      const sourcePath = path.join(collectedDocsDir, 'docs', source.loader_type, source.minecraft_version);
+      
+      // Build target path in package
+      const targetPath = path.join(docsPath, source.loader_type, source.minecraft_version);
+      
+      // Check if source exists
+      let sourceExists: boolean;
+      try {
+        await fs.access(sourcePath);
+        sourceExists = true;
+      } catch {
+        sourceExists = false;
+      }
+      
+      if (!sourceExists) {
+        logger.warn(`Documentation corpus not found: ${sourcePath}`);
+        return;
+      }
+      
+      // Copy entire documentation tree
+      await this.copyDirectoryRecursive(sourcePath, targetPath);
+      
+      logger.info(`📚 Copied documentation corpus: ${source.loader_type}/${source.minecraft_version}`);
+      
+    } catch (error: any) {
+      logger.error(`Failed to copy documentation corpus for ${source.url}`, {
+        error: error.message,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Recursively copy directory contents
+   */
+  async copyDirectoryRecursive(source: string, target: string): Promise<void> {
+    await fs.mkdir(target, { recursive: true });
+    
+    const entries = await fs.readdir(source, { withFileTypes: true });
+    
+    for (const entry of entries) {
+      const sourcePath = path.join(source, entry.name);
+      const targetPath = path.join(target, entry.name);
+      
+      if (entry.isDirectory()) {
+        await this.copyDirectoryRecursive(sourcePath, targetPath);
+      } else {
+        await fs.copyFile(sourcePath, targetPath);
+      }
+    }
   }
 
   /**

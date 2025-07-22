@@ -31,6 +31,10 @@ import {
   GitHubReleasesDiscovery,
   type IGitHubReleasesDiscoveryOptions,
 } from './github-releases-discovery';
+import {
+  type ILoaderDocsDiscoveryOptions,
+  LoaderDocsDiscovery,
+} from './loader-docs-discovery';
 import { type IMavenDiscoveryOptions, MavenDiscovery } from './maven-discovery';
 import { type ISourceConfig, SourceConfigs } from './source-configs';
 import type { ISourceItem } from './source-item-factory';
@@ -44,7 +48,8 @@ type IDiscoveryOptions = { cacheDirectory: string } & IGitHubDiscoveryOptions &
   IDiscordDiscoveryOptions &
   IVideoDiscoveryOptions &
   IDynamicDiscoveryOptions &
-  ICommunityDiscoveryOptions;
+  ICommunityDiscoveryOptions &
+  ILoaderDocsDiscoveryOptions;
 
 /**
  * Core Discovery Module class
@@ -61,6 +66,7 @@ export class DiscoveryCore {
   videoDiscovery: VideoDiscovery;
   dynamicDiscovery: DynamicDiscovery;
   communityDiscovery: CommunityDiscovery;
+  loaderDocsDiscovery: LoaderDocsDiscovery;
   discoveredSources: Map<string, ISourceItem>;
   options: IDiscoveryOptions;
 
@@ -89,6 +95,7 @@ export class DiscoveryCore {
     this.videoDiscovery = new VideoDiscovery(this.options);
     this.dynamicDiscovery = new DynamicDiscovery(this.options);
     this.communityDiscovery = new CommunityDiscovery(this.options);
+    this.loaderDocsDiscovery = new LoaderDocsDiscovery(this.options);
     this.discoveredSources = new Map();
   }
 
@@ -192,6 +199,9 @@ export class DiscoveryCore {
         break;
       case 'community_discovery':
         await this._discoverFromCommunitySubmissions(sourceId, config);
+        break;
+      case 'loader_docs':
+        await this._discoverFromLoaderDocs(sourceId, config);
         break;
       default:
         throw new Error(`Unknown source type: ${config.type}`);
@@ -552,6 +562,33 @@ export class DiscoveryCore {
         logger.error(
           { error },
           `❌ Failed to discover from community submissions ${sourceId}: unknown error`
+        );
+      }
+    }
+  }
+
+  /**
+   * Discover sources from loader documentation
+   */
+  async _discoverFromLoaderDocs(sourceId: string, config: ISourceConfig) {
+    try {
+      const sources = await this.loaderDocsDiscovery.discover(config);
+      for (const source of sources) {
+        this.discoveredSources.set(source.url, source);
+      }
+      logger.info(
+        { sourceId, count: sources.length },
+        `📊 ${sourceId}: discovered ${sources.length} loader documentation sources`
+      );
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        logger.error(
+          `❌ Failed to discover from loader documentation ${sourceId}: ${error.message}`
+        );
+      } else {
+        logger.error(
+          { error },
+          `❌ Failed to discover from loader documentation ${sourceId}: unknown error`
         );
       }
     }
